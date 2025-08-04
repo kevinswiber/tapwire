@@ -158,3 +158,11 @@ For performance issues:
 ```bash
 cargo flamegraph --bin shadowcat -- forward stdio -- your-command
 ```
+
+## Git Commit Guidelines
+
+**Important**: When creating git commits:
+- **DO NOT** add Claude as a co-author of commits
+- **DO NOT** mention Claude Code in commit messages
+- Keep commit messages focused on the technical changes and their purpose
+- Use standard conventional commit format when appropriate
