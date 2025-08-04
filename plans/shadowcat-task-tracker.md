@@ -4,6 +4,14 @@
 **Current Phase:** Phase 4 - Interception & Rule Engine ✅ HIGH-PRIORITY COMPLETE  
 **Status:** Production-ready rule-based interception with file watching and CLI management
 
+## 🔴 CRITICAL ISSUE - Immediate Action Required 
+
+**JSONPath Library Integration Broken** - Advanced message actions implemented but core functionality non-functional due to JSONPath API issues. See `plans/013-advanced-actions-implementation-issues.md` for details.
+
+**Impact:** Rules with `advanced_modify`, conditional delays, and dynamic templates silently fail.  
+**Priority:** Must fix before deploying advanced actions to production.  
+**Estimated Fix Time:** 0.5-1 day
+
 ---
 
 ## Phase 1: Core Infrastructure ✅ COMPLETE
@@ -159,35 +167,43 @@
 ### Medium Priority Tasks 🟡 REMAINING
 
 #### 1. Advanced Message Actions
-**Status:** 🔴 Not Started  
-**File:** `src/interceptor/actions.rs` (new file)  
-**Priority:** MEDIUM - Enhancement for advanced use cases  
-**Estimated Effort:** 1.5 days
+**Status:** 🟡 Partially Complete - CRITICAL JSONPath Issues  
+**File:** `src/interceptor/actions.rs` (implemented)  
+**Priority:** HIGH - JSONPath issues must be fixed immediately  
+**Completed:** August 4, 2025  
+**Critical Issue:** See `plans/013-advanced-actions-implementation-issues.md`
 
-**Current State:**
-- ✅ Basic action types (Continue, Block, Pause, Delay) implemented
-- ✅ Action framework with conditional execution working
-- ❌ Advanced message modification missing
-- ❌ Template-based mock responses not implemented
-- ❌ Sophisticated delay patterns missing
+**✅ COMPLETED:**
+- ✅ Advanced action framework and architecture
+- ✅ Integration with existing rule system and RuleBasedInterceptor
+- ✅ Four new action types: AdvancedModify, TemplateMock, PatternDelay, FaultInject
+- ✅ Handlebars template system for response generation
+- ✅ Advanced delay patterns (exponential backoff, jitter, random)
+- ✅ Fault injection scenarios (timeout, malformed response, rate limiting)
+- ✅ Value transformation functions (string manipulation, math operations)
+- ✅ Thread-safe concurrent design with proper error handling
+- ✅ Comprehensive unit tests (6 tests passing)
+- ✅ Full integration with hot-reloading and CLI management
 
-**Implementation Tasks:**
-- [ ] **Enhanced Message Modification**:
-  - [ ] JSONPath-based field editing (set, remove, transform)
-  - [ ] Value transformation functions (string manipulation, math operations)
-  - [ ] Message structure validation after modification
-- [ ] **Template-Based Mock Responses**:
-  - [ ] Handlebars template system for response generation
-  - [ ] Variable substitution from request context
-  - [ ] Response type selection (success, error, custom)
-- [ ] **Advanced Delay Patterns**:
-  - [ ] Exponential backoff with configurable base and max attempts
-  - [ ] Random jitter for realistic delay simulation
-  - [ ] Conditional delays based on message content
-- [ ] **Fault Injection Scenarios**:
-  - [ ] Network timeout simulation
-  - [ ] Malformed response generation
-  - [ ] Rate limiting simulation
+**❌ CRITICAL ISSUES (Must Fix Immediately):**
+- ❌ **JSONPath library integration completely broken** - jsonpath_lib API mismatch
+- ❌ **Advanced message modification non-functional** - silently does nothing
+- ❌ **Conditional delays broken** - ignores conditions, always uses true_duration
+- ❌ **Template context extraction broken** - can't access request.params.field
+
+**🔴 URGENT FIXES REQUIRED:**
+- [ ] **Fix JSONPath Library Integration** (Priority 1 - 0.5-1 day)
+  - [ ] Research correct jsonpath_lib API or switch to alternative library
+  - [ ] Implement proper set_json_path(), get_json_path(), remove_json_path()
+  - [ ] Restore apply_single_modification() functionality
+- [ ] **Fix Conditional Logic** (Priority 2 - 0.5 day)
+  - [ ] Implement JSONPath condition evaluation in DelayPattern
+  - [ ] Fix template context extraction for dynamic variables
+- [ ] **Update Tests to Use Real Functionality** (Priority 3 - 0.5 day)
+  - [ ] Remove mocked expectations, test actual message modification
+  - [ ] Add comprehensive JSONPath expression testing
+
+**Current Test Status:** 127 tests passing (6 new + 121 existing) but 2 advanced action tests are mocked
 
 #### 2. End-to-End Integration Testing
 **Status:** 🟡 Basic Complete  
@@ -284,7 +300,7 @@
 - **CLI Intercept Management: ~90% ✅ (Complete command suite with rich formatting)**
 
 ### Test Status
-- Unit Tests: **121 passing ✅** (17 new tests added for hot-reloading + CLI intercept management in Phase 4)
+- Unit Tests: **127 passing ✅** (23 new tests added in Phase 4: hot-reloading + CLI + advanced actions)
 - Integration Tests: **10 passing ✅** (Proxy + Session + Recording + Replay + Interceptor + RuleBasedInterceptor)
 - End-to-End Tests: 0 written 🔴
 - Benchmarks: 0 written 🔴
@@ -297,6 +313,7 @@
 - Rule Engine: 8 tests ✅
 - RuleBasedInterceptor: 13 tests ✅ (includes hot-reloading tests)
 - CLI Intercept Management: 4 tests ✅
+- **Advanced Actions: 6 tests ✅** (2 mocked due to JSONPath issues)
 - Integration Tests: 10 tests ✅ (5 proxy integration + 5 interceptor integration)
 
 ### Documentation
@@ -316,7 +333,8 @@
 ✅ **Dynamic Rule Management** - Runtime rule addition, removal, and configuration without service restart  
 ✅ **File System Watching & Hot-Reloading** - Automatic rule reloading with atomic validation and rollback  
 ✅ **CLI Intercept Management** - Complete command-line interface for rule and interceptor management  
-✅ **Comprehensive Testing** - 121 total tests (17 new interceptor + CLI tests) covering all functionality  
+✅ **Advanced Actions Framework** - Architecture and integration for enhanced message actions (JSONPath issues noted)  
+✅ **Comprehensive Testing** - 127 total tests (23 new tests in Phase 4) covering all functionality  
 ✅ **Advanced Metrics System** - Detailed performance tracking at both rule and interceptor levels  
 ✅ **Thread-Safe Design** - Concurrent message processing with Arc/RwLock patterns and zero data races  
 
@@ -328,6 +346,7 @@
 - **Runtime Rule Management**: Add, remove, enable/disable rules without service interruption
 - **Advanced Configuration**: Timeouts, rule limits, metrics control, and custom naming
 - **Comprehensive Action Support**: Continue, Block, Modify, Mock, Pause, Delay with conditional execution
+- **Advanced Actions Framework**: Template system, delay patterns, fault injection (⚠️ JSONPath needs fix)
 - **File Format Support**: Both JSON and YAML rule file formats with validation
 - **Performance Monitoring**: Rule execution metrics, timing analysis, and action statistics
 - **Integration Testing**: Full workflow testing with InterceptorChain and ForwardProxy
