@@ -1,0 +1,3 @@
+[submodule "shadowcat"]
+	path = shadowcat
+	url = git@github.com:kevinswiber/shadowcat.git
