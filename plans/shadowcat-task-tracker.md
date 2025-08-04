@@ -257,14 +257,207 @@
 
 ---
 
-## Phase 5: Security & Auth (Weeks 9-10)
+## Phase 5: Reverse Proxy & Authentication (Weeks 9-10)
 
-### Planned Tasks
-- [ ] OAuth 2.1 implementation
-- [ ] Token validation
-- [ ] No-passthrough enforcement
-- [ ] Policy engine
-- [ ] Audit logging
+**Status:** 🔵 PLANNING COMPLETE - READY FOR RESEARCH & IMPLEMENTATION  
+**Current Phase:** Phase 4 ✅ Complete → Phase 5 🎯 Next  
+**Key Insight:** AuthGateway belongs with Reverse Proxy (production) not Forward Proxy (dev tool)
+
+### 📋 Phase 5 Overview
+
+**Core Goal:** Implement production-ready reverse proxy with OAuth 2.1 authentication gateway
+
+**Architecture:** HTTP clients → Shadowcat Reverse Proxy (with AuthGateway) → upstream MCP servers
+
+**Key Differentiator:** Unlike forward proxy (dev tool), reverse proxy is where clients connect TO Shadowcat as authenticated API gateway
+
+### 📚 Planning Documents (COMPLETE)
+
+**Reference Documents:**
+- `plans/014-phase5-security-auth-architecture.md` - Complete architectural design
+- `plans/015-phase5-implementation-roadmap.md` - Detailed 10-day implementation plan
+- `plans/002-shadowcat-architecture-plan.md` - Updated with reverse proxy clarification
+
+**Planning Status:**
+- ✅ OAuth 2.1 + MCP security requirements researched
+- ✅ Architecture design complete (ReverseProxy + AuthGateway)
+- ✅ Implementation roadmap complete (2 weeks, 10 days)
+- ✅ Integration strategy with existing Phase 4 infrastructure defined
+
+### 🔬 PHASE 5 RESEARCH STRATEGY (NEXT STEP)
+
+**Status:** 🟡 NOT STARTED - CRITICAL BEFORE IMPLEMENTATION
+
+Before implementation begins, comprehensive research is needed to ensure technical decisions are sound and implementation is efficient.
+
+**Research Goals:**
+1. **HTTP Server Framework Analysis** - Choose optimal framework for reverse proxy
+2. **MCP over HTTP Protocol Deep Dive** - Understand MCP HTTP transport requirements
+3. **OAuth 2.1 Library Evaluation** - Select production-ready OAuth implementation
+4. **Reverse Proxy Pattern Research** - Study production patterns and best practices
+5. **Performance & Security Benchmarking** - Establish baseline requirements
+
+### 📊 Research Plan - Week 0 (Pre-Implementation)
+
+#### Day 1-2: HTTP Server & MCP Protocol Research
+
+**HTTP Server Framework Analysis:**
+- [ ] **Axum vs Warp vs Actix-web** - Performance, ecosystem, MCP compatibility
+- [ ] **Connection handling** - Keep-alive, connection pooling, concurrent requests
+- [ ] **Middleware integration** - Auth, logging, metrics, interceptors
+- [ ] **WebSocket support** - Future MCP transport requirements
+- [ ] **Production features** - Graceful shutdown, health checks, metrics exposure
+
+**MCP over HTTP Deep Dive:**
+- [ ] **Official MCP HTTP specification** - Latest version requirements
+- [ ] **Header requirements** - MCP-Session-Id, MCP-Protocol-Version, custom headers
+- [ ] **Request/Response mapping** - HTTP → TransportMessage conversion
+- [ ] **Error handling** - HTTP status codes for MCP error scenarios
+- [ ] **Streaming support** - Long-lived connections, server-sent events
+
+**Research Deliverable:** `plans/016-http-server-mcp-research.md`
+
+#### Day 3: Rules Engine & Policy Integration Research
+
+**Existing Interceptor Pattern Analysis:**
+- [ ] **Phase 4 Infrastructure Review** - InterceptorChain, RuleBasedInterceptor, RuleEngine architecture
+- [ ] **AuthContext Integration** - How auth flows through existing interceptor patterns
+- [ ] **HTTP-Specific Extensions** - Path, method, header conditions for reverse proxy
+- [ ] **Performance Analysis** - Rule evaluation overhead in auth gateway context
+
+**Rules Engine Options Evaluation:**
+- [ ] **Extend Existing RuleEngine** - Leverage Phase 4 hot-reloading, CLI, JSONPath matching
+- [ ] **Dedicated Policy Engine** - Auth-optimized separate engine for security policies
+- [ ] **External Policy Engines** - OPA, Cedar integration research and performance testing
+- [ ] **Hybrid Approach** - Combine existing interceptors with dedicated auth policies
+
+**Research Deliverable:** `plans/017-rules-engine-policy-integration-research.md`
+
+#### Day 4: OAuth 2.1 & Security Library Research
+
+**OAuth 2.1 Library Evaluation:**
+- [ ] **oauth2 crate analysis** - Features, PKCE support, production readiness
+- [ ] **JWT validation libraries** - jsonwebtoken vs alternatives, performance
+- [ ] **JWKS client libraries** - Key rotation, caching, error handling
+- [ ] **Cryptographic requirements** - Ring, RustCrypto, performance comparison
+
+**Security Pattern Research:**
+- [ ] **Token storage** - Secure caching, encryption at rest, memory protection
+- [ ] **Rate limiting patterns** - Algorithms, distributed vs local, performance
+- [ ] **Audit logging** - Structured logging, compliance requirements, storage
+- [ ] **Policy engines** - Rule evaluation performance, pattern matching optimization
+
+**Enterprise Security Requirements:**
+- [ ] **Production deployment** - TLS termination, certificate management
+- [ ] **Multi-tenancy** - Tenant isolation, resource limits
+- [ ] **Compliance** - SOC2, FedRAMP, enterprise audit requirements
+
+**Research Deliverable:** `plans/018-oauth-security-library-research.md`
+
+#### Day 5: Reverse Proxy Patterns & Performance Research
+
+**Reverse Proxy Architecture Patterns:**
+- [ ] **Production proxy patterns** - Load balancing, failover, circuit breakers
+- [ ] **Connection pooling** - Upstream connection management, keep-alive tuning
+- [ ] **Request routing** - Path-based, header-based, auth-context-based routing
+- [ ] **Response handling** - Streaming, buffering, error propagation
+
+**Performance & Benchmarking:**
+- [ ] **Baseline measurements** - Current forward proxy performance characteristics
+- [ ] **Target performance** - Latency, throughput, memory usage goals
+- [ ] **Bottleneck analysis** - Authentication overhead, policy evaluation, network I/O
+- [ ] **Optimization strategies** - Caching, async processing, resource pooling
+
+**Real-world Reference Implementations:**
+- [ ] **Study production proxies** - Envoy, HAProxy, nginx patterns for MCP-like protocols
+- [ ] **Authentication gateways** - Kong, Ambassador, Istio auth patterns
+- [ ] **Rust proxy implementations** - Linkerd2-proxy, vector.dev patterns
+
+**Research Deliverable:** `plans/019-reverse-proxy-performance-research.md`
+
+### 🛠️ Implementation Tasks (After Research)
+
+**Week 1: Reverse Proxy Infrastructure + Authentication**
+- Day 1: Project setup + OAuth 2.1 foundation
+- Day 2: OAuth flow implementation  
+- Day 3: JWT token validation
+- Day 4: AuthGateway core implementation
+- Day 5: ReverseProxy HTTP server implementation
+
+**Week 2: Policy Engine & Security Features**
+- Day 6: Policy engine foundation
+- Day 7: Policy integration & hot-reloading
+- Day 8: Audit logging system
+- Day 9: Rate limiting & security features
+- Day 10: Reverse proxy CLI & final integration
+
+**Detailed Implementation Plan:** See `plans/015-phase5-implementation-roadmap.md`
+
+### 🎯 Success Criteria
+
+**Functional Requirements:**
+- [ ] **Reverse Proxy HTTP Server** - Accept client connections, route to upstream
+- [ ] **OAuth 2.1 Compliance** - PKCE mandatory, secure token handling
+- [ ] **MCP Security Compliance** - Never forward client tokens upstream
+- [ ] **Policy-Based Authorization** - Fine-grained access control
+- [ ] **Production Ready** - Performance, security, monitoring, deployment
+
+**Performance Requirements:**
+- [ ] **Authentication Overhead** < 5ms per request
+- [ ] **Memory Usage** < 10MB additional for auth components
+- [ ] **Startup Time** < 100ms additional
+- [ ] **Concurrent Connections** Support 1000+ simultaneous clients
+
+**Quality Requirements:**
+- [ ] **Test Coverage** 95% unit tests, comprehensive integration tests  
+- [ ] **Security Testing** Penetration testing, vulnerability assessment
+- [ ] **Documentation** Complete API docs, deployment guides, security documentation
+
+### 🚧 Current Implementation Status
+
+**Phase 4 Complete (Baseline):**
+- ✅ 127 tests passing
+- ✅ InterceptorChain with rule-based interception
+- ✅ Session management and recording
+- ✅ CLI management interfaces
+- ✅ Hot-reloading rule engine
+- ✅ Advanced message actions
+
+**Phase 5 Not Started:**
+- ❌ Reverse proxy implementation (placeholder in `src/proxy/reverse.rs`)
+- ❌ Authentication modules
+- ❌ OAuth 2.1 implementation
+- ❌ HTTP server infrastructure
+- ❌ Policy engine integration
+
+### 📋 Immediate Next Steps for New Claude Session
+
+1. **Start Research Phase** - Execute research strategy outlined above
+2. **Create Research Documents** - Document findings in planned research files
+3. **Technical Decision Documentation** - Record architecture and library choices
+4. **Update Implementation Plan** - Refine roadmap based on research findings
+5. **Begin Implementation** - Start Day 1 of implementation roadmap
+
+### 🔗 Context for New Claude Session
+
+**Key Context Files to Review:**
+- `plans/shadowcat-task-tracker.md` (this file) - Current status and next steps
+- `plans/014-phase5-security-auth-architecture.md` - Complete architecture design
+- `plans/015-phase5-implementation-roadmap.md` - Detailed implementation plan
+- `plans/002-shadowcat-architecture-plan.md` - Overall architecture with Phase 5 updates
+- `shadowcat/src/main.rs` line 183-186 - Current reverse proxy placeholder
+- `CLAUDE.md` - Project context and development guidelines
+
+**Current Codebase State:**
+- Phase 4 complete with 127 tests passing
+- Strong foundation: Transport layer, Session management, Interceptors, Recording
+- Ready for Phase 5: Reverse proxy + authentication implementation
+- No reverse proxy implementation yet (just placeholder)
+
+**Critical Architectural Understanding:**
+- **Forward Proxy** (Phases 1-4 ✅): Development tool, no auth needed
+- **Reverse Proxy** (Phase 5 🎯): Production API gateway, OAuth 2.1 auth required
+- AuthGateway belongs with reverse proxy, not forward proxy
 
 ---
 

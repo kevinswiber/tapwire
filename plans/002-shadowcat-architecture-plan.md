@@ -41,7 +41,16 @@ Shadowcat is the core proxy component of Tapwire, implementing both forward and 
 ### 2.2 Data Flow
 
 1. **Forward Proxy Mode**: Client → Shadowcat → MCP Server
-2. **Reverse Proxy Mode**: Client → Shadowcat (auth/policy) → MCP Server
+   - Development/debugging tool - launches and manages MCP server process
+   - Primarily uses stdio transport
+   - No authentication needed (client controls both ends)
+
+2. **Reverse Proxy Mode**: Client → Shadowcat (auth/policy) → MCP Server  
+   - Production deployment pattern - clients connect TO shadowcat
+   - HTTP server accepting client connections
+   - OAuth 2.1 authentication gateway enforces security
+   - Policy engine controls access to upstream MCP servers
+
 3. **Recording**: All traffic → Storage (with timing/metadata)
 4. **Replay**: Storage → Shadowcat → Client (deterministic playback)
 
@@ -286,12 +295,13 @@ impl AuthGateway {
 - [ ] Mock responses
 - [ ] Interactive UI (TUI or web)
 
-### Phase 5: Security & Auth (Weeks 9-10)
-- [ ] OAuth 2.1 implementation
-- [ ] Token validation
-- [ ] Audience checking
-- [ ] Resource server integration
-- [ ] No-passthrough enforcement
+### Phase 5: Reverse Proxy & Security (Weeks 9-10)
+- [ ] Reverse proxy HTTP server implementation
+- [ ] OAuth 2.1 authentication gateway integration
+- [ ] Token validation and audience checking
+- [ ] Policy engine for authorization decisions
+- [ ] Security audit logging
+- [ ] No client token passthrough enforcement (MCP requirement)
 
 ### Phase 6: Observability (Weeks 11-12)
 - [ ] Metrics collection
