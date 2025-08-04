@@ -8,7 +8,33 @@ Tapwire is a Model Context Protocol (MCP) developer proxy platform with two main
 1. **Tapwire**: The overall platform vision for MCP inspection, recording, and observability
 2. **Shadowcat**: The core Rust proxy implementation handling forward/reverse proxy, recording, and interception
 
+**Important**: Shadowcat is a git submodule with its own repository. Changes to Shadowcat must be committed in its own repository, not in the main Tapwire repository.
+
 ## Essential Commands
+
+### Git Submodule Management
+```bash
+# Clone with submodules
+git clone --recursive <tapwire-repo>
+
+# If already cloned, initialize submodule
+git submodule init
+git submodule update
+
+# Work on Shadowcat
+cd shadowcat
+git checkout main  # Or appropriate branch
+# Make changes...
+git add .
+git commit -m "feat: implement feature"
+git push
+
+# Update parent repo to point to new commit
+cd ..
+git add shadowcat
+git commit -m "Update shadowcat submodule"
+git push
+```
 
 ### Shadowcat Development
 ```bash
