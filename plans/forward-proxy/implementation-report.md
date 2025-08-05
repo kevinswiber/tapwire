@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Successfully implemented HTTP/SSE support for Shadowcat's forward proxy, extending it from stdio-only to support HTTP-based MCP servers with Streamable HTTP and SSE capabilities. The implementation creates a proper forward proxy server that accepts HTTP client connections and forwards them to target MCP servers.
+Successfully implemented complete HTTP/SSE forward proxy support for Shadowcat, extending it from stdio-only to support both HTTP-based MCP servers and HTTP-to-stdio bridge functionality. The implementation creates a proper forward proxy server that accepts HTTP client connections and forwards them to target MCP servers via HTTP/SSE or stdio transports, completing the transport matrix.
 
 ## Completed Implementation ✅
 
@@ -98,8 +98,17 @@ curl http://127.0.0.1:8080/anything -d '{"jsonrpc":"2.0","method":"test","id":1}
 
 ```
 [HTTP MCP Client] --HTTP--> [Shadowcat Proxy :8080] --HTTP/SSE--> [HTTP MCP Server]
+[HTTP MCP Client] --HTTP--> [Shadowcat Proxy :8080] --stdio--> [Stdio MCP Server]  
 [Stdio MCP Client] --stdio--> [Shadowcat Direct] --stdio--> [Stdio MCP Server]
 ```
+
+**Complete Transport Matrix:**
+| Client Type | → | Server Type | Status |
+|-------------|---|-------------|---------|
+| HTTP | → | HTTP | ✅ **Working** |
+| Stdio | → | Stdio | ✅ **Working** |
+| HTTP | → | Stdio | ✅ **Working** |
+| Stdio | → | HTTP | ❌ **Future** |
 
 ### Key Components
 
@@ -127,15 +136,48 @@ HTTP_PROXY=http://127.0.0.1:8080 my-mcp-client
 cargo run -- forward stdio -- your-mcp-server --args
 ```
 
-### HTTP-to-Stdio Bridge (NOT IMPLEMENTED)
+### HTTP-to-Stdio Bridge (COMPLETED)
 ```bash
-# This would be the next feature:
-cargo run -- forward http --port 8080 --target stdio --command "my-mcp-server" "--args"
+# HTTP clients can now connect to stdio MCP servers:
+cargo run -- forward http --port 8080 --target stdio -- npx -y @modelcontextprotocol/server-everything
+curl http://127.0.0.1:8080/ -d '{"jsonrpc":"2.0","method":"initialize","id":"1"}' -H "Content-Type: application/json"
+```
+
+### 4. HTTP-to-Stdio Bridge (COMPLETED)
+
+**Complete Transport Matrix Support:**
+Extended the forward proxy to support HTTP clients connecting to stdio-based MCP servers:
+
+**Implementation (`src/main.rs`):**
+- Extended CLI to support `-- command args` syntax for stdio targets
+- Created `handle_stdio_proxy_request` function for per-request stdio process management
+- JSON-RPC request/response conversion between HTTP and stdio
+- Proper process lifecycle management with cleanup
+- Full error handling with appropriate HTTP status codes
+
+**Key Features:**
+- Per-request process spawning for isolation and reliability
+- Support for complex commands: `npx -y @modelcontextprotocol/server-everything`
+- Proper JSON-RPC protocol translation
+- MCP header management (`MCP-Protocol-Version: 2025-11-05`)
+- Thread-safe Arc-based command handling
+
+**Usage Examples:**
+```bash
+# Simple test server
+cargo run -- forward http --port 8080 --target stdio -- cat
+
+# Real MCP server
+cargo run -- forward http --port 8080 --target stdio -- npx -y @modelcontextprotocol/server-everything
+
+# Python MCP server  
+cargo run -- forward http --port 8080 --target stdio -- python my-mcp-server.py --config config.json
 ```
 
 ## Success Criteria Achieved ✅
 
 - ✅ Can run: `cargo run -- forward http --port 8080 --target http://localhost:3001/mcp`
+- ✅ Can run: `cargo run -- forward http --port 8080 --target stdio -- npx -y @modelcontextprotocol/server-everything`
 - ✅ Acts as proper forward proxy server accepting client connections
 - ✅ Maintains <5% latency overhead  
 - ✅ Full compatibility with existing stdio functionality
