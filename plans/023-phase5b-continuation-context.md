@@ -119,9 +119,19 @@ The Shadowcat reverse proxy is now **production-ready** with comprehensive confi
 ### 📋 Planning & Context Documents
 1. **`plans/022-phase5b-authentication-implementation-plan.md`** - Complete implementation plan
 2. **`plans/021-phase5-reverse-proxy-completion.md`** - Phase 5A completion report
-3. **`plans/shadowcat-task-tracker.md`** - Updated task tracker with current status
-4. **`plans/014-phase5-security-auth-architecture.md`** - Authentication architecture design
-5. **`plans/015-phase5-implementation-roadmap.md`** - Original Phase 5 roadmap
+3. **`plans/tasks/reverse-proxy/000-task-status-reconciliation.md`** - ⚠️ **CRITICAL** - Task 003-010 reconciliation
+4. **`plans/shadowcat-task-tracker.md`** - Updated task tracker with current status
+5. **`plans/014-phase5-security-auth-architecture.md`** - Authentication architecture design
+6. **`plans/015-phase5-implementation-roadmap.md`** - Original Phase 5 roadmap
+
+### 🎯 **IMPORTANT: Detailed Task Specifications**
+For implementation details, reference these original task files:
+- **Day 2 (JWT)**: `plans/tasks/reverse-proxy/003-jwt-validation-jwks.md`
+- **Day 3 (AuthGateway)**: `plans/tasks/reverse-proxy/004-auth-gateway-core.md`
+- **Day 4 (Policy Engine)**: `plans/tasks/reverse-proxy/006-extended-rules-engine-http.md`
+- **Day 6-7 (Rate Limiting/Audit)**: `plans/tasks/reverse-proxy/007-rate-limiting-audit-integration.md`
+- **Day 10 (Testing)**: `plans/tasks/reverse-proxy/008-end-to-end-integration-testing.md`
+- **Day 8-10 (Performance)**: `plans/tasks/reverse-proxy/009-performance-testing-optimization.md`
 
 ### 🔧 Implementation Reference Files
 1. **`src/proxy/reverse.rs`** - Current reverse proxy implementation (integration point)

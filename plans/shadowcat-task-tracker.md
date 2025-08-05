@@ -523,22 +523,29 @@ Before implementation begins, comprehensive research is needed to ensure technic
 The reverse proxy is now **production-ready** for deployment without authentication. Next phase should focus on:
 
 #### **Phase 5B: Authentication & Security (Priority 1)**
-1. **OAuth 2.1 Implementation**
-   - Research: Begin with `plans/015-phase5-implementation-roadmap.md`
-   - Library Selection: Evaluate oauth2 crate vs alternatives
+
+**⚠️ IMPORTANT**: Detailed task specifications exist for these components in `plans/tasks/reverse-proxy/` directory.
+**Primary Plan**: `plans/022-phase5b-authentication-implementation-plan.md`
+**Task Reconciliation**: `plans/tasks/reverse-proxy/000-task-status-reconciliation.md`
+
+1. **OAuth 2.1 Implementation & JWT Validation**
+   - **Task 003**: JWT Validation with JWKS (detailed specs available)
+   - **Task 004**: AuthGateway Core Implementation (detailed specs available)
    - PKCE Support: Mandatory for security compliance
-   - Token Validation: JWT handling with proper verification
+   - Performance Target: < 1ms JWT validation, < 5ms total auth overhead
 
 2. **Policy Engine Integration** 
-   - Extend existing RuleBasedInterceptor for auth policies
-   - Authorization rules based on token claims
-   - Path-based access control
-   - Integration with interceptor chain
+   - **Task 006**: Extended RuleBasedInterceptor with HTTP Conditions (detailed specs available)
+   - Extend existing Phase 4 RuleBasedInterceptor for auth policies
+   - Authorization rules based on token claims and HTTP context
+   - Integration with interceptor chain and hot-reloading
 
-3. **Rate Limiting & Security**
-   - Request throttling per client/token
-   - Audit logging for security events
-   - Attack prevention (DoS, brute force)
+3. **Rate Limiting, Audit Logging & Security**
+   - **Task 007**: Rate Limiting and Audit Integration (detailed specs available)
+   - **Task 008**: End-to-End Integration Testing (detailed specs available)
+   - **Task 009**: Performance Testing and Optimization (detailed specs available)
+   - Multi-tier rate limiting with tower-governor GCRA algorithm
+   - Comprehensive audit logging for security events
 
 #### **Phase 6: Production Deployment Features (Priority 2)**
 4. **Load Balancing**
