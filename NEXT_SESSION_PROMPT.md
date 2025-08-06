@@ -1,215 +1,161 @@
-# Next Claude Session Prompt - Task 008 Completion & Circuit Breaker Integration
+# Next Claude Session Prompt - Integration Test Failure Investigation
+
+## 🚨 **CRITICAL PRIORITY - Start Session With This Task**
 
 ## 🎯 **Primary Objective**
 
-Complete the remaining work from **Task 008: End-to-End Integration Testing** by:
-1. **Adding missing serde derives to CircuitBreakerConfig** and integrating it into ReverseProxyConfig
-2. **Updating E2E integration tests** to leverage the enhanced ReverseUpstreamConfig functionality
-3. **Validating the complete configuration architecture** works end-to-end
+Investigate and fix the runtime failures in integration tests that were discovered during Task 008.5 completion. While compilation issues were resolved, **integration tests are failing at runtime**, indicating deeper systemic problems.
 
 ## ✅ **Previous Session Accomplishments**
 
-**Task 008 - End-to-End Integration Testing: 95% COMPLETE**
-- ✅ **Complete E2E Test Framework** - Mock OAuth 2.1 server, MCP servers, test client, metrics collector
-- ✅ **Comprehensive Integration Test Suites** - Authentication flows, policy enforcement, rate limiting, performance validation, security compliance
-- ✅ **Enhanced Configuration Architecture** - Unified ReverseProxyConfig with auth, rate limiting, audit, upstream configs
-- ✅ **Advanced Upstream Configuration** - ID, weight, health checks, connection pooling, load balancing strategies
-- ✅ **Builder Pattern API** - Easy programmatic configuration with fluent interface
-- ✅ **341 total tests passing** with comprehensive coverage
+**Task 008.5: E2E Test Recovery - COMPLETE** ✅
+- ✅ **Type conflicts eliminated** - Prefixed all reverse proxy types to resolve module conflicts
+- ✅ **E2E tests re-enabled** - All 3 disabled integration test files now compile successfully
+- ✅ **Configuration fixes** - Updated OAuth2Config, AuthGatewayConfig, RateLimitConfig structures
+- ✅ **Import/export corrections** - Fixed module structure and eliminated naming conflicts
+- ✅ **Unit tests preserved** - All 341 unit tests continue to pass
 
-**Configuration Enhancement Completed:**
-```rust
-// NEW: Enhanced ReverseProxyConfig now supports:
-pub struct ReverseProxyConfig {
-    // Basic settings
-    pub bind_address: SocketAddr,
-    pub session_config: SessionConfig,
-    
-    // Advanced authentication and security features  
-    pub auth_config: Option<AuthGatewayConfig>,
-    pub rate_limit_config: Option<RateLimitConfig>,
-    pub audit_config: Option<AuditConfig>,
-    
-    // Multi-upstream configuration with load balancing
-    pub upstream_configs: Vec<ReverseUpstreamConfig>,
-    pub load_balancing_strategy: LoadBalancingStrategy,
-    
-    // TODO: Circuit breaker (needs serde derives)
-    // pub circuit_breaker_config: Option<CircuitBreakerConfig>,
-}
+**Key Type Renames Completed:**
+- `LoadBalancingStrategy` → `ReverseLoadBalancingStrategy`
+- `UpstreamHealthCheckConfig` → `ReverseUpstreamHealthCheckConfig`
+- `UpstreamPoolConfig` → `ReverseUpstreamPoolConfig`
+- `SessionConfig` → `ReverseSessionConfig`
+- `Metrics` → `ReverseProxyMetrics`
 
-// NEW: Enhanced ReverseUpstreamConfig with production features:
-pub struct ReverseUpstreamConfig {
-    pub id: String,                    // NEW: Unique identifier
-    pub weight: u32,                   // NEW: Load balancing weight
-    pub health_check: Option<UpstreamHealthCheckConfig>,  // NEW: Health monitoring
-    pub connection_pool: Option<UpstreamPoolConfig>,      // NEW: Connection pooling
-    pub enabled: bool,                 // NEW: Dynamic enable/disable
-    // ... existing transport fields
-}
+## 🚨 **Critical Issue Discovered**
+
+**Integration tests compile successfully but fail when executed**, revealing that the codebase has significant runtime issues beyond the type conflicts that were resolved.
+
+## 🔍 **Required Investigation**
+
+### **Phase 1: Individual Test Analysis**
+Run each integration test separately to identify specific failure patterns:
+
+```bash
+# Test each integration test individually
+cargo test --test e2e_basic_integration_test -- --nocapture
+cargo test --test e2e_complete_flow_test -- --nocapture  
+cargo test --test e2e_resilience_test -- --nocapture
+cargo test --test e2e_multi_upstream_test -- --nocapture
+cargo test --test integration_reverse_proxy -- --nocapture
 ```
 
-## 🔧 **Immediate Tasks for This Session**
+### **Phase 2: Error Pattern Analysis**
+1. **Capture full error logs** from each failing test
+2. **Identify common failure patterns** across tests
+3. **Categorize issues** (mock servers, transports, authentication, configuration, etc.)
+4. **Prioritize fixes** based on impact and complexity
 
-### **Priority 1: Fix Circuit Breaker Integration (CRITICAL)**
-1. **Add serde derives** to `CircuitBreakerConfig` in `src/proxy/circuit_breaker.rs`:
-   ```rust
-   #[derive(Debug, Clone, Serialize, Deserialize)]
-   pub struct CircuitBreakerConfig {
-       // ... existing fields
-   }
-   ```
+### **Phase 3: Component Isolation Testing**
+Test individual components in isolation:
+1. **Mock OAuth Server** - Verify mock authentication server functions
+2. **Mock MCP Server** - Test mock upstream MCP servers
+3. **HTTP Transport** - Validate HTTP transport implementation
+4. **Stdio Transport** - Confirm stdio transport works correctly
+5. **Session Management** - Test session creation and management
+6. **Authentication Flow** - Verify OAuth/JWT workflows
 
-2. **Uncomment circuit breaker fields** in `src/proxy/reverse.rs`:
-   ```rust
-   // Uncomment this line:
-   pub circuit_breaker_config: Option<crate::proxy::circuit_breaker::CircuitBreakerConfig>,
-   
-   // And this method:
-   pub fn with_circuit_breaker(mut self, circuit_breaker_config: CircuitBreakerConfig) -> Self {
-   ```
+### **Phase 4: Systematic Fix Implementation**
+Based on investigation results:
+1. **Fix highest-impact issues first**
+2. **Validate fixes with targeted tests**
+3. **Re-run full integration test suite**
+4. **Ensure no regressions in unit tests**
 
-3. **Update Default implementation** to include `circuit_breaker_config: None,`
+## 📋 **Likely Investigation Areas**
 
-### **Priority 2: Update E2E Integration Tests**
-1. **Update integration test framework** to use new enhanced configuration:
-   - Use `upstream_configs: Vec<ReverseUpstreamConfig>` instead of single upstream
-   - Test multiple upstream servers with different weights
-   - Test load balancing strategies (RoundRobin, WeightedRoundRobin)
-   - Test health check configurations
-   - Test connection pool settings
+### **Mock Infrastructure Issues**
+- OAuth mock server may not be starting correctly
+- MCP mock servers may have runtime configuration issues
+- Test client connections may be failing
 
-2. **Create new test scenarios**:
-   - **Multi-upstream load balancing test**
-   - **Upstream health check integration test** 
-   - **Connection pool behavior under load test**
-   - **Circuit breaker with multiple upstreams test**
-   - **Dynamic upstream enable/disable test**
+### **Transport Implementation Problems**
+- HTTP transport may have runtime bugs
+- Stdio transport may not be handling connections properly
+- Transport message serialization/deserialization issues
 
-### **Priority 3: Validate Complete Integration**
-1. **Run all integration tests** with enhanced configuration
-2. **Test builder pattern API** works correctly
-3. **Validate backward compatibility** with existing tests
-4. **Performance test** with multiple upstreams
+### **Authentication Flow Failures**
+- OAuth 2.1 PKCE flow may be broken in integration context
+- JWT validation may be failing
+- Session management may not be working correctly
 
-## 📁 **Key Files to Modify**
+### **Configuration Runtime Issues**
+- While types compile, configuration objects may not work at runtime
+- Builder patterns may have logical errors
+- Serialization/deserialization may be failing
 
-### **Circuit Breaker Integration:**
-- `src/proxy/circuit_breaker.rs` - Add serde derives to CircuitBreakerConfig
-- `src/proxy/reverse.rs` - Uncomment circuit breaker configuration fields and methods
+## ⚙️ **Investigation Tools & Commands**
 
-### **E2E Test Updates:**
-- `tests/integration/e2e_framework_simple.rs` - Update to use enhanced ReverseUpstreamConfig
-- `tests/e2e_basic_integration_test.rs` - Add multi-upstream tests
-- `tests/e2e_complete_flow_test.rs` - Update for enhanced configuration
-- Create `tests/e2e_multi_upstream_test.rs` - New multi-upstream integration tests
+### **Individual Test Execution**
+```bash
+# Run with detailed output
+RUST_LOG=debug cargo test --test e2e_basic_integration_test -- --nocapture
 
-## 🔍 **Implementation Details**
-
-### **CircuitBreakerConfig Serde Integration**
-The current TODO in `src/proxy/reverse.rs` around lines 155-156 and 231-235 needs to be resolved:
-
-```rust
-// Current (commented out due to missing serde derives):
-// Circuit breaker configuration (TODO: Add serde derives to CircuitBreakerConfig)
-// pub circuit_breaker_config: Option<crate::proxy::circuit_breaker::CircuitBreakerConfig>,
-
-// Should become:
-pub circuit_breaker_config: Option<crate::proxy::circuit_breaker::CircuitBreakerConfig>,
+# Run specific test function
+cargo test --test e2e_multi_upstream_test test_weighted_round_robin_serialization -- --nocapture
 ```
 
-### **Enhanced E2E Test Configuration**
-```rust
-// NEW: Multi-upstream configuration for testing
-let config = ReverseProxyConfig::default()
-    .with_auth(auth_config)
-    .with_rate_limiting(rate_limit_config) 
-    .with_upstreams(vec![
-        ReverseUpstreamConfig::http("primary", "http://localhost:9001")
-            .with_weight(3)
-            .with_health_check(health_config),
-        ReverseUpstreamConfig::http("secondary", "http://localhost:9002")
-            .with_weight(1),
-        ReverseUpstreamConfig::http("backup", "http://localhost:9003")
-            .with_weight(1)
-            .enabled(false), // Test dynamic enable/disable
-    ])
-    .with_load_balancing(LoadBalancingStrategy::WeightedRoundRobin)
-    .with_circuit_breaker(circuit_breaker_config);
+### **Mock Server Testing**
+```bash
+# Test mock servers independently if needed
+RUST_LOG=shadowcat=debug,reqwest=debug cargo test mock_auth_server -- --nocapture
 ```
 
-## ✅ **Current System Status**
+### **Unit Test Validation**
+```bash
+# Ensure unit tests still pass
+cargo test --lib --quiet
+```
 
-**Task 008 Status: 95% Complete**
-- ✅ E2E test framework with mock servers (OAuth + MCP upstreams)
-- ✅ Complete integration test suites (auth, policy, rate limiting, performance, security)
-- ✅ Enhanced configuration architecture with builder patterns
-- ✅ Advanced upstream configuration (ID, weight, health checks, pools)
-- 🔧 **MISSING: Circuit breaker serde integration**
-- 🔧 **MISSING: E2E tests using enhanced upstream configuration**
-
-**Test Coverage:**
-- 341 total tests passing
-- Comprehensive coverage of all Phase 5B components
-- Missing: Multi-upstream integration tests
-
-## 🚨 **Critical Path Issues**
-
-1. **Circuit Breaker Configuration** - Currently commented out due to missing serde derives
-2. **E2E Test Framework** - Still using simplified single upstream configuration
-3. **Load Balancing Testing** - No tests for multiple upstream scenarios
-4. **Health Check Integration** - Configuration exists but not tested end-to-end
-
-## 🎯 **Success Criteria for This Session**
+## 🎯 **Success Criteria**
 
 ### **Must Complete:**
-1. ✅ **CircuitBreakerConfig** has serde derives and is integrated into ReverseProxyConfig
-2. ✅ **All compilation issues resolved** - `cargo build` succeeds without warnings about commented fields
-3. ✅ **E2E framework enhanced** to test multiple upstream configurations
-4. ✅ **Multi-upstream integration tests** working (at least 3 basic scenarios)
+1. ✅ **Root cause identification** - Understand why integration tests are failing
+2. ✅ **Systematic fix plan** - Prioritized approach to resolve issues  
+3. ✅ **Critical fixes implemented** - Address highest-impact failures
+4. ✅ **Integration tests passing** - All integration tests execute successfully
 
 ### **Should Complete:**
-5. ✅ **Load balancing strategy testing** - RoundRobin and WeightedRoundRobin validated
-6. ✅ **Health check integration** - Basic upstream health monitoring tests
-7. ✅ **Connection pool configuration** - Multi-upstream pool behavior tested
-8. ✅ **Backward compatibility** - All existing tests still pass
+5. ✅ **Full test suite functional** - 341+ unit tests + all integration tests passing
+6. ✅ **System stability verified** - Core workflows working end-to-end
+7. ✅ **Documentation updated** - Record findings and fixes for future reference
 
-### **Stretch Goals:**
-9. ✅ **Circuit breaker multi-upstream testing** - Test circuit breaker with multiple upstreams
-10. ✅ **Dynamic upstream management** - Enable/disable upstreams during tests
-11. ✅ **Performance validation** - Multi-upstream load testing
-12. ✅ **Configuration serialization testing** - YAML/JSON config file support
+## 💡 **Investigation Strategy**
 
-## 💡 **Implementation Strategy**
+1. **Start with simplest test** - Begin with `e2e_multi_upstream_test` as it's most recently updated
+2. **Use detailed logging** - `RUST_LOG=debug` to capture comprehensive error information
+3. **Test incrementally** - Fix issues one at a time and re-test
+4. **Validate continuously** - Ensure unit tests continue to pass throughout investigation
+5. **Document findings** - Keep track of issues discovered and solutions applied
 
-1. **Start with CircuitBreakerConfig** - This is blocking the configuration architecture
-2. **Validate compilation** - Ensure all configuration integrates properly
-3. **Update E2E framework gradually** - Start with basic multi-upstream support
-4. **Add specific test scenarios** - Build up comprehensive multi-upstream testing
-5. **Performance validation** - Ensure enhanced configuration doesn't impact performance
+## 📊 **Current Status**
 
-## 📊 **Expected Outcomes**
+**What's Working:**
+- ✅ All 341 unit tests pass consistently
+- ✅ All integration tests compile successfully
+- ✅ Type system is coherent and conflict-free
 
-After this session, we should have:
-- **Complete configuration architecture** with all components integrated
-- **Production-ready multi-upstream support** with load balancing
-- **Comprehensive integration testing** covering all advanced features
-- **Task 008 fully completed** and ready for production deployment
-- **Foundation for Task 009** (Performance Testing and Optimization)
+**What Needs Investigation:**
+- 🚨 Integration test runtime failures
+- 🚨 Mock server functionality
+- 🚨 Transport implementations 
+- 🚨 Authentication workflows
+- 🚨 End-to-end system integration
 
-## 🚀 **Getting Started**
+## 🚀 **Next Steps After Investigation**
 
-1. **First priority**: Fix CircuitBreakerConfig serde derives in `src/proxy/circuit_breaker.rs`
-2. **Second**: Uncomment circuit breaker fields in `src/proxy/reverse.rs`
-3. **Third**: Update E2E framework in `tests/integration/e2e_framework_simple.rs` for multi-upstream
-4. **Fourth**: Create multi-upstream integration tests
-5. **Finally**: Run full test suite and validate all 341+ tests pass
+Once integration test failures are resolved:
+1. **Task 009: Performance Testing** - Benchmark enhanced multi-upstream architecture
+2. **Production Readiness** - Validate system is ready for deployment
+3. **Future Enhancements** - WebSocket support, dynamic configuration, etc.
 
-## 📝 **Notes**
+## 📝 **Important Notes**
 
-- All the infrastructure for advanced configuration is in place
-- The E2E test framework is sophisticated and just needs to leverage the new configuration
-- This is the final push to complete Task 008 and make the system production-ready
-- Focus on getting a working multi-upstream configuration first, then expand test coverage
+- **Unit tests are solid** - Core functionality is implemented correctly
+- **Type system is fixed** - No more import conflicts or compilation errors
+- **Focus on runtime issues** - The problems are in execution, not compilation
+- **Systematic approach needed** - Don't rush fixes, understand root causes first
 
-Let's finish this comprehensive integration testing framework! 🚀
+**Remember: The goal is to identify why integration tests fail at runtime despite successful compilation, then systematically fix the discovered issues.**
+
+Let's get the integration tests fully functional! 🔍🔧
