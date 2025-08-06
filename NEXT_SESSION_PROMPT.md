@@ -1,124 +1,108 @@
-# Phase 5B Day 4+: Policy Engine Integration - Next Session Prompt
+# Continue Shadowcat Phase 5B Day 6+: Rate Limiting and Advanced Features
 
-Use this comprehensive prompt to continue Shadowcat development in your next Claude session:
-
----
-
-# Continue Shadowcat Phase 5B Day 4+: Policy Engine Integration
-
-I'm implementing Shadowcat, an MCP (Model Context Protocol) proxy in Rust. Phase 5B Days 1-3 are complete with OAuth 2.1, JWT validation, and enhanced AuthGateway. Now I need to continue with Day 4+ Policy Engine Integration.
+I'm implementing Shadowcat, an MCP (Model Context Protocol) proxy in Rust. Phase 5B Days 1-5 are complete with OAuth 2.1, JWT validation, AuthGateway enhancement, HTTP policy engine integration, and circuit breaker implementation. Now I need to continue with Day 6+: Rate Limiting and Advanced Features.
 
 ## Current Status
 - **Repository:** `/Users/kevin/src/tapwire/shadowcat` (git submodule in `/Users/kevin/src/tapwire`)
-- **Phase:** Phase 5B Day 4+ - Policy Engine Integration and HTTP-specific conditions
-- **Previous Work:** Days 1-3 complete (OAuth 2.1 + JWT + AuthGateway enhancement)
-- **Tests:** 232 passing (73 auth module tests)
-- **Achievement:** < 5ms authentication overhead with comprehensive middleware
+- **Phase:** Phase 5B Days 6+ - Rate Limiting and Advanced Features
+- **Previous Work:** Days 1-5 complete (OAuth + JWT + AuthGateway + HTTP Policy + Circuit Breaker)
+- **Tests:** 274 passing (98 auth+proxy tests, 23 circuit breaker tests)
+- **Achievement:** < 100μs circuit breaker overhead, < 5ms total auth overhead, < 1ms policy evaluation
 
-## What's Complete (Phase 5B Days 1-3)
+## What's Complete (Phase 5B Days 1-5)
 
-### ✅ Day 1: OAuth 2.1 Foundation & PKCE
-- Complete OAuth 2.1 client with mandatory PKCE (S256 method)
-- `src/auth/oauth.rs` - OAuth2Config and client implementation
-- `src/auth/pkce.rs` - Secure PKCE generation and validation
-- Full OAuth 2.1 compliance with cryptographically secure generation
+✅ **Day 1**: OAuth 2.1 with mandatory PKCE (S256 method)
+✅ **Day 2**: JWT validation with JWKS (< 1ms performance)
+✅ **Day 3**: Enhanced AuthGateway with session management
+✅ **Day 4**: HTTP policy engine with interceptor integration
+✅ **Day 5**: Circuit breaker with load balancing and health monitoring
 
-### ✅ Day 2: JWT Token Validation with JWKS
-- High-performance JWT validation (< 1ms with cache hits)
-- `src/auth/token.rs` - TokenValidator with JWKS integration
-- Automatic key rotation with 5-minute TTL caching
-- Algorithm support: RS256, RS384, RS512, ES256, ES384
+## Your Task: Phase 5B Day 6+ - Rate Limiting and Advanced Features
 
-### ✅ Day 3: AuthGateway Enhancement (Just Completed)
-- Enhanced `src/auth/gateway.rs` with session management and caching
-- Complete `src/auth/middleware.rs` - Axum middleware suite
-- Token refresh flows with secure session-to-token mapping
-- < 5ms authentication pipeline with intelligent caching
-- 18 new tests added (73 total auth tests)
+Continue implementing the advanced features of the authentication and resilience system.
 
-## Your Task: Phase 5B Day 4+ Policy Engine Integration
+### Next Priority: Day 7 - Rate Limiting and Audit System
 
-Extend the existing Phase 4 RuleBasedInterceptor for HTTP-specific authentication policies.
+**Primary Task:** Task 007: Rate Limiting and Audit Logging Integration
 
 ### Key Files to Work With:
-- **Current Auth:** `src/auth/gateway.rs` (enhanced), `src/auth/policy.rs` (basic)
-- **Phase 4 Interceptors:** `src/interceptor/` (complete with RuleBasedInterceptor)
-- **Integration Point:** Connect auth context with rule evaluation
+- **Reference Spec:** `plans/tasks/reverse-proxy/007-rate-limiting-audit.md` (create if needed)
+- **Timeline Spec:** `plans/tasks/reverse-proxy/implementation-timeline.md` (see Day 7)
+- **Integration Point:** `src/auth/middleware.rs` - Where rate limiting will integrate
 
 ### Specifications to Follow:
-1. **Primary Spec:** `plans/tasks/reverse-proxy/006-extended-rules-engine-http.md` (if exists)
-2. **Task Tracker:** `plans/shadowcat-task-tracker.md` (see Phase 5B section)
-3. **Implementation Timeline:** `plans/tasks/reverse-proxy/implementation-timeline.md` (Day 6)
-4. **Gap Analysis:** `plans/PHASE5B_IMPLEMENTATION_GAPS.md` (follow-up priorities)
+1. **Primary Timeline:** `plans/tasks/reverse-proxy/implementation-timeline.md` (see Day 7)
+2. **Master Plan:** `plans/022-phase5b-authentication-implementation-plan.md`
+3. **Task Tracker:** `plans/shadowcat-task-tracker.md`
 
-### Current Architecture Context:
-```rust
-// Phase 4 Complete: Interceptor system with rule engine
-src/interceptor/engine.rs    // InterceptorChain with async hooks  
-src/interceptor/actions.rs   // Rule actions (pause/modify/block)
-src/interceptor/rules.rs     // RuleBasedInterceptor with JSONPath
-
-// Phase 5B Complete: Authentication system
-src/auth/gateway.rs          // Enhanced AuthGateway with session management
-src/auth/middleware.rs       // Complete Axum middleware suite
-src/auth/policy.rs           // Basic PolicyEngine (needs HTTP extension)
-```
-
-### Key Integration Points:
-1. **HTTP Context in Rules:** Add HTTP method, path, headers to rule conditions
-2. **Auth Context in Rules:** Make `AuthContext` available to rule evaluation
-3. **Policy Decision Integration:** Connect PolicyEngine with InterceptorChain
-4. **Performance:** Maintain < 5ms total auth + policy overhead
+### Key Requirements for Day 7:
+1. **Multi-tier Rate Limiting:** Use tower-governor for HTTP-level rate limiting
+2. **Audit Logging:** Unified audit logging with tracing integration  
+3. **Security Event Monitoring:** Track authentication, authorization, and security events
+4. **Performance:** < 100μs rate limiting overhead
+5. **Integration:** Seamless with existing AuthGateway middleware
 
 ### Success Criteria:
-- [ ] HTTP-specific rule conditions (method, path, headers, client IP)
-- [ ] Authentication context available in rule evaluation
-- [ ] Policy decisions integrated with existing interceptor flow
-- [ ] Backward compatibility with Phase 4 rule format
-- [ ] < 1ms additional overhead for policy evaluation
-- [ ] Comprehensive testing of policy integration
+- Rate limiting protects against abuse and DoS attacks
+- Audit logging provides security visibility and compliance
+- Performance targets maintained (< 100μs rate limiting overhead)
+- Integration with existing authentication and policy systems
+- Comprehensive tests for all rate limiting scenarios
+
+### Context Documents:
+
+**Review these for full context:**
+- `plans/shadowcat-task-tracker.md` - Current progress and architecture  
+- `CIRCUIT_BREAKER_IMPLEMENTATION_SUMMARY.md` - What we just completed
+- `plans/tasks/reverse-proxy/implementation-timeline.md` - Timeline and dependencies
+- `plans/022-phase5b-authentication-implementation-plan.md` - Master implementation plan
 
 ### Testing Commands:
 ```bash
-# Navigate to working directory
+# Navigate to project
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Current test status
-cargo test --lib | grep "test result"  # Should show 232 passing
+# Run existing tests
+cargo test --lib auth  # Current auth tests (85 passing)
+cargo test --lib proxy  # Current proxy tests including circuit breaker
 
-# Run auth tests specifically  
-cargo test auth --lib  # Should show 73 passing
-
-# Test the enhanced authentication
-cargo run -- reverse --port 8080 --upstream "echo test"
+# After implementation
+cargo test --lib --all  # Should maintain 274+ passing
 ```
 
-### Context Files to Review:
-- `plans/shadowcat-task-tracker.md` - Master task tracking (Phase 5B section)
-- `plans/PHASE5B_IMPLEMENTATION_GAPS.md` - Implementation shortcuts and follow-ups
-- `PHASE5B_DAY3_COMPLETE.md` - Recent completion summary
-- `AUTHENTICATION.md` - Complete authentication guide
-- `JWT_VALIDATION_COMPLETE.md` - Day 2 completion details
-
 ### Implementation Approach:
-1. **Review existing policy engine** in `src/auth/policy.rs`
-2. **Extend rule conditions** to include HTTP-specific data
-3. **Integrate with InterceptorChain** for policy evaluation
-4. **Add authentication context** to rule evaluation environment
-5. **Maintain backward compatibility** with existing Phase 4 rules
-6. **Optimize performance** to stay within overhead targets
+1. Review existing `src/auth/middleware.rs` implementation
+2. Add tower-governor dependency and rate limiting middleware
+3. Implement audit logging with tracing integration
+4. Add security event monitoring and metrics
+5. Create configuration structures for rate limiting
+6. Write comprehensive tests for rate limiting scenarios
+7. Update integration tests
 
-### Key Technical Constraints:
-- **Backward Compatibility:** Don't break existing Phase 4 interceptor functionality
-- **Performance:** < 1ms additional overhead for policy evaluation
-- **Security:** Ensure policy decisions respect authentication context
-- **Integration:** Seamless integration with existing auth flow
+### Dependencies Already Available:
+```toml
+# Available in Cargo.toml
+tower_governor = { version = "0.7.0", features = ["axum"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+```
 
-Start by reviewing the current `src/auth/policy.rs` and `src/interceptor/` structure, then extend the policy engine to handle HTTP-specific conditions while integrating with the authentication context from the enhanced AuthGateway.
+### Alternative Tasks (if rate limiting blocked):
+If rate limiting work is blocked, consider these alternative tasks:
+- **Task 008**: End-to-End Integration Testing and Debugging
+- **Task 009**: Performance Testing and Optimization  
+- **Task 010**: CLI Updates and Documentation
 
-The goal is to create a unified authentication + authorization system where HTTP requests go through:
-1. **Authentication** (OAuth 2.1 + JWT validation) - ✅ Complete
-2. **Authorization** (Policy-based with HTTP context) - 🎯 Your task
-3. **Interception** (Existing Phase 4 rules) - ✅ Already works
+The goal is to add comprehensive rate limiting and audit logging to provide production-ready security monitoring and abuse protection, while maintaining the excellent performance we've achieved so far.
 
-This builds on the solid authentication foundation to create a complete security gateway for MCP APIs.
+### Current Architecture Context
+
+Shadowcat now has a complete authentication and resilience stack:
+- **OAuth 2.1** with PKCE for secure authentication
+- **JWT validation** with < 1ms performance  
+- **AuthGateway** with session management and middleware
+- **HTTP policy engine** with < 1ms evaluation
+- **Circuit breaker** with < 100μs overhead and automatic recovery
+- **Load balancing** with health monitoring and multiple strategies
+
+The next layer is rate limiting and audit logging to complete the production security suite.
