@@ -1,108 +1,202 @@
-# Continue Shadowcat Phase 5B Day 6+: Rate Limiting and Advanced Features
+# Next Claude Session Prompt - Task 008: End-to-End Integration Testing
 
-I'm implementing Shadowcat, an MCP (Model Context Protocol) proxy in Rust. Phase 5B Days 1-5 are complete with OAuth 2.1, JWT validation, AuthGateway enhancement, HTTP policy engine integration, and circuit breaker implementation. Now I need to continue with Day 6+: Rate Limiting and Advanced Features.
+## 🎯 **Primary Objective**
 
-## Current Status
-- **Repository:** `/Users/kevin/src/tapwire/shadowcat` (git submodule in `/Users/kevin/src/tapwire`)
-- **Phase:** Phase 5B Days 6+ - Rate Limiting and Advanced Features
-- **Previous Work:** Days 1-5 complete (OAuth + JWT + AuthGateway + HTTP Policy + Circuit Breaker)
-- **Tests:** 274 passing (98 auth+proxy tests, 23 circuit breaker tests)
-- **Achievement:** < 100μs circuit breaker overhead, < 5ms total auth overhead, < 1ms policy evaluation
+Continue Phase 5B implementation with **Task 008: End-to-End Integration Testing and Debugging**. Build comprehensive integration tests to validate the complete reverse proxy system, ensuring all components (authentication, rate limiting, audit logging, policy enforcement, connection pooling) work together seamlessly.
 
-## What's Complete (Phase 5B Days 1-5)
+## ✅ **Previous Session Accomplishments**
 
-✅ **Day 1**: OAuth 2.1 with mandatory PKCE (S256 method)
-✅ **Day 2**: JWT validation with JWKS (< 1ms performance)
-✅ **Day 3**: Enhanced AuthGateway with session management
-✅ **Day 4**: HTTP policy engine with interceptor integration
-✅ **Day 5**: Circuit breaker with load balancing and health monitoring
+**Task 007 - Rate Limiting and Audit System: ✅ COMPLETE**
+- ✅ Multi-tier rate limiting with GCRA algorithm (governor crate)
+- ✅ Unified audit logging with tracing integration  
+- ✅ File audit store with JSONL format for persistent logging
+- ✅ Security event monitoring and metrics collection
+- ✅ HTTP middleware with RFC 6585 compliant rate limit headers
+- ✅ **CRITICAL FIXES APPLIED:**
+  - ✅ Fixed rate calculation algorithm for rates < 60/min
+  - ✅ Implemented persistent File audit store (was missing)
+  - ✅ Added standard HTTP rate limit headers
+- ✅ 67 new tests added (36 rate limiting + 31 audit)
+- ✅ All 341 total tests passing
+- ✅ All critical technical debt resolved
 
-## Your Task: Phase 5B Day 6+ - Rate Limiting and Advanced Features
+**Commits Made:**
+- shadowcat: commit `38a005c` - Complete Task 007 implementation
+- tapwire: commit `562518c` - Updated task tracker and submodule
 
-Continue implementing the advanced features of the authentication and resilience system.
+## 🎯 **Current Task: Task 008 - End-to-End Integration Testing**
 
-### Next Priority: Day 7 - Rate Limiting and Audit System
+**Task Specifications:** `/Users/kevin/src/tapwire/plans/tasks/reverse-proxy/008-end-to-end-integration-testing.md`
 
-**Primary Task:** Task 007: Rate Limiting and Audit Logging Integration
+**Key Objectives:**
+1. **Complete Request Flow Testing** - HTTP ingress → auth → policy → rate limiting → upstream → response
+2. **Authentication Integration Validation** - OAuth 2.1 flow, JWT validation, AuthGateway functionality
+3. **Policy Enforcement Integration** - HTTP conditions with auth context, rule evaluation, action execution
+4. **Rate Limiting Integration** - Multi-tier limiting with audit logging, standard headers
+5. **Connection Pool Integration** - Circuit breaker resilience, load balancing, health monitoring
+6. **Performance Validation** - Meet < 5ms end-to-end latency target, component overhead validation
+7. **Security Compliance Testing** - No token forwarding, complete audit trails
+8. **Resilience Testing** - Upstream failures, circuit breaker behavior, system recovery
 
-### Key Files to Work With:
-- **Reference Spec:** `plans/tasks/reverse-proxy/007-rate-limiting-audit.md` (create if needed)
-- **Timeline Spec:** `plans/tasks/reverse-proxy/implementation-timeline.md` (see Day 7)
-- **Integration Point:** `src/auth/middleware.rs` - Where rate limiting will integrate
+## 🔧 **Implementation Approach**
 
-### Specifications to Follow:
-1. **Primary Timeline:** `plans/tasks/reverse-proxy/implementation-timeline.md` (see Day 7)
-2. **Master Plan:** `plans/022-phase5b-authentication-implementation-plan.md`
-3. **Task Tracker:** `plans/shadowcat-task-tracker.md`
-
-### Key Requirements for Day 7:
-1. **Multi-tier Rate Limiting:** Use tower-governor for HTTP-level rate limiting
-2. **Audit Logging:** Unified audit logging with tracing integration  
-3. **Security Event Monitoring:** Track authentication, authorization, and security events
-4. **Performance:** < 100μs rate limiting overhead
-5. **Integration:** Seamless with existing AuthGateway middleware
-
-### Success Criteria:
-- Rate limiting protects against abuse and DoS attacks
-- Audit logging provides security visibility and compliance
-- Performance targets maintained (< 100μs rate limiting overhead)
-- Integration with existing authentication and policy systems
-- Comprehensive tests for all rate limiting scenarios
-
-### Context Documents:
-
-**Review these for full context:**
-- `plans/shadowcat-task-tracker.md` - Current progress and architecture  
-- `CIRCUIT_BREAKER_IMPLEMENTATION_SUMMARY.md` - What we just completed
-- `plans/tasks/reverse-proxy/implementation-timeline.md` - Timeline and dependencies
-- `plans/022-phase5b-authentication-implementation-plan.md` - Master implementation plan
-
-### Testing Commands:
-```bash
-# Navigate to project
-cd /Users/kevin/src/tapwire/shadowcat
-
-# Run existing tests
-cargo test --lib auth  # Current auth tests (85 passing)
-cargo test --lib proxy  # Current proxy tests including circuit breaker
-
-# After implementation
-cargo test --lib --all  # Should maintain 274+ passing
+### **Phase 1: E2E Test Framework (Priority 1)**
+```rust
+// Create comprehensive integration test framework
+pub struct E2ETestFramework {
+    proxy_server: ReverseProxyServer,
+    mock_upstreams: Vec<MockMcpServer>,
+    mock_auth_server: MockAuthServer,
+    test_client: TestClient,
+    metrics_collector: MetricsCollector,
+}
 ```
 
-### Implementation Approach:
-1. Review existing `src/auth/middleware.rs` implementation
-2. Add tower-governor dependency and rate limiting middleware
-3. Implement audit logging with tracing integration
-4. Add security event monitoring and metrics
-5. Create configuration structures for rate limiting
-6. Write comprehensive tests for rate limiting scenarios
-7. Update integration tests
+**Files to Create:**
+- `tests/integration/e2e_framework.rs` - Core framework
+- `tests/mocks/mock_mcp_server.rs` - Mock upstream servers
+- `tests/mocks/mock_auth_server.rs` - Mock OAuth server
 
-### Dependencies Already Available:
-```toml
-# Available in Cargo.toml
-tower_governor = { version = "0.7.0", features = ["axum"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+### **Phase 2: Complete Flow Testing (Priority 1)**
+- Test authenticated request flows end-to-end
+- Test unauthenticated request rejection  
+- Test policy enforcement blocking/allowing
+- Test rate limiting protection activation
+- Test error handling and recovery scenarios
+
+### **Phase 3: Performance Integration Testing (Priority 1)**
+- Validate < 5ms end-to-end latency (average)
+- Validate < 20ms p95 latency, < 50ms p99 latency
+- Test 1000+ concurrent connections
+- Validate component-specific overhead:
+  - Authentication: < 5ms
+  - Policy evaluation: < 1ms  
+  - Rate limiting: < 100μs (validate our implementation)
+  - Connection pooling: minimal overhead
+
+### **Phase 4: Security & Compliance Testing (Priority 1)**
+- Test token forwarding prevention (critical security requirement)
+- Validate complete audit trail creation
+- Test authentication bypass prevention
+- Verify compliance requirements are met
+
+### **Phase 5: Resilience Testing (Priority 2)**
+- Test upstream failure scenarios with circuit breaker
+- Test system recovery after failures
+- Test rate limiting under heavy load
+- Test connection pool behavior under stress
+
+### **Phase 6: Debug Integration Issues (Priority 2)**
+- Create debugging utilities for component interactions
+- Identify and resolve any integration bugs
+- Optimize performance bottlenecks
+- Document integration patterns
+
+## 📋 **Current System Status**
+
+**Phase 5B Authentication & Security Components:**
+- ✅ **Days 1-3**: OAuth 2.1, JWT validation, AuthGateway - COMPLETE
+- ✅ **Day 4**: HTTP policy engine - COMPLETE  
+- ✅ **Day 5**: Circuit breaker integration - COMPLETE
+- ✅ **Days 6-7**: Rate limiting and audit system - COMPLETE
+- 🎯 **Day 8**: Integration testing - NEXT (this session)
+
+**System Architecture Status:**
+```
+Client Request → HTTP Server (Axum) → Auth Middleware → Policy Engine → 
+Rate Limiting → Connection Pool → Circuit Breaker → Upstream MCP Server
+     ↓                ↓              ↓               ↓
+Audit Logging ← Auth Context ← Policy Decision ← Rate Limit Check
 ```
 
-### Alternative Tasks (if rate limiting blocked):
-If rate limiting work is blocked, consider these alternative tasks:
-- **Task 008**: End-to-End Integration Testing and Debugging
-- **Task 009**: Performance Testing and Optimization  
-- **Task 010**: CLI Updates and Documentation
+**Test Coverage:**
+- 341 total tests passing (excellent coverage)
+- 36 rate limiting tests
+- 31 audit logging tests  
+- 98 auth+proxy tests
+- Missing: End-to-end integration tests (this task)
 
-The goal is to add comprehensive rate limiting and audit logging to provide production-ready security monitoring and abuse protection, while maintaining the excellent performance we've achieved so far.
+## 🚨 **Important Context**
 
-### Current Architecture Context
+### **Critical Requirements:**
+1. **NO Token Forwarding** - Client Bearer tokens must NEVER reach upstream servers
+2. **Complete Audit Trails** - All security events must be logged for compliance
+3. **Performance Targets** - Must meet < 5ms end-to-end latency requirement
+4. **OAuth 2.1 Compliance** - PKCE mandatory, proper scope handling
+5. **MCP Protocol Compliance** - Version 2025-11-05, proper headers
 
-Shadowcat now has a complete authentication and resilience stack:
-- **OAuth 2.1** with PKCE for secure authentication
-- **JWT validation** with < 1ms performance  
-- **AuthGateway** with session management and middleware
-- **HTTP policy engine** with < 1ms evaluation
-- **Circuit breaker** with < 100μs overhead and automatic recovery
-- **Load balancing** with health monitoring and multiple strategies
+### **Available Components:**
+- `src/auth/` - Complete OAuth 2.1, JWT validation, AuthGateway
+- `src/proxy/` - ReverseProxyServer, connection pooling, circuit breaker
+- `src/interceptor/` - HTTP policy engine with rule evaluation
+- `src/rate_limiting/` - Multi-tier rate limiting with GCRA algorithm
+- `src/audit/` - Comprehensive audit logging with File store
 
-The next layer is rate limiting and audit logging to complete the production security suite.
+### **Key Dependencies:**
+- All Phase 5B components are implemented and tested individually
+- Need to create mock servers for testing (OAuth and MCP upstreams)
+- Need to create comprehensive integration test suite
+- May need to adjust configurations for optimal integration
+
+## 🎯 **Success Criteria for This Session**
+
+### **Must Complete:**
+1. **E2E Test Framework** - Complete setup with mock servers
+2. **Basic Integration Tests** - Authenticated request flow working end-to-end
+3. **Authentication Integration** - OAuth → JWT → AuthContext → Policy flow validated
+4. **Security Compliance** - Token forwarding prevention verified
+5. **Rate Limiting Integration** - Multi-tier limiting working with audit logging
+
+### **Should Complete:**
+6. **Performance Testing** - Basic latency validation
+7. **Policy Integration** - HTTP conditions with auth context working
+8. **Error Handling** - Basic error scenarios tested
+
+### **Stretch Goals:**
+9. **Resilience Testing** - Circuit breaker integration tested
+10. **Concurrent Load Testing** - 1000+ connection handling
+11. **Debug Utilities** - Integration troubleshooting tools
+
+## 📁 **Key Files to Reference**
+
+### **Task Specifications:**
+- `/Users/kevin/src/tapwire/plans/tasks/reverse-proxy/008-end-to-end-integration-testing.md` - Complete task spec
+- `/Users/kevin/src/tapwire/plans/shadowcat-task-tracker.md` - Current status
+- `/Users/kevin/src/tapwire/shadowcat/TECHNICAL_DEBT.md` - Remaining technical debt
+
+### **Implementation References:**
+- `src/proxy/reverse.rs` - Main reverse proxy server
+- `src/auth/gateway.rs` - Authentication gateway  
+- `src/auth/middleware.rs` - Authentication middleware
+- `src/interceptor/http_policy.rs` - HTTP policy engine
+- `src/rate_limiting/middleware.rs` - Rate limiting middleware
+- `src/audit/unified_logger.rs` - Audit logging system
+
+### **Existing Integration Tests:**
+- `tests/integration_reverse_proxy.rs` - Basic reverse proxy tests (extend these)
+
+## ⚠️ **Critical Reminders**
+
+1. **Security First** - Always verify no client tokens reach upstream servers
+2. **Performance Targets** - < 5ms end-to-end latency is critical requirement
+3. **Test Thoroughly** - Integration bugs are subtle and hard to find later
+4. **Document Issues** - Any integration problems should be clearly documented
+5. **Mock Properly** - Use realistic mock servers that behave like real MCP servers
+
+## 🚀 **Getting Started**
+
+1. **Start by reading the complete Task 008 specification** at `/Users/kevin/src/tapwire/plans/tasks/reverse-proxy/008-end-to-end-integration-testing.md`
+2. **Review existing integration test** at `tests/integration_reverse_proxy.rs` to understand current patterns
+3. **Begin with E2E framework setup** - create mock servers and test infrastructure
+4. **Implement basic authenticated request flow test** to validate core integration
+5. **Expand testing coverage** based on the task specifications
+
+## 📊 **Current Project Status**
+
+- **Phase 5B Days 1-7**: ✅ COMPLETE (all authentication and security components)
+- **Total Tests**: 341 passing
+- **Critical Issues**: ✅ All resolved
+- **Production Readiness**: High (pending integration validation)
+- **Next After This**: Task 009 (Performance Optimization) and Task 010 (CLI/Documentation)
+
+Let's build comprehensive integration tests to validate this sophisticated reverse proxy system! 🚀
