@@ -101,21 +101,28 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - Dual-channel validation for 2025-06-18+ (HTTP headers must match negotiated version)
 - Initialize-only mode for 2025-03-26 (no HTTP validation required)
 - Comprehensive error handling with VersionStateError enum
-- 12 unit tests covering all state transitions and edge cases
-- Updated Session struct to use VersionState instead of VersionInfo
-- Forward and reverse proxies now track complete version lifecycle
+- 12 unit tests for VersionState + 5 tests for reverse proxy version tracking
+- Updated Session struct to use VersionState instead of deprecated VersionInfo
+- **BOTH** forward and reverse proxies now track complete version lifecycle
 - Transport version validation in reverse proxy with critical error on mismatch
+- Fixed bug: Forward proxy now properly updates session requested version
+- Added version constants module to eliminate string duplication
 
-### Task 0.5: Handle Dual-Channel Version Conflicts ⏳
+### Task 0.5: Handle Dual-Channel Version Conflicts 🎯 NEXT
 **File**: `tasks/phase-0-task-005-dual-channel-conflicts.md`
 **Duration**: 2 hours
-**Status**: Not Started
-**Dependencies**: Task 0.4
+**Status**: Ready to Start
+**Dependencies**: Task 0.4 ✅ (Completed)
+**Foundation in Place**:
+- VersionState with dual-channel validation ✅
+- Transport version tracking in both proxies ✅
+- Critical error on version mismatch ✅
 **Deliverables**:
-- [ ] Validate HTTP header matches negotiated version
-- [ ] Reject mismatches properly (not just warn)
-- [ ] Add proper error types
-- [ ] Tests for conflict scenarios
+- [ ] Ensure HTTP header validation is enforced (not just warned) in both proxies
+- [ ] Add proper HTTP error responses (400 Bad Request) for version conflicts
+- [ ] Implement version downgrade prevention
+- [ ] Tests for all conflict scenarios in both forward and reverse proxy modes
+**⚠️ IMPORTANT**: Must implement in BOTH forward and reverse proxy modes!
 
 ---
 
@@ -429,11 +436,12 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Tasks Completed | 0/29 | 29 | 🔴 |
+| Tasks Completed | 4/29 | 29 | 🟡 |
 | Phases Completed | 0/6 | 6 | 🔴 |
-| MCP Compliance | ~20% | 100% | 🔴 |
-| Test Coverage | Unknown | 90%+ | ⚫ |
-| Critical Bugs | 5 | 0 | 🔴 |
+| Phase 0 Progress | 4/5 | 5 | 🟢 |
+| MCP Compliance | ~30% | 100% | 🟡 |
+| Test Coverage | Growing | 90%+ | 🟡 |
+| Critical Bugs | 1 | 0 | 🟡 |
 
 ## Risk Register
 
@@ -488,6 +496,25 @@ For complex Rust implementation tasks, consider using the `rust-code-reviewer` s
 - [ ] No clippy warnings
 - [ ] Documentation updated
 - [ ] Tracker status updated
+
+## 🚨 Critical Implementation Guidelines
+
+### Proxy Mode Parity
+**ALWAYS implement changes in BOTH proxy modes:**
+- **Forward Proxy** (`src/proxy/forward.rs`): Client → Shadowcat → Server
+- **Reverse Proxy** (`src/proxy/reverse.rs`): Client → Shadowcat (HTTP) → Server
+
+When implementing any MCP compliance feature:
+1. ✅ Implement in forward proxy
+2. ✅ Implement in reverse proxy  
+3. ✅ Add tests for both modes
+4. ✅ Verify behavior consistency
+
+**Common oversights:**
+- Version tracking (must track in both modes)
+- Error handling (must be consistent)
+- Session state management (must be synchronized)
+- Protocol validation (must enforce equally)
 
 ## Communication Protocol
 
