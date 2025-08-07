@@ -1,139 +1,144 @@
-# Task 009.1: Fix Critical Session Cleanup Design Flaws
+# MCP Compliance Task 0.1: Fix Initialize Version Extraction
 
 ## Context
 
-You are working on the Shadowcat project, a high-performance Model Context Protocol (MCP) proxy written in Rust. Task 009 (Session Cleanup) was completed but a comprehensive code review revealed **CRITICAL design flaws** that must be fixed immediately before production deployment.
+You are working on the Shadowcat MCP proxy implementation which has critical compliance issues with the MCP specification. The project is currently non-compliant with MCP versions 2025-03-26 (minimum supported) and 2025-06-18 (current target).
 
-### Current Status
+**Working Directory**: `/Users/kevin/src/tapwire`
 
-- **Phase 1 (Critical Safety)**: ✅ COMPLETE - All 4 tasks finished
-- **Phase 2 (Core Features)**: 6/7 tasks complete - Task 009.1 CRITICAL fixes needed
-  - ✅ Task 005: Record Command implemented
-  - ✅ Task 006: Replay Command implemented
-  - ✅ Task 007: Rate Limiting implemented
-  - ✅ Task 008: Session Matching implemented
-  - ✅ Task 008.1: Session Matching Design Flaws fixed
-  - ✅ Task 009: Session Cleanup implemented
-  - 🔴 **Task 009.1: Fix Critical Session Cleanup Design Flaws** (YOUR CURRENT TASK)
+## Current Status
 
-- **Production Readiness**: 90/100 ⚠️ (reduced from 98 due to critical issues)
+The MCP Compliance project is in **Phase 0: Critical Version Bug Fixes**. This phase addresses fundamental version negotiation bugs that prevent basic MCP compliance. No tasks have been completed yet (0/29 tasks done).
 
-### Working Directory
+### Critical Issue Being Addressed
 
-```
-/Users/kevin/src/tapwire/shadowcat
+The Shadowcat proxy completely ignores the `protocolVersion` field in MCP initialize requests. This violates the MCP specification and prevents proper version negotiation, affecting every MCP session.
+
+**Current Bug Location**: `shadowcat/src/session/manager.rs:783-786`
+```rust
+TransportMessage::Request { method, .. } if method == "initialize" => {
+    session.transition(SessionEvent::InitializeRequest)?;
+    // CRITICAL BUG: Ignores params field containing protocolVersion!
+}
 ```
 
-## Critical Issues to Fix
+## Task Objectives
 
-### 🔴 CRITICAL Issue 1: Deadlock in LRU Eviction
+Implement proper version extraction from initialize requests:
 
-**Location**: `src/session/manager.rs:383-402`
+1. **Extract `protocolVersion`** from initialize request params
+2. **Store requested version** in session state  
+3. **Add version validation** logic to check if version is supported
+4. **Create unit tests** for version extraction functionality
 
-The `evict_lru_sessions()` method holds a write lock on `lru_queue` while calling `delete_session()`, which also tries to acquire the same write lock. This creates a **guaranteed deadlock** that will freeze the system.
+## Essential Context Files to Read
 
-### 🔴 CRITICAL Issue 2: Race Condition in Metrics
+Start by reading these files in order:
 
-**Location**: `src/session/manager.rs:341-346`
+1. **Task Specification**: `plans/mcp-compliance/tasks/phase-0-task-001-initialize-version-extraction.md`
+   - Contains detailed implementation plan and code examples
+   
+2. **Critical Bug Report**: `plans/mcp-compliance/006-critical-version-bugs.md`
+   - Explains the severity and impact of this bug
 
-Metrics incorrectly assume all deleted sessions were active, leading to incorrect or negative session counts.
+3. **Current Implementation**: 
+   - `shadowcat/src/session/manager.rs` (lines 783-800) - Where bug exists
+   - `shadowcat/src/session/store.rs` - Session structure that needs updating
+   - `shadowcat/src/transport/mod.rs` - Current version constants
 
-### 🟠 HIGH Priority Issues
+4. **MCP Specifications** (for reference):
+   - `specs/mcp/docs/specification/2025-06-18/basic/lifecycle.mdx` - Initialize handshake
+   - `specs/mcp/docs/specification/2025-03-26/basic/lifecycle.mdx` - Older version for comparison
 
-- **Memory Leak in LRU Queue**: Duplicate entries cause unbounded growth
-- **O(n) Cleanup Performance**: Linear scan of all sessions
-- **Missing Backpressure**: No rate limiting on request tracking
+## Implementation Strategy
 
-## Essential Files to Review
+### Phase 1: Create Protocol Module (30 min)
+1. Create new file `shadowcat/src/protocol/mod.rs`
+2. Define version constants and supported versions array
+3. Implement `extract_protocol_version()` helper function
+4. Add `is_version_supported()` validation function
 
-1. **Code Review Document**: `/Users/kevin/src/tapwire/reviews/session-cleanup-review-2025-08-07.md`
-   - Contains detailed analysis and recommended fixes for all issues
-2. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-009.1-session-cleanup-fixes.md`
-3. **Session Manager**: `src/session/manager.rs` - Primary focus for fixes
-4. **Refactor Tracker**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
+### Phase 2: Update Session Structure (45 min)
+1. Modify `shadowcat/src/session/store.rs`
+2. Add `VersionInfo` struct with requested/negotiated fields
+3. Add `set_requested_version()` method to Session
+4. Implement negotiation_required flag logic
 
-## Implementation Priority
+### Phase 3: Fix Initialize Handler (45 min)
+1. Update `shadowcat/src/session/manager.rs:783-800`
+2. Extract params and call version extraction helper
+3. Store version in session state
+4. Add debug logging for version tracking
 
-### Immediate (Must fix before ANY other work):
+### Phase 4: Add Tests (60 min)
+1. Create unit tests in protocol module
+2. Test version extraction with valid/invalid params
+3. Test version support checking
+4. Create integration test for full flow
 
-1. **Fix the deadlock in `evict_lru_sessions`**
-   - Release lock before calling `delete_session`
-   - See review document for exact fix
-
-2. **Fix race condition in metrics**
-   - Track active sessions separately
-   - Only decrement active count for actually active sessions
-
-### Short-term (Fix in this session):
-
-3. **Replace VecDeque with LinkedHashMap for LRU**
-   - Prevents duplicate entries
-   - Maintains O(1) operations
-
-4. **Improve cleanup performance**
-   - Consider priority queue for O(log n) cleanup
-   - Or at minimum, optimize the linear scan
-
-5. **Add backpressure for request tracking**
-   - Implement rate limiting per session
-   - Prevent system overload from rapid requests
+### Phase 5: Validate and Clean Up (30 min)
+1. Run all tests: `cargo test`
+2. Format code: `cargo fmt`
+3. Check for issues: `cargo clippy --all-targets -- -D warnings`
+4. Update compliance tracker
 
 ## Success Criteria Checklist
 
-- [ ] No deadlocks in LRU eviction (test with concurrent operations)
-- [ ] Metrics accurately track active/cleaned sessions
-- [ ] LRU queue maintains unique entries only
-- [ ] Cleanup performance improved from O(n)
-- [ ] Request tracking has proper backpressure
-- [ ] All existing tests still pass
-- [ ] New concurrent tests added and passing
-- [ ] Memory usage remains bounded under load
-- [ ] Clean `cargo fmt` output
-- [ ] Clean `cargo clippy --all-targets -- -D warnings` output
+- [ ] Protocol version successfully extracted from initialize params
+- [ ] Version stored correctly in session state
+- [ ] Unsupported versions flagged for negotiation
+- [ ] Missing version handled with appropriate default ("2025-03-26")
+- [ ] All unit tests passing
+- [ ] Integration test demonstrates end-to-end flow
+- [ ] No clippy warnings
+- [ ] Debug logging added for version tracking
+- [ ] Code formatted with `cargo fmt`
 
 ## Commands to Use
 
-### Testing Commands
-
 ```bash
-# Test for deadlocks
-cargo test evict_lru --release -- --test-threads=1
+# Navigate to shadowcat directory
+cd shadowcat
 
-# Test concurrent operations
-cargo test concurrent_cleanup
+# Create new protocol module
+mkdir -p src/protocol
 
-# Check for memory leaks (if valgrind available)
-valgrind --leak-check=full ./target/debug/shadowcat session cleanup --all
+# Run tests frequently
+cargo test protocol::
+cargo test session::manager::tests::
+cargo test version_extraction
 
-# Verify metrics accuracy
-cargo test metrics_accuracy
-
-# Run all session tests
-cargo test session
-
-# Format and lint
+# Check your work
 cargo fmt
 cargo clippy --all-targets -- -D warnings
+
+# Run specific test with output
+cargo test test_extract_version_from_valid_params -- --nocapture
 ```
 
-### Development Workflow
+## Expected Deliverables
 
-1. Create todo list with TodoWrite tool
-2. Read the comprehensive review document first
-3. Fix CRITICAL issues first (deadlock and race condition)
-4. Test each fix incrementally
-5. Add concurrent tests for each fix
-6. Fix HIGH priority issues
-7. Run full test suite
-8. Update refactor tracker when complete
+By the end of this session, you should have:
+
+1. **New Files Created**:
+   - `shadowcat/src/protocol/mod.rs` - Protocol version handling module
+   - `shadowcat/tests/version_extraction_test.rs` - Integration tests
+
+2. **Files Modified**:
+   - `shadowcat/src/session/store.rs` - Added VersionInfo to Session
+   - `shadowcat/src/session/manager.rs` - Fixed initialize handler
+   - `shadowcat/src/lib.rs` - Added protocol module export
+
+3. **Tests Passing**:
+   - Unit tests for version extraction
+   - Unit tests for version validation
+   - Integration test for initialize flow
+
+4. **Documentation**:
+   - Updated `plans/mcp-compliance/compliance-tracker.md` with task completion
 
 ## Important Notes
 
-- **This is a CRITICAL blocker** - The system cannot be deployed with these issues
-- **The deadlock will freeze production** - Must be fixed immediately
-- **Follow the exact fixes in the review document** - They have been carefully designed
-- **Test with concurrent operations** - Single-threaded tests won't catch these issues
-- **Consider using `parking_lot::RwLock`** - Better performance and deadlock detection
 - **Always use TodoWrite tool** to track your progress through the task
 - **Start with examining existing code** to understand current architecture
 - **Follow established patterns** from previous implementations
@@ -162,25 +167,28 @@ cargo clippy --all-targets -- -D warnings
 11. Update project documentation and tracker as needed
 12. Commit changes with clear, descriptive messages
 
-## Expected Deliverables
+## Using the rust-code-reviewer
 
-1. **Fixed `evict_lru_sessions`** - No deadlock possibility
-2. **Fixed metrics tracking** - Accurate active/cleaned counts
-3. **LinkedHashMap LRU** - No duplicate entries
-4. **Improved cleanup algorithm** - Better than O(n) if possible
-5. **Backpressure mechanism** - Rate limiting on requests
-6. **Comprehensive concurrent tests** - Prove fixes work under load
-7. **Updated documentation** - Document the fixes and why they were needed
+If you encounter complex Rust patterns or need to ensure memory safety, use the `rust-code-reviewer` subagent to:
+- Validate ownership and borrowing patterns
+- Check async/await usage with tokio
+- Verify error handling with Result types
+- Ensure no unwrap()/expect() in production code
 
-## Start Here
+## Next Steps After Completion
 
-1. First, create a TodoWrite list with the critical fixes
-2. Read `/Users/kevin/src/tapwire/reviews/session-cleanup-review-2025-08-07.md` thoroughly
-3. Fix the deadlock IMMEDIATELY - this is the highest priority
-4. Test the deadlock fix with concurrent operations
-5. Then proceed with the race condition fix
-6. Continue with HIGH priority issues
+Once Task 0.1 is complete:
+- Task 0.2 (Fix HTTP Default Version) can run in parallel
+- Task 0.3 (Version Negotiation Response) depends on 0.1 completion
+- Update tracker to mark Task 0.1 as complete
+- Create new session for next task if context window > 70%
 
-Remember: These are not theoretical issues - they are **guaranteed bugs** that will cause production failures. The fixes in the review document have been carefully designed to resolve them properly.
+## References
 
-Good luck with Task 009.1!
+- Compliance Tracker: `plans/mcp-compliance/compliance-tracker.md`
+- Task File: `plans/mcp-compliance/tasks/phase-0-task-001-initialize-version-extraction.md`
+- Bug Report: `plans/mcp-compliance/006-critical-version-bugs.md`
+- MCP 2025-06-18 Spec: `specs/mcp/docs/specification/2025-06-18/`
+- MCP 2025-03-26 Spec: `specs/mcp/docs/specification/2025-03-26/`
+
+Good luck! This fix is critical for MCP compliance and will unblock many other tasks.
