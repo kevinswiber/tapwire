@@ -1,421 +1,310 @@
-# Task 1.1: SSE Event Parser
+# Phase 1 - Task 1.1: SSE Event Parser Implementation
 
-## Task Metadata
-- **Phase**: 1 (Core SSE Implementation)
-- **Priority**: CRITICAL
-- **Estimated Duration**: 3-4 hours
-- **Dependencies**: Phase 0 complete
-- **Status**: ⏳ Not Started
+## Task Overview
+Implement a robust Server-Sent Events (SSE) parser for the MCP Streamable HTTP transport that can handle all standard SSE formats, edge cases, and protocol requirements.
 
-## Problem Statement
-
-The current SSE implementation in `shadowcat/src/transport/http.rs:148-216` only handles basic message events. It lacks proper SSE format parsing for the full specification including event IDs, event types, retry directives, and multi-line data.
-
-### Current Limitations
-- Only processes `Event::Message` types
-- No support for event IDs (for resumption)
-- No handling of retry directives
-- Incomplete multi-line data parsing
-- Missing custom event type support
-
-### SSE Format Specification
-```
-event: message\n
-id: 123\n
-retry: 10000\n
-data: {"jsonrpc":"2.0",\n
-data: "method":"ping",\n
-data: "id":1}\n
-\n
-```
+**Duration**: 3-4 hours
+**Priority**: CRITICAL - Foundation for all SSE functionality
+**Dependencies**: Phase 0 complete (version management infrastructure)
 
 ## Objectives
 
-1. Implement complete SSE format parser
-2. Support all SSE field types (data, event, id, retry)
-3. Handle multi-line data fields correctly
-4. Parse and validate JSON from data fields
-5. Track event IDs for resumption support
+### Primary Goals
+1. Create a streaming SSE parser that processes incoming byte streams
+2. Handle all SSE field types: `data:`, `event:`, `id:`, `retry:`
+3. Support multi-line data fields with proper concatenation
+4. Implement event emission when double newline is encountered
+5. Handle edge cases (comments, malformed data, partial messages)
+
+### Success Criteria
+- [ ] Parser correctly processes standard SSE format
+- [ ] Multi-line data fields are properly concatenated with newlines
+- [ ] Custom event types are preserved
+- [ ] Event IDs are tracked for resumability
+- [ ] Retry intervals are parsed and stored
+- [ ] Comments (lines starting with `:`) are ignored
+- [ ] Partial messages are buffered until complete
+- [ ] Zero-copy parsing where possible for performance
+- [ ] Comprehensive unit tests with 100% coverage of SSE spec
+
+## Technical Requirements
+
+### SSE Format Specification
+According to the [SSE standard](https://html.spec.whatwg.org/multipage/server-sent-events.html):
+
+1. **Field Format**: `field: value\n`
+2. **Supported Fields**:
+   - `data:` - The message payload (can span multiple lines)
+   - `event:` - Custom event type (default: "message")
+   - `id:` - Event ID for resumability
+   - `retry:` - Reconnection time in milliseconds
+3. **Special Cases**:
+   - Empty line (`\n\n`) triggers event dispatch
+   - Lines starting with `:` are comments
+   - Field without `:` is treated as field name with empty value
+   - BOM at stream start should be ignored
+
+### MCP-Specific Requirements
+From the MCP Streamable HTTP specification:
+
+1. **Event IDs**: Must be globally unique within a session
+2. **Resumability**: Support `Last-Event-ID` header for reconnection
+3. **JSON-RPC Messages**: Data fields contain JSON-RPC payloads
+4. **Session Context**: Events may need session ID association
+5. **Multiple Streams**: Parser instances must be independent
 
 ## Implementation Plan
 
-### Step 1: Define SSE Event Types
-Create comprehensive event types:
+### Module Structure
+```
+src/transport/sse/
+├── mod.rs           # Module exports and public API
+├── parser.rs        # Core SSE parsing logic
+├── event.rs         # SSE event types and structures
+├── buffer.rs        # Buffering and stream handling
+└── tests/
+    ├── mod.rs       # Test module
+    ├── parser.rs    # Parser unit tests
+    └── fixtures.rs  # SSE test fixtures
+```
 
+### Core Components
+
+#### 1. Event Structure (`event.rs`)
 ```rust
-// In shadowcat/src/transport/sse/parser.rs
-use serde_json::Value;
-use std::time::Duration;
+#[derive(Debug, Clone, PartialEq)]
+pub struct SseEvent {
+    pub id: Option<String>,
+    pub event_type: String,  // Default: "message"
+    pub data: String,
+    pub retry: Option<u64>,
+}
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum SseField {
     Data(String),
     Event(String),
     Id(String),
-    Retry(Duration),
+    Retry(u64),
     Comment(String),
-}
-
-#[derive(Debug, Clone)]
-pub struct SseEvent {
-    pub event_type: Option<String>,
-    pub id: Option<String>,
-    pub data: Vec<String>,  // Multiple data lines
-    pub retry: Option<Duration>,
-}
-
-impl SseEvent {
-    pub fn new() -> Self {
-        Self {
-            event_type: None,
-            id: None,
-            data: Vec::new(),
-            retry: None,
-        }
-    }
-    
-    /// Parse complete data as JSON
-    pub fn parse_json_data(&self) -> Result<Value, SseError> {
-        let combined = self.data.join("\n");
-        serde_json::from_str(&combined)
-            .map_err(|e| SseError::InvalidJson(e))
-    }
-    
-    /// Check if this is an MCP message
-    pub fn is_mcp_message(&self) -> bool {
-        self.event_type.as_deref() == Some("message") ||
-        self.event_type.is_none()  // Default is message
-    }
 }
 ```
 
-### Step 2: Implement SSE Parser
-Create the parser state machine:
-
+#### 2. Parser State Machine (`parser.rs`)
 ```rust
-// In shadowcat/src/transport/sse/parser.rs
 pub struct SseParser {
-    current_event: SseEvent,
-    last_event_id: Option<String>,
+    buffer: Vec<u8>,
+    current_event: EventBuilder,
+    position: usize,
 }
 
 impl SseParser {
-    pub fn new() -> Self {
-        Self {
-            current_event: SseEvent::new(),
-            last_event_id: None,
-        }
-    }
-    
-    /// Parse a single SSE line
-    pub fn parse_line(&mut self, line: &str) -> Result<Option<SseEvent>, SseError> {
-        // Empty line signals end of event
-        if line.is_empty() {
-            if !self.current_event.data.is_empty() || 
-               self.current_event.event_type.is_some() {
-                let event = std::mem::replace(&mut self.current_event, SseEvent::new());
-                
-                // Update last event ID if present
-                if let Some(ref id) = event.id {
-                    self.last_event_id = Some(id.clone());
-                }
-                
-                return Ok(Some(event));
-            }
-            return Ok(None);
-        }
-        
-        // Parse field
-        if let Some((field, value)) = self.parse_field(line)? {
-            match field {
-                "data" => {
-                    self.current_event.data.push(value.to_string());
-                }
-                "event" => {
-                    self.current_event.event_type = Some(value.to_string());
-                }
-                "id" => {
-                    self.current_event.id = Some(value.to_string());
-                }
-                "retry" => {
-                    if let Ok(ms) = value.parse::<u64>() {
-                        self.current_event.retry = Some(Duration::from_millis(ms));
-                    }
-                }
-                _ => {
-                    // Ignore unknown fields per spec
-                    debug!("Ignoring unknown SSE field: {}", field);
-                }
-            }
-        }
-        
-        Ok(None)
-    }
-    
-    /// Parse field:value format
-    fn parse_field<'a>(&self, line: &'a str) -> Result<Option<(&'a str, &'a str)>, SseError> {
-        // Comment lines start with :
-        if line.starts_with(':') {
-            return Ok(None);
-        }
-        
-        // Find colon separator
-        if let Some(colon_pos) = line.find(':') {
-            let field = &line[..colon_pos];
-            let mut value = &line[colon_pos + 1..];
-            
-            // Remove optional space after colon
-            if value.starts_with(' ') {
-                value = &value[1..];
-            }
-            
-            Ok(Some((field, value)))
-        } else {
-            // Field with no value
-            Ok(Some((line, "")))
-        }
-    }
-    
-    pub fn get_last_event_id(&self) -> Option<&str> {
-        self.last_event_id.as_deref()
-    }
+    pub fn new() -> Self;
+    pub fn feed(&mut self, data: &[u8]) -> Vec<SseEvent>;
+    fn parse_line(&mut self, line: &str) -> Option<SseField>;
+    fn dispatch_event(&mut self) -> Option<SseEvent>;
 }
 ```
 
-### Step 3: Integrate with HTTP Transport
-Update the HTTP transport to use the parser:
-
+#### 3. Stream Adapter (`buffer.rs`)
 ```rust
-// In shadowcat/src/transport/http.rs
-use crate::transport::sse::parser::{SseParser, SseEvent};
-
-impl HttpTransport {
-    async fn process_sse_stream(
-        &mut self,
-        mut event_source: EventSource,
-        response_tx: mpsc::Sender<TransportMessage>,
-    ) {
-        let mut parser = SseParser::new();
-        
-        // Restore from last event ID if reconnecting
-        if let Some(last_id) = &self.last_event_id {
-            debug!("Resuming SSE from event ID: {}", last_id);
-        }
-        
-        while let Some(event_result) = event_source.next().await {
-            match event_result {
-                Ok(Event::Message(msg)) => {
-                    // Parse SSE message
-                    if let Ok(Some(sse_event)) = parser.parse_line(&msg.data) {
-                        self.handle_sse_event(sse_event, &response_tx).await;
-                    }
-                }
-                Ok(Event::Open) => {
-                    info!("SSE connection established");
-                    
-                    // Send Last-Event-ID if we have one
-                    if let Some(last_id) = parser.get_last_event_id() {
-                        self.last_event_id = Some(last_id.to_string());
-                    }
-                }
-                Err(e) => {
-                    warn!("SSE error: {}", e);
-                    self.handle_sse_error(e).await;
-                }
-            }
-        }
-    }
-    
-    async fn handle_sse_event(
-        &mut self,
-        event: SseEvent,
-        tx: &mpsc::Sender<TransportMessage>,
-    ) {
-        // Store event ID for resumption
-        if let Some(ref id) = event.id {
-            self.last_event_id = Some(id.clone());
-            trace!("Received SSE event with ID: {}", id);
-        }
-        
-        // Handle retry directive
-        if let Some(retry) = event.retry {
-            self.reconnect_delay = retry;
-            debug!("SSE server requested retry delay: {:?}", retry);
-        }
-        
-        // Process MCP messages
-        if event.is_mcp_message() {
-            match event.parse_json_data() {
-                Ok(json_value) => {
-                    if let Ok(transport_msg) = Self::json_to_transport_message(&json_value) {
-                        if let Err(e) = tx.send(transport_msg).await {
-                            warn!("Failed to send SSE message: {}", e);
-                        }
-                    }
-                }
-                Err(e) => {
-                    warn!("Failed to parse SSE data as JSON: {}", e);
-                }
-            }
-        } else {
-            // Handle custom event types
-            debug!("Received custom SSE event type: {:?}", event.event_type);
-        }
-    }
-}
-```
-
-### Step 4: Add Stream Processing
-Handle SSE stream properly:
-
-```rust
-// In shadowcat/src/transport/sse/stream.rs
-use futures_util::StreamExt;
-use tokio::io::{AsyncBufReadExt, BufReader};
-
-pub struct SseStream {
-    reader: BufReader<Box<dyn AsyncRead + Send + Unpin>>,
+pub struct SseStream<S> {
+    stream: S,
     parser: SseParser,
 }
 
-impl SseStream {
-    pub fn new<R>(reader: R) -> Self 
-    where
-        R: AsyncRead + Send + Unpin + 'static,
-    {
-        Self {
-            reader: BufReader::new(Box::new(reader)),
-            parser: SseParser::new(),
-        }
-    }
-    
-    pub async fn next_event(&mut self) -> Result<SseEvent, SseError> {
-        let mut lines = String::new();
-        
-        loop {
-            lines.clear();
-            match self.reader.read_line(&mut lines).await {
-                Ok(0) => return Err(SseError::ConnectionClosed),
-                Ok(_) => {
-                    let line = lines.trim_end_matches('\n').trim_end_matches('\r');
-                    
-                    if let Some(event) = self.parser.parse_line(line)? {
-                        return Ok(event);
-                    }
-                }
-                Err(e) => return Err(SseError::Io(e)),
-            }
-        }
-    }
+impl<S: AsyncRead> Stream for SseStream<S> {
+    type Item = Result<SseEvent, SseError>;
+    // Stream implementation
 }
 ```
 
-## Testing Requirements
+### Parsing Algorithm
+
+1. **Input Processing**:
+   - Accept byte chunks from network
+   - Buffer partial lines
+   - Split on newline boundaries
+
+2. **Line Parsing**:
+   ```
+   FOR each line:
+     IF line is empty:
+       Dispatch current event
+     ELSE IF line starts with ':':
+       Ignore (comment)
+     ELSE IF line contains ':':
+       Split on first ':'
+       Process field and value
+     ELSE:
+       Treat as field with empty value
+   ```
+
+3. **Field Processing**:
+   - `data:` - Append to event data (with newline if not first)
+   - `event:` - Set event type
+   - `id:` - Set event ID
+   - `retry:` - Parse as integer, set retry interval
+
+4. **Event Dispatch**:
+   - Triggered by empty line
+   - Reset event builder
+   - Emit if data is non-empty
+
+### Error Handling
+
+```rust
+#[derive(Debug, thiserror::Error)]
+pub enum SseError {
+    #[error("Invalid UTF-8 in SSE stream")]
+    InvalidUtf8(#[from] std::str::Utf8Error),
+    
+    #[error("Invalid retry value: {0}")]
+    InvalidRetry(String),
+    
+    #[error("Stream terminated unexpectedly")]
+    UnexpectedEof,
+    
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+}
+```
+
+## Test Cases
 
 ### Unit Tests
 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_parse_simple_message() {
-        let mut parser = SseParser::new();
-        
-        assert!(parser.parse_line("data: {\"test\":1}").unwrap().is_none());
-        let event = parser.parse_line("").unwrap().unwrap();
-        
-        assert_eq!(event.data, vec!["{\"test\":1}"]);
-        assert!(event.event_type.is_none());
-    }
-    
-    #[test]
-    fn test_parse_multi_line_data() {
-        let mut parser = SseParser::new();
-        
-        parser.parse_line("data: {").unwrap();
-        parser.parse_line("data:   \"test\": 1").unwrap();
-        parser.parse_line("data: }").unwrap();
-        
-        let event = parser.parse_line("").unwrap().unwrap();
-        assert_eq!(event.data.len(), 3);
-        
-        let json = event.parse_json_data().unwrap();
-        assert_eq!(json["test"], 1);
-    }
-    
-    #[test]
-    fn test_parse_with_event_id() {
-        let mut parser = SseParser::new();
-        
-        parser.parse_line("id: msg-123").unwrap();
-        parser.parse_line("event: message").unwrap();
-        parser.parse_line("data: test").unwrap();
-        
-        let event = parser.parse_line("").unwrap().unwrap();
-        assert_eq!(event.id, Some("msg-123".to_string()));
-        assert_eq!(event.event_type, Some("message".to_string()));
-        assert_eq!(parser.get_last_event_id(), Some("msg-123"));
-    }
-    
-    #[test]
-    fn test_parse_retry_directive() {
-        let mut parser = SseParser::new();
-        
-        parser.parse_line("retry: 5000").unwrap();
-        parser.parse_line("data: test").unwrap();
-        
-        let event = parser.parse_line("").unwrap().unwrap();
-        assert_eq!(event.retry, Some(Duration::from_millis(5000)));
-    }
-    
-    #[test]
-    fn test_ignore_comments() {
-        let mut parser = SseParser::new();
-        
-        parser.parse_line(": this is a comment").unwrap();
-        parser.parse_line("data: actual data").unwrap();
-        
-        let event = parser.parse_line("").unwrap().unwrap();
-        assert_eq!(event.data, vec!["actual data"]);
-    }
-}
-```
+1. **Basic Parsing**:
+   ```
+   data: hello\n\n
+   → Event { data: "hello", event_type: "message" }
+   ```
 
-## Files to Create/Modify
+2. **Multi-line Data**:
+   ```
+   data: first line\n
+   data: second line\n\n
+   → Event { data: "first line\nsecond line" }
+   ```
 
-1. **Create**: `shadowcat/src/transport/sse/mod.rs` - SSE module
-2. **Create**: `shadowcat/src/transport/sse/parser.rs` - Parser implementation
-3. **Create**: `shadowcat/src/transport/sse/stream.rs` - Stream processing
-4. **Modify**: `shadowcat/src/transport/http.rs:148-216` - Use new parser
-5. **Create**: `shadowcat/tests/sse_parser_test.rs` - Integration tests
+3. **Custom Event Type**:
+   ```
+   event: custom\n
+   data: payload\n\n
+   → Event { event_type: "custom", data: "payload" }
+   ```
 
-## Acceptance Criteria
+4. **Event ID and Retry**:
+   ```
+   id: 123\n
+   retry: 5000\n
+   data: test\n\n
+   → Event { id: Some("123"), retry: Some(5000), data: "test" }
+   ```
 
-- [ ] Parse all SSE field types (data, event, id, retry)
-- [ ] Handle multi-line data fields
-- [ ] Track last event ID for resumption
-- [ ] Parse JSON from combined data lines
-- [ ] Handle retry directives
-- [ ] Ignore comments and unknown fields
-- [ ] All tests passing
-- [ ] No clippy warnings
+5. **Comments**:
+   ```
+   : this is a comment\n
+   data: actual data\n\n
+   → Event { data: "actual data" }
+   ```
+
+6. **Edge Cases**:
+   - Field without colon
+   - Field with empty value
+   - Multiple colons in value
+   - Partial message buffering
+   - Invalid UTF-8 handling
+   - BOM handling
+
+### Integration Tests
+
+1. **Streaming Parse**: Feed data in chunks, verify correct assembly
+2. **Large Messages**: Parse multi-megabyte events
+3. **Rapid Events**: High-frequency event parsing
+4. **Malformed Input**: Graceful error recovery
 
 ## Performance Considerations
 
-- Use streaming parser to avoid buffering entire events
-- Minimize string allocations with careful lifetime management
-- Consider using `bytes::Bytes` for zero-copy parsing
+1. **Zero-Copy**: Use string slices where possible
+2. **Buffering**: Efficient buffer management with growth strategy
+3. **Allocation**: Pre-allocate for common event sizes
+4. **Streaming**: Process data as it arrives, don't wait for complete messages
 
-## Notes for Next Session
+## Dependencies
 
-- Task 1.2 will build on this parser for connection management
-- Task 1.3 will add reconnection using Last-Event-ID
-- Consider adding metrics for SSE event types and sizes
+```toml
+[dependencies]
+tokio = { version = "1", features = ["io-util"] }
+bytes = "1"
+thiserror = "2"
+tracing = "0.1"
+futures = "0.3"
 
-## References
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "test-util"] }
+pretty_assertions = "1"
+```
 
-- SSE Specification: https://html.spec.whatwg.org/multipage/server-sent-events.html
-- MCP HTTP Transport: `/specs/mcp/docs/specification/2025-06-18/basic/transports.mdx`
-- Current Implementation: `shadowcat/src/transport/http.rs:148-216`
+## Files to Modify
+
+1. **Create new files**:
+   - `src/transport/sse/mod.rs`
+   - `src/transport/sse/parser.rs`
+   - `src/transport/sse/event.rs`
+   - `src/transport/sse/buffer.rs`
+   - `src/transport/sse/tests/mod.rs`
+   - `src/transport/sse/tests/parser.rs`
+   - `src/transport/sse/tests/fixtures.rs`
+
+2. **Update existing**:
+   - `src/transport/mod.rs` - Export SSE module
+   - `Cargo.toml` - Add bytes dependency if not present
+
+## Verification Steps
+
+1. **Unit Tests**:
+   ```bash
+   cargo test sse::parser
+   ```
+
+2. **Doc Tests**:
+   ```bash
+   cargo test --doc sse
+   ```
+
+3. **Benchmarks** (optional):
+   ```bash
+   cargo bench sse_parser
+   ```
+
+4. **Example Usage**:
+   ```rust
+   let mut parser = SseParser::new();
+   let events = parser.feed(b"data: hello\n\n");
+   assert_eq!(events[0].data, "hello");
+   ```
+
+## Integration Points
+
+This parser will integrate with:
+1. **HTTP Transport**: Parse SSE responses from POST/GET
+2. **Session Manager**: Associate events with sessions
+3. **Interceptor**: Allow event interception/modification
+4. **Recorder**: Capture SSE events for replay
+
+## Next Steps
+
+After completing this task:
+1. Task 1.2: SSE Connection Management - Use parser in HTTP client
+2. Task 1.3: SSE Reconnection - Implement retry and resumption
+3. Task 1.4: SSE Session Integration - Link with session management
+4. Task 1.5: SSE Performance - Optimize and benchmark
+
+## Notes
+
+- The parser must be reusable across multiple connections
+- Consider implementing as a tokio codec for efficiency
+- Ensure thread-safety for concurrent usage
+- Follow Rust idioms and error handling patterns
+- Document public API with examples
