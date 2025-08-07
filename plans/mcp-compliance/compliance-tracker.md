@@ -28,16 +28,16 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 ## Phase 0: Critical Version Bug Fixes [🟡 IN PROGRESS]
 **Goal**: Fix fundamental version negotiation bugs preventing basic MCP compliance
 
-### Task 0.1: Fix Initialize Version Extraction ⏳
+### Task 0.1: Fix Initialize Version Extraction ✅
 **File**: `tasks/phase-0-task-001-initialize-version-extraction.md`
 **Duration**: 2-3 hours
-**Status**: Not Started
+**Status**: Completed
 **Dependencies**: None
 **Deliverables**:
-- [ ] Extract protocolVersion from initialize request params
-- [ ] Store requested version in session state
-- [ ] Add version validation logic
-- [ ] Unit tests for version extraction
+- [x] Extract protocolVersion from initialize request params
+- [x] Store requested version in session state
+- [x] Add version validation logic
+- [x] Unit tests for version extraction
 
 ### Task 0.2: Fix HTTP Default Version ⏳
 **File**: `tasks/phase-0-task-002-http-default-version.md`
