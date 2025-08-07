@@ -1,4 +1,4 @@
-# Task 008: Complete Session Matching for Shadowcat
+# Task 008.1: Fix Session Matching Design Flaws
 
 ## Context
 
@@ -11,12 +11,16 @@ You are working on the Shadowcat project, a high-performance Model Context Proto
   - Fixed duplicate error types
   - Added request size limits
   - Fixed blocking I/O in async contexts
-- **Phase 2 (Core Features)**: IN PROGRESS - 3/5 tasks complete
-  - ✅ Task 005: Implement Record Command
-  - ✅ Task 006: Implement Replay Command
-  - ✅ Task 007: Implement Rate Limiting
-  - 🔄 **Task 008: Complete Session Matching** (YOUR CURRENT TASK)
-  - ⏳ Task 009: Implement Session Cleanup
+  
+- **Phase 2 (Core Features)**: IN PROGRESS - 4/5 core tasks complete + 1 critical fix needed
+  - ✅ Task 005: Record Command implemented
+  - ✅ Task 006: Replay Command implemented
+  - ✅ Task 007: Rate Limiting implemented
+  - ✅ Task 008: Session Matching implemented (but with critical flaws)
+  - 🔴 **Task 008.1: Fix Session Matching Design Flaws** (YOUR CURRENT TASK - BLOCKER)
+  - ⏳ Task 009: Session Cleanup (blocked by 008.1)
+
+- **Production Readiness**: 96/100 (-2 points due to critical issues)
 
 ### Working Directory
 
@@ -24,114 +28,120 @@ You are working on the Shadowcat project, a high-performance Model Context Proto
 /Users/kevin/src/tapwire/shadowcat
 ```
 
-## Objective: Complete Session Matching Implementation
+## Objective: Fix Critical Design Flaws in Session Matching
 
 ### Problem Statement
 
-The session matching logic is marked as CRITICAL but has a TODO stub at `src/session/manager.rs:108`. This functionality is essential for:
+Task 008 successfully implemented session matching functionality, but review discovered 10 critical design flaws that make the feature non-functional and potentially dangerous in production. These MUST be fixed before proceeding to Task 009.
 
-- Associating MCP requests with responses
-- Tracking session lifecycle
-- Managing session state transitions
-- Proper cleanup and resource management
+### Critical Issues (Priority Order)
+
+1. **🔴 Memory Leak**: Pending requests never cleaned up for ended sessions
+2. **🔴 Race Condition**: Shutdown detection has TOCTOU bug between check and process
+3. **🔴 InterceptContext Metadata Never Populated**: Session matching is completely non-functional
+4. **🔴 No Session Recovery**: Lost session context cannot be recovered
+5. **🟡 State Confusion**: SessionState and SessionStatus overlap and conflict
+6. **🟡 No DoS Protection**: Unbounded pending_requests HashMap
+7. **🟡 Fragile Detection**: Initialized response detection assumes specific structure
+8. **🟡 Error Handling**: State modifications continue after failures
+9. **🟢 Session Tags Never Set**: Feature exists but is never used
+10. **🟢 No Transactional Guarantees**: Multiple state updates without atomicity
 
 ### Essential Context Files to Read
 
-1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-008-session-matching.md`
-2. **Session Manager**: `src/session/manager.rs` - Current implementation with TODO
-3. **Session Module**: `src/session/mod.rs` - Session struct and types
-4. **Refactor Tracker**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
-5. **Transport Types**: `src/transport/mod.rs` - TransportMessage enum
-6. **MCP Protocol**: Review MCP message types and session handling
+1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-008-1-session-matching-fixes.md`
+2. **Session Manager**: `src/session/manager.rs` - Contains memory leak and race conditions
+3. **Session Store**: `src/session/store.rs` - Has state confusion issues
+4. **Forward Proxy**: `src/proxy/forward.rs` - Where InterceptContext is created without metadata
+5. **Interceptor Rules**: `src/interceptor/rules.rs` - Expects metadata that's never provided
+6. **Refactor Tracker**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
 
 ## Implementation Strategy
 
-### Phase 1: Analysis (Start Here)
+### Phase 1: Critical Memory & Safety Fixes (MUST DO FIRST)
 
-1. Use TodoWrite tool to create task tracking list
-2. Examine `src/session/manager.rs` to understand current implementation
-3. Find the TODO at line 108 and analyze what's missing
-4. Review how sessions are currently created and tracked
-5. Understand MCP message flow (initialize, requests, responses, shutdown)
+1. **Fix Memory Leak in pending_requests**
+   - Add session-scoped cleanup when sessions end
+   - Modify `complete_session()` and `fail_session()` to clean up pending requests
+   - Consider two-level HashMap: `HashMap<SessionId, HashMap<RequestId, PendingRequest>>`
 
-### Phase 2: Core Implementation
+2. **Fix Race Condition in Shutdown Detection**
+   - Make `is_shutdown_response()` atomic with removal
+   - Use `remove()` instead of separate `get()` and later `remove()`
+   - Store request type in PendingRequest
 
-1. **Session State Machine**
+3. **Populate InterceptContext Metadata**
+   - In `src/proxy/forward.rs`, look up session before creating InterceptContext
+   - Add metadata for frame_count, session_duration_ms, session_tags
+   - Make session matching actually functional
 
-   - Add SessionState enum (Initializing, Active, ShuttingDown, Closed, Failed)
-   - Implement state transitions
-   - Add validation for invalid transitions
+4. **Add Session Recovery Mechanism**
+   - Add fallback in `extract_session_id()` to use current session context
+   - Pass session ID through transport layer
+   - Log warnings when session context is lost
 
-2. **Session ID Extraction**
+### Phase 2: Design Improvements (IMPORTANT)
 
-   - Extract session IDs from MCP messages
-   - Handle initialize requests (generate new session)
-   - Extract from headers (Mcp-Session-Id)
-   - Match responses to pending requests
+1. **Consolidate State Management**
+   - Either remove SessionStatus or SessionState (pick one)
+   - If keeping both, clearly define relationship
+   - Add invariant checks
 
-3. **Request-Response Correlation**
-   - Track pending requests with session IDs
-   - Match responses to their originating sessions
-   - Clean up completed request-response pairs
+2. **Add DoS Protection**
+   - Limit pending requests per session (e.g., max 1000)
+   - Add global limit
+   - Return errors when exceeded
 
-### Phase 3: Lifecycle Management
+3. **Improve Response Detection**
+   - Track request types in pending_requests
+   - Match responses based on original request type
+   - Remove fragile protocol-specific assumptions
 
-1. **Timeout Handling**
+### Phase 3: Robustness (NICE TO HAVE)
 
-   - Implement cleanup for stale requests (30-second timeout)
-   - Log warnings for timed-out requests
-   - Prevent memory leaks from orphaned requests
+1. **Transactional State Updates**
+   - Collect all changes first
+   - Apply atomically or rollback
+   - Use Unit of Work pattern
 
-2. **Session Cleanup**
-   - Handle shutdown messages properly
-   - Clean up resources on session close
-   - Remove pending requests for closed sessions
-
-### Phase 4: Testing & Validation
-
-1. Write unit tests for:
-
-   - Session creation from initialize
-   - Request-response matching
-   - State transitions
-   - Timeout handling
-
-2. Write integration tests for:
-   - Full session lifecycle
-   - Concurrent session handling
-   - Error recovery
+2. **Implement Session Tagging**
+   - Define automatic tags (e.g., "long-running", "high-volume")
+   - Add tagging logic in process_message_for_session
 
 ## Success Criteria Checklist
 
-- [ ] TODO comment at `src/session/manager.rs:108` removed
-- [ ] Session matching handles all MCP message types:
-  - [ ] initialize/initialized
-  - [ ] ping/pong
-  - [ ] Tool calls and responses
-  - [ ] Resource operations
-  - [ ] Prompt operations
-  - [ ] shutdown
-- [ ] Request-response correlation working
-- [ ] Session state transitions implemented
-- [ ] Stale request cleanup working
-- [ ] Comprehensive tests passing
-- [ ] No performance degradation
-- [ ] All existing 349+ tests still passing
+- [ ] No memory leaks - pending_requests cleaned up with sessions
+- [ ] No race conditions - atomic operations for concurrent access
+- [ ] InterceptContext metadata properly populated from session
+- [ ] Session matching actually works (test with interceptor rules)
+- [ ] Session recovery mechanism in place
+- [ ] State consistency guaranteed (SessionState vs SessionStatus resolved)
+- [ ] DoS protection with request limits
+- [ ] All 359+ existing tests still passing
+- [ ] New tests for all fixes passing
+- [ ] Clean `cargo fmt` output
+- [ ] Clean `cargo clippy --all-targets -- -D warnings` output
 
 ## Commands to Use
 
 ### Development Commands
 
 ```bash
-# Find the TODO
-rg "TODO.*session matching" --type rust
+# Find the memory leak location
+rg "pending_requests" --type rust
+
+# Check where InterceptContext is created
+rg "InterceptContext::new" --type rust -A 5
 
 # Run session tests
-cargo test session::manager
 cargo test session::
+cargo test intercept::
 
-# Test with actual MCP messages
-cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"initialize","id":1}'
+# Test with debug logging
+RUST_LOG=shadowcat=debug cargo test session_matching
+
+# Check for race conditions
+cargo test --release -- --test-threads=1
 
 # Watch for changes
 cargo watch -x check -x test
@@ -144,17 +154,17 @@ cargo clippy --all-targets -- -D warnings
 ### Verification Commands
 
 ```bash
-# Ensure TODO is removed
-rg "TODO" src/session/manager.rs
+# Ensure no memory leaks
+valgrind --leak-check=full ./target/debug/shadowcat forward stdio -- echo '{}'
 
 # Run all tests
 cargo test
 
-# Check for warnings
-cargo clippy --all-targets -- -D warnings
+# Check session matching works
+cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"initialize","id":1}'
 
-# Performance check
-cargo test --release
+# Stress test for DoS protection
+for i in {1..10000}; do echo '{"jsonrpc":"2.0","method":"test","id":'$i'}'; done | cargo run -- forward stdio -- cat
 ```
 
 ## Important Notes
@@ -164,7 +174,7 @@ cargo test --release
 - **Follow established patterns** from previous implementations
 - **Test incrementally** as you build each component
 - **Run `cargo fmt`** after implementing new functionality
-- **Run `cargo clippy -- -D warnings`** before any commit
+- **Run `cargo clippy --all-targets -- -D warnings`** before any commit
 - **Update the refactor tracker** when the task is complete
 - **Focus on the current phase objectives**
 
@@ -189,26 +199,28 @@ cargo test --release
 
 ## Expected Deliverables
 
-1. **Completed Session Matching Logic**
+1. **Fixed Memory Management**
+   - No memory leaks in pending_requests
+   - Proper cleanup on session end
+   - DoS protection with limits
 
-   - Session ID extraction from all message types
-   - Request-response correlation
-   - State machine for session lifecycle
-   - Cleanup mechanisms for stale data
+2. **Working Session Matching**
+   - InterceptContext metadata populated
+   - Session matching rules functional
+   - Session recovery mechanism
 
-2. **Comprehensive Tests**
+3. **Consistent State Management**
+   - SessionState/SessionStatus confusion resolved
+   - Atomic state updates
+   - No race conditions
 
-   - Unit tests for all new functions
-   - Integration tests for session lifecycle
-   - Edge case handling tests
+4. **Comprehensive Tests**
+   - Tests for memory leak prevention
+   - Tests for race condition fixes
+   - Tests for session matching with metadata
+   - Tests for DoS protection
 
-3. **Documentation Updates**
-
-   - Remove TODO comment
-   - Add inline documentation for complex logic
-   - Update refactor tracker with completion status
-
-4. **Clean Code**
+5. **Clean Code**
    - No clippy warnings
    - Properly formatted with cargo fmt
    - Following established project patterns
@@ -218,20 +230,20 @@ cargo test --release
 Based on completed tasks, follow these patterns:
 
 - Use `anyhow::Context` for error context
-- Return `Result<T, SessionError>` from session functions
-- Use `Arc<RwLock<>>` for shared state (but justify usage)
+- Return proper Result types from all functions
+- Use Arc<RwLock<>> only when justified (document why)
 - Add tracing logs for debugging
 - Handle all error cases explicitly (no unwraps)
+- Use #[instrument] on key functions
 
 ## Start Here
 
 1. First, create a TodoWrite list with the major implementation steps
-2. Read `src/session/manager.rs` to find the TODO and understand context
-3. Examine how sessions are currently created and managed
-4. Begin implementing the session state machine
+2. Read `src/session/manager.rs` to understand the memory leak
+3. Check `src/proxy/forward.rs` to see where InterceptContext lacks metadata
+4. Begin with Phase 1 critical fixes (memory leak first)
 5. Test frequently as you build
 
-Remember: Session matching is CRITICAL functionality that affects recording, replay, and interception features. Take care to implement it correctly and thoroughly test all scenarios.
+Remember: This is a CRITICAL BLOCKER. Task 009 cannot proceed until these issues are fixed. The session matching feature is currently non-functional and has memory leaks that could cause production outages.
 
-Good luck with Task 008!
-
+Good luck with Task 008.1!
