@@ -4,9 +4,9 @@
 This document tracks the systematic refactoring of Shadowcat based on the [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md). Each phase must be completed and verified before proceeding to the next.
 
 ## Current Status
-- **Current Phase**: Phase 2 (1/5 tasks complete) ✅ **Task 005 COMPLETE**
-- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 In Progress (1/5 tasks: Task 005 ✅)
-- **Production Readiness**: 96/100 ⬆️ (+1 point) - **Core Features Implementation Started**
+- **Current Phase**: Phase 2 (2/5 tasks complete) ✅ **Task 006 COMPLETE**
+- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 In Progress (2/5 tasks: Task 005 ✅, Task 006 ✅)
+- **Production Readiness**: 97/100 ⬆️ (+1 point) - **Record/Replay Functionality Complete**
 
 ## Phase 1: Critical Safety (Days 1-5)
 **Goal**: Eliminate all panic points and make the codebase crash-resistant
@@ -71,14 +71,20 @@ cargo clippy -- -D warnings
   - ✅ Integration with existing tape management system
   - ✅ Comprehensive error handling and cleanup
   - ✅ 4 integration tests + all 349 tests passing
-- [ ] [Task 006: Implement Replay Command](./task-006-implement-replay.md)
+- [x] **[Task 006: Implement Replay Command](./task-006-implement-replay.md)** ✅ **COMPLETED**
+  - ✅ CLI interface for replay by tape ID or file path
+  - ✅ HTTP server that serves replayed MCP responses
+  - ✅ Request matching and response playback from tapes
+  - ✅ Error handling for missing/corrupt tapes
+  - ✅ Integration tests demonstrating record->replay flow
+  - ✅ Works with tapes created by record command
 - [ ] [Task 007: Implement Rate Limiting](./task-007-implement-rate-limiting.md)
 - [ ] [Task 008: Complete Session Matching](./task-008-session-matching.md)
 - [ ] [Task 009: Implement Session Cleanup](./task-009-session-cleanup.md)
 
 ### Success Criteria
 - ✅ `shadowcat record` command works end-to-end **VERIFIED** ✅
-- [ ] `shadowcat replay` command works with recorded tapes
+- ✅ `shadowcat replay` command works with recorded tapes **VERIFIED** ✅
 - [ ] Rate limiting enforces configured limits
 - [ ] Session matching logic handles all MCP message types
 - [ ] Old sessions are cleaned up automatically
@@ -173,9 +179,9 @@ ab -n 10000 -c 100 http://localhost:8080/health
 
 ### Phase 2 Progress
 - [x] Started: **2025-08-07**
-- [ ] Completed: **In Progress (1/5 tasks complete)**
+- [ ] Completed: **In Progress (2/5 tasks complete)**
 - [ ] Blockers: **None**
-- [ ] Notes: **Task 005 (Record Command) completed successfully! Full CLI interface with stdio/HTTP recording, complete tape data with timing, rich metadata, integration tests, all 349 tests passing. Ready to start Task 006 (Replay Command).**
+- [ ] Notes: **Task 006 (Replay Command) completed successfully! Fully functional replay by tape ID or file path, HTTP server serving replayed responses, request matching logic, error handling for missing/corrupt tapes, 4 integration tests passing. Record->Replay flow fully working. Ready to start Task 007 (Rate Limiting).**
 
 ### Phase 3 Progress
 - [ ] Started: _____
@@ -212,24 +218,28 @@ Before declaring production-ready:
 4. ✅ ~~Complete Task 004: Fix Blocking IO in Async~~ **COMPLETED**
 5. ✅ ~~Run Phase 1 verification commands~~ **COMPLETED**
 
-## **🎉 TASK 005 COMPLETE! 🎉**
+## **🎉 TASK 006 COMPLETE! 🎉**
 
-**Status**: Phase 2 In Progress (1/5 tasks complete)
-**Next Task**: Task 006: Implement Replay Command
+**Status**: Phase 2 In Progress (2/5 tasks complete)
+**Next Task**: Task 007: Implement Rate Limiting
 
 ### Next Priority Tasks:
-1. **Task 006: Implement Replay Command** - Enable playback of recorded tapes through HTTP server
-2. **Task 007: Implement Rate Limiting** - Add proper rate limiting to prevent abuse
-3. **Task 008: Complete Session Matching** - Ensure all MCP message types are properly handled
-4. **Task 009: Implement Session Cleanup** - Auto-cleanup of old sessions
+1. **Task 007: Implement Rate Limiting** - Add proper rate limiting to prevent abuse
+2. **Task 008: Complete Session Matching** - Ensure all MCP message types are properly handled
+3. **Task 009: Implement Session Cleanup** - Auto-cleanup of old sessions
 
-### Working Record Command Examples:
+### Working Record/Replay Examples:
 ```bash
-# Stdio recording (working)
+# Record commands (working)
 shadowcat record stdio --output demo.tape --name "Demo" --description "Test" -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
-
-# HTTP recording (working)  
 shadowcat record http --output http.tape --port 8081
+
+# Replay commands (working)
+shadowcat replay ef510f7f-1de3-426e-b3b6-66f0b16141d6 --port 8080  # By tape ID
+shadowcat replay ./tapes/demo.json --port 8081                       # By file path
+
+# Test replay
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}' http://localhost:8080/
 
 # List recorded tapes
 shadowcat tape list

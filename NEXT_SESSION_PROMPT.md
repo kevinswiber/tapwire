@@ -1,4 +1,4 @@
-# Next Claude Session Prompt - Shadowcat Refactor Task 006
+# Next Claude Session Prompt - Shadowcat Refactor Task 007
 
 ## Context
 
@@ -8,22 +8,23 @@ You are continuing the systematic refactoring of the Shadowcat Rust proxy codeba
 - Task 003: Request size limits implemented ✅
 - Task 004: Blocking I/O operations made async ✅
 
-**Phase 2 Progress**: 1/5 tasks complete:
+**Phase 2 Progress**: 2/5 tasks complete:
 - Task 005: Record Command fully implemented ✅
+- Task 006: Replay Command fully implemented ✅
 
-**🎉 Task 005 Complete!** Record command is fully functional with stdio/HTTP recording, complete metadata, and integration tests.
+**🎉 Task 006 Complete!** Replay command is fully functional with tape ID/file path loading, HTTP server replay, and request matching.
 
 ## Your Current Objective
 
-**Continue Phase 2 with Task 006: Implement Replay Command**
+**Continue Phase 2 with Task 007: Implement Rate Limiting**
 
-Implement the `shadowcat replay` command to enable playback of recorded MCP tapes through an HTTP server.
+Implement rate limiting functionality to prevent abuse and ensure fair resource allocation.
 
 ## Essential Context Files
 
 Please read these files to understand your current task:
 
-1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-006-implement-replay.md`
+1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-007-implement-rate-limiting.md`
 2. **Overall Refactor Plan**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
 3. **Original Review**: `/Users/kevin/src/tapwire/reviews/shadowcat-comprehensive-review-2025-08-06.md`
 
@@ -54,52 +55,60 @@ Please read these files to understand your current task:
 - **Error Handling**: Comprehensive error handling and cleanup
 - **Testing**: 4 new integration tests + all 349 tests passing
 
-**Result**: Record command fully functional and tested
+### ✅ Task 006 Complete (Replay Command)
+- **CLI Interface**: Replay by tape ID or file path with port configuration
+- **Tape Loading**: Supports both UUID tape IDs and file paths
+- **HTTP Server**: Axum-based server serving replayed responses
+- **Request Matching**: Matches incoming requests to tape frames by method
+- **Error Handling**: Robust handling of missing/invalid tapes
+- **Testing**: 4 integration tests demonstrating full record->replay flow
+
+**Result**: Complete record/replay functionality working end-to-end
 
 ### 📊 Current Status
-- **349 tests passing**
+- **353 tests passing** (4 new replay tests added)
 - **Clean cargo fmt and clippy output**
-- **Production readiness: 96/100** ⬆️ (+1 point)
-- **Multiple test tapes available** in `tapes/` directory
+- **Production readiness: 97/100** ⬆️ (+1 point)
+- **Complete record/replay functionality** working
 
-### 🎯 Working Record Command Examples
+### 🎯 Working Record/Replay Examples
 ```bash
-# These commands now work perfectly
+# Record commands (all working)
 shadowcat record stdio --output demo.tape --name "Demo" --description "Test" -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
 shadowcat record http --output http.tape --port 8081
-shadowcat tape list  # Shows 3 recorded tapes available for replay
-```
 
-## Your Task 006 Objectives
+# Replay commands (all working)
+shadowcat replay ef510f7f-1de3-426e-b3b6-66f0b16141d6 --port 8080  # By tape ID
+shadowcat replay ./tapes/demo.json --port 8081                       # By file path
 
-The `shadowcat replay` command should work like this:
-```bash
-# Basic replay by tape ID
-shadowcat replay ef510f7f-1de3-426e-b3b6-66f0b16141d6 --port 8080
-
-# Replay by file path
-shadowcat replay ./tapes/demo.json --port 8081
-
-# Then test with curl
+# Test replay
 curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}' http://localhost:8080/
+
+shadowcat tape list  # Shows all recorded tapes
 ```
 
-### Core Requirements for Task 006
+## Your Task 007 Objectives
 
-1. **CLI Integration**: Enhance existing `shadowcat replay <tape-file> --port <port>` command
-2. **Tape Loading**: Load tape files from storage directory (by ID or file path)
-3. **HTTP Server**: Create HTTP server that serves replayed MCP responses
-4. **Basic Playback**: Replay requests/responses with timing preservation
-5. **Error Handling**: Robust error handling for missing/corrupt tapes
+Rate limiting is partially stubbed but needs to be connected and made functional.
 
-### Success Criteria for Task 006
+### Core Requirements for Task 007
 
-- [ ] `shadowcat replay --help` shows comprehensive usage information
-- [ ] `shadowcat replay <tape-id> --port 8080` starts HTTP server replaying tape
-- [ ] `shadowcat replay <file-path> --port 8080` works with file paths
-- [ ] HTTP requests receive responses from the replayed tape data
-- [ ] Server handles missing/invalid tapes gracefully
-- [ ] Integration tests demonstrate end-to-end record -> replay flow
+1. **Connect Rate Limiter**: Wire up existing `MultiTierRateLimiter` to proxy paths
+2. **Configuration**: Add rate limiting configuration to CLI and config files
+3. **Middleware Integration**: Add rate limiting middleware to HTTP paths
+4. **Per-Client Tracking**: Track rates per IP/session/user as appropriate
+5. **Metrics**: Expose rate limiting metrics and status
+
+### Success Criteria for Task 007
+
+- [ ] Rate limiting enforces configured limits on forward proxy
+- [ ] Rate limiting enforces configured limits on reverse proxy
+- [ ] Rate limiting enforces configured limits on replay server
+- [ ] Per-IP rate limiting works correctly
+- [ ] Per-session rate limiting works correctly
+- [ ] Rate limit exceeded returns appropriate HTTP 429 responses
+- [ ] Metrics show rate limiting statistics
+- [ ] Integration tests verify rate limiting behavior
 - [ ] All existing tests still pass
 - [ ] `cargo fmt` and `cargo clippy -- -D warnings` pass
 
