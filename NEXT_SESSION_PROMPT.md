@@ -1,161 +1,95 @@
-# Next Claude Session Prompt - Integration Test Failure Investigation
+# Next Claude Session Prompt - Shadowcat Refactor Task 002
 
-## 🚨 **CRITICAL PRIORITY - Start Session With This Task**
+## Context
 
-## 🎯 **Primary Objective**
+You are continuing the systematic refactoring of the Shadowcat Rust proxy codebase. **Task 001 (Remove All Unwrap Calls) has been successfully completed** - all 35 production unwrap calls have been eliminated, and the codebase now has zero panic points in production code.
 
-Investigate and fix the runtime failures in integration tests that were discovered during Task 008.5 completion. While compilation issues were resolved, **integration tests are failing at runtime**, indicating deeper systemic problems.
+## Your Current Objective
 
-## ✅ **Previous Session Accomplishments**
+**Continue Phase 1 with Task 002: Fix Duplicate Error Types**
 
-**Task 008.5: E2E Test Recovery - COMPLETE** ✅
-- ✅ **Type conflicts eliminated** - Prefixed all reverse proxy types to resolve module conflicts
-- ✅ **E2E tests re-enabled** - All 3 disabled integration test files now compile successfully
-- ✅ **Configuration fixes** - Updated OAuth2Config, AuthGatewayConfig, RateLimitConfig structures
-- ✅ **Import/export corrections** - Fixed module structure and eliminated naming conflicts
-- ✅ **Unit tests preserved** - All 341 unit tests continue to pass
+Based on the comprehensive review, there are duplicate error type definitions in `src/error.rs` that need to be consolidated for better maintainability and consistency.
 
-**Key Type Renames Completed:**
-- `LoadBalancingStrategy` → `ReverseLoadBalancingStrategy`
-- `UpstreamHealthCheckConfig` → `ReverseUpstreamHealthCheckConfig`
-- `UpstreamPoolConfig` → `ReverseUpstreamPoolConfig`
-- `SessionConfig` → `ReverseSessionConfig`
-- `Metrics` → `ReverseProxyMetrics`
+## Essential Context Files
 
-## 🚨 **Critical Issue Discovered**
+Please read these files to understand your current task:
 
-**Integration tests compile successfully but fail when executed**, revealing that the codebase has significant runtime issues beyond the type conflicts that were resolved.
+1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-002-fix-duplicate-errors.md` (if it exists, otherwise refer to the review)
+2. **Overall Refactor Plan**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md` - Shows current progress and next steps
+3. **Original Review**: `/Users/kevin/src/tapwire/reviews/shadowcat-comprehensive-review-2025-08-06.md` - Section on duplicate error types
 
-## 🔍 **Required Investigation**
+## Working Directory
 
-### **Phase 1: Individual Test Analysis**
-Run each integration test separately to identify specific failure patterns:
+`/Users/kevin/src/tapwire/shadowcat`
+
+## What Task 001 Accomplished
+
+- ✅ **35 production unwraps eliminated** (560 → 525, remaining are test-only)
+- ✅ **Added 4 new error variants**: `SystemTime`, `AddressParse`, `RequiredFieldMissing`, `InvalidUpstreamConfig`
+- ✅ **All 341 tests passing**
+- ✅ **Clean clippy output**
+- ✅ **Zero panic points in production code**
+
+## Your Task 002 Objectives
+
+1. **Analyze `src/error.rs`** for duplicate error type definitions
+2. **Consolidate duplicate error types** - Remove redundant definitions
+3. **Ensure consistent error handling patterns** across the codebase
+4. **Update any imports/usage** of the old duplicate types
+5. **Verify all tests still pass**
+6. **Update documentation** when complete
+
+## Success Criteria for Task 002
+
+- [ ] No duplicate error type definitions in codebase
+- [ ] All error types have single, canonical definitions
+- [ ] Consistent error handling patterns across modules
+- [ ] All tests pass
+- [ ] Clean clippy output
+- [ ] Update task documentation when complete
+
+## Commands to Use
 
 ```bash
-# Test each integration test individually
-cargo test --test e2e_basic_integration_test -- --nocapture
-cargo test --test e2e_complete_flow_test -- --nocapture  
-cargo test --test e2e_resilience_test -- --nocapture
-cargo test --test e2e_multi_upstream_test -- --nocapture
-cargo test --test integration_reverse_proxy -- --nocapture
+# Check for duplicate error definitions
+rg "enum.*Error" --type rust src/
+
+# Run tests
+cargo test
+
+# Check clippy
+cargo clippy -- -D warnings
+
+# Check compilation
+cargo check
 ```
 
-### **Phase 2: Error Pattern Analysis**
-1. **Capture full error logs** from each failing test
-2. **Identify common failure patterns** across tests
-3. **Categorize issues** (mock servers, transports, authentication, configuration, etc.)
-4. **Prioritize fixes** based on impact and complexity
+## Current Phase Status
 
-### **Phase 3: Component Isolation Testing**
-Test individual components in isolation:
-1. **Mock OAuth Server** - Verify mock authentication server functions
-2. **Mock MCP Server** - Test mock upstream MCP servers
-3. **HTTP Transport** - Validate HTTP transport implementation
-4. **Stdio Transport** - Confirm stdio transport works correctly
-5. **Session Management** - Test session creation and management
-6. **Authentication Flow** - Verify OAuth/JWT workflows
+**Phase 1: Critical Safety (1/4 tasks complete)**
+- ✅ Task 001: Remove All Unwrap Calls (COMPLETED)
+- 🔄 Task 002: Fix Duplicate Error Types (CURRENT)
+- ⏳ Task 003: Add Request Size Limits
+- ⏳ Task 004: Fix Blocking IO in Async
 
-### **Phase 4: Systematic Fix Implementation**
-Based on investigation results:
-1. **Fix highest-impact issues first**
-2. **Validate fixes with targeted tests**
-3. **Re-run full integration test suite**
-4. **Ensure no regressions in unit tests**
+## Important Notes
 
-## 📋 **Likely Investigation Areas**
+- Always use the TodoWrite tool to track your progress through the task
+- Test frequently to catch any issues early
+- Follow the same systematic approach used in Task 001
+- Update the refactor tracker when Task 002 is complete
+- The original review mentioned duplicate `ConfigurationError` and `AuthenticationError` definitions
 
-### **Mock Infrastructure Issues**
-- OAuth mock server may not be starting correctly
-- MCP mock servers may have runtime configuration issues
-- Test client connections may be failing
+## Model Usage Strategy
 
-### **Transport Implementation Problems**
-- HTTP transport may have runtime bugs
-- Stdio transport may not be handling connections properly
-- Transport message serialization/deserialization issues
+Use **OPUS for**:
+- Initial analysis of duplicate error types
+- Complex error consolidation decisions
+- Architecture-level error handling patterns
 
-### **Authentication Flow Failures**
-- OAuth 2.1 PKCE flow may be broken in integration context
-- JWT validation may be failing
-- Session management may not be working correctly
+Use **SONNET for**:
+- Mechanical code changes (removing duplicates)
+- Running validation commands
+- Updating imports and references
 
-### **Configuration Runtime Issues**
-- While types compile, configuration objects may not work at runtime
-- Builder patterns may have logical errors
-- Serialization/deserialization may be failing
-
-## ⚙️ **Investigation Tools & Commands**
-
-### **Individual Test Execution**
-```bash
-# Run with detailed output
-RUST_LOG=debug cargo test --test e2e_basic_integration_test -- --nocapture
-
-# Run specific test function
-cargo test --test e2e_multi_upstream_test test_weighted_round_robin_serialization -- --nocapture
-```
-
-### **Mock Server Testing**
-```bash
-# Test mock servers independently if needed
-RUST_LOG=shadowcat=debug,reqwest=debug cargo test mock_auth_server -- --nocapture
-```
-
-### **Unit Test Validation**
-```bash
-# Ensure unit tests still pass
-cargo test --lib --quiet
-```
-
-## 🎯 **Success Criteria**
-
-### **Must Complete:**
-1. ✅ **Root cause identification** - Understand why integration tests are failing
-2. ✅ **Systematic fix plan** - Prioritized approach to resolve issues  
-3. ✅ **Critical fixes implemented** - Address highest-impact failures
-4. ✅ **Integration tests passing** - All integration tests execute successfully
-
-### **Should Complete:**
-5. ✅ **Full test suite functional** - 341+ unit tests + all integration tests passing
-6. ✅ **System stability verified** - Core workflows working end-to-end
-7. ✅ **Documentation updated** - Record findings and fixes for future reference
-
-## 💡 **Investigation Strategy**
-
-1. **Start with simplest test** - Begin with `e2e_multi_upstream_test` as it's most recently updated
-2. **Use detailed logging** - `RUST_LOG=debug` to capture comprehensive error information
-3. **Test incrementally** - Fix issues one at a time and re-test
-4. **Validate continuously** - Ensure unit tests continue to pass throughout investigation
-5. **Document findings** - Keep track of issues discovered and solutions applied
-
-## 📊 **Current Status**
-
-**What's Working:**
-- ✅ All 341 unit tests pass consistently
-- ✅ All integration tests compile successfully
-- ✅ Type system is coherent and conflict-free
-
-**What Needs Investigation:**
-- 🚨 Integration test runtime failures
-- 🚨 Mock server functionality
-- 🚨 Transport implementations 
-- 🚨 Authentication workflows
-- 🚨 End-to-end system integration
-
-## 🚀 **Next Steps After Investigation**
-
-Once integration test failures are resolved:
-1. **Task 009: Performance Testing** - Benchmark enhanced multi-upstream architecture
-2. **Production Readiness** - Validate system is ready for deployment
-3. **Future Enhancements** - WebSocket support, dynamic configuration, etc.
-
-## 📝 **Important Notes**
-
-- **Unit tests are solid** - Core functionality is implemented correctly
-- **Type system is fixed** - No more import conflicts or compilation errors
-- **Focus on runtime issues** - The problems are in execution, not compilation
-- **Systematic approach needed** - Don't rush fixes, understand root causes first
-
-**Remember: The goal is to identify why integration tests fail at runtime despite successful compilation, then systematically fix the discovered issues.**
-
-Let's get the integration tests fully functional! 🔍🔧
+Begin by reading the context files and analyzing the current state of error type definitions in `src/error.rs`.

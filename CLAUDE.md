@@ -166,3 +166,114 @@ cargo flamegraph --bin shadowcat -- forward stdio -- your-command
 - **DO NOT** mention Claude Code in commit messages
 - Keep commit messages focused on the technical changes and their purpose
 - Use standard conventional commit format when appropriate
+
+## Rust Code Review Guidelines
+
+When reviewing Rust code in this project, use the specialized `rust-code-reviewer` agent for:
+- Memory safety verification and unsafe code auditing
+- Performance optimization and zero-cost abstractions
+- Async/await patterns with tokio
+- Error handling with Result types and custom errors
+- Trait design and generic programming
+
+The agent follows specific quality gates:
+- Flag any unsafe code lacking safety documentation
+- Ensure public APIs have documentation
+- Check for unwrap()/expect() in production code
+- Verify test coverage for critical paths
+- Monitor performance against 5% overhead target
+
+**Important** Make sure there are no clippy warnings with `cargo clippy -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems.
+
+## Current Implementation Status
+
+### Shadowcat Core Modules
+- `src/transport/`: Transport abstraction with stdio, HTTP, and HTTP-MCP implementations
+- `src/proxy/`: Forward and reverse proxy implementations with circuit breakers and health checking
+- `src/session/`: Session management and storage
+- `src/interceptor/`: Rule-based message interception engine
+- `src/recorder/`: Tape recording and replay functionality
+- `src/auth/`: OAuth 2.1 authentication gateway
+- `src/audit/`: Event logging and audit trails
+- `src/rate_limiting/`: Multi-tier rate limiting
+- `src/metrics/`: Performance metrics collection
+
+### CLI Commands
+```bash
+# Forward proxy modes
+shadowcat forward stdio -- command args
+shadowcat forward http --port 8080 --target http://server
+
+# Reverse proxy
+shadowcat reverse --bind 127.0.0.1:8080 --upstream http://mcp-server
+
+# Recording and replay
+shadowcat record --output session.tape -- command
+shadowcat replay session.tape --port 8080
+
+# Tape management
+shadowcat tape list
+shadowcat tape info <tape-id>
+shadowcat tape export <tape-id>
+
+# Interception management
+shadowcat intercept list-rules
+shadowcat intercept add-rule --file rule.yaml
+```
+
+### Key Dependencies
+- **rmcp**: MCP protocol implementation
+- **tokio**: Async runtime with full features
+- **axum**: HTTP server framework
+- **sqlx**: Database access with SQLite
+- **jsonwebtoken**: JWT handling
+- **oauth2**: OAuth 2.1 implementation
+- **governor**: Rate limiting
+- **tracing**: Structured logging
+
+## Security Requirements
+
+### Authentication and Authorization
+- OAuth 2.1 compliance for auth gateway
+- JWT validation with proper audience checking
+- PKCE (Proof Key for Code Exchange) support
+- **Never forward client tokens to upstream servers**
+- Resource server metadata discovery (RFC 9728)
+
+### Transport Security
+- Localhost binding by default for development
+- Origin validation for HTTP transport
+- DNS rebinding protection
+- TLS termination for production deployments
+
+### Audit and Compliance
+- Comprehensive event logging
+- Session tracking and replay capabilities
+- Rate limiting with configurable tiers
+- Policy enforcement at multiple layers
+
+## Performance Targets
+
+- **Latency overhead**: < 5% p95 for typical tool calls
+- **Memory usage**: < 100MB for 1000 concurrent sessions
+- **Throughput**: > 10,000 requests/second
+- **Startup time**: < 100ms
+- **Recording overhead**: < 10% additional latency
+
+## Contributing Guidelines
+
+1. **Code Style**: Follow standard Rust conventions (cargo fmt, cargo clippy)
+2. **Testing**: Comprehensive unit and integration tests required
+3. **Documentation**: Public APIs must be documented with examples
+4. **Performance**: Profile changes that may affect latency
+5. **Security**: All auth-related changes need security review
+6. **Compatibility**: Maintain MCP protocol compliance
+
+## Important Notes
+
+- **Submodule Workflow**: Always commit Shadowcat changes in the shadowcat repository first, then update the parent repository's submodule reference
+- **Never commit secrets**: Use proper configuration management for sensitive data
+- **Protocol Version**: Currently targeting MCP `2025-11-05`
+- **Transport Priority**: stdio for development, HTTP for production deployments
+- **Session Lifecycle**: All operations are session-scoped with proper cleanup
+- **Error Context**: Use `anyhow::Context` for rich error messages throughout the codebase
