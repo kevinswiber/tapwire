@@ -1,141 +1,203 @@
-# MCP Compliance Task 0.1: Fix Initialize Version Extraction
+# MCP Compliance Phase 0 - Task 0.4: Add Version State Management
 
 ## Context
 
-You are working on the Shadowcat MCP proxy implementation which has critical compliance issues with the MCP specification. The project is currently non-compliant with MCP versions 2025-03-26 (minimum supported) and 2025-06-18 (current target).
+You are working on the Shadowcat MCP proxy implementation in the Tapwire project. The project is currently at 10% completion (3 of 29 tasks) for MCP compliance, with Phase 0 at 60% complete (3 of 5 tasks).
 
-**Working Directory**: `/Users/kevin/src/tapwire`
+### What Has Been Completed
 
-## Current Status
+1. **Task 0.1**: Fix Initialize Version Extraction ✅
+   - Created centralized protocol module for version management
+   - Removed all non-compliant "2025-11-05" references
+   - Added VersionInfo struct with negotiation tracking
+   - Implemented backward compatibility between versions
 
-The MCP Compliance project is in **Phase 0: Critical Version Bug Fixes**. This phase addresses fundamental version negotiation bugs that prevent basic MCP compliance. No tasks have been completed yet (0/29 tasks done).
+2. **Task 0.2**: Fix HTTP Default Version ✅
+   - Changed HTTP default from "2025-11-05" to "2025-03-26"
+   - Added HTTP_DEFAULT_VERSION constant in protocol module
+   - Updated all HTTP header extraction to use centralized constant
 
-### Critical Issue Being Addressed
+3. **Task 0.3**: Implement Version Negotiation Response ✅
+   - Created `protocol/negotiation.rs` with VersionNegotiator
+   - Modified forward proxy to intercept initialize responses
+   - Track initialize requests by ID for response matching
+   - Negotiate versions when client/server mismatch
+   - Fixed memory leak and added TTL-based cleanup for tracked requests
+   - Added LATEST_SUPPORTED_VERSION constant for maintainability
 
-The Shadowcat proxy completely ignores the `protocolVersion` field in MCP initialize requests. This violates the MCP specification and prevents proper version negotiation, affecting every MCP session.
+### Recent Improvements
+- Fixed critical memory leak in initialize request tracking
+- Implemented TTL-based cleanup (60s) for orphaned requests
+- Added bounded size protection (max 1000 tracked requests)
+- Switched from Mutex to RwLock for better performance
+- All tests passing with no clippy warnings
 
-**Current Bug Location**: `shadowcat/src/session/manager.rs:783-786`
-```rust
-TransportMessage::Request { method, .. } if method == "initialize" => {
-    session.transition(SessionEvent::InitializeRequest)?;
-    // CRITICAL BUG: Ignores params field containing protocolVersion!
-}
+## Current Task: Task 0.4 - Add Version State Management
+
+### Objective
+
+Create a comprehensive version state management system that tracks the complete version lifecycle throughout a session, including requested, negotiated, and transport versions. This will ensure proper version consistency across all protocol layers and enable better debugging of version-related issues.
+
+### Working Directory
+```
+/Users/kevin/src/tapwire/shadowcat
 ```
 
-## Task Objectives
+### Essential Context Files to Read
 
-Implement proper version extraction from initialize requests:
+1. **Task Specification** (if exists):
+   ```
+   plans/mcp-compliance/tasks/phase-0-task-004-version-state-management.md
+   ```
 
-1. **Extract `protocolVersion`** from initialize request params
-2. **Store requested version** in session state  
-3. **Add version validation** logic to check if version is supported
-4. **Create unit tests** for version extraction functionality
+2. **Current Implementation**:
+   - `src/session/store.rs` - Current VersionInfo struct (lines 99-108)
+   - `src/session/manager.rs` - Session management and version tracking
+   - `src/protocol/mod.rs` - Protocol constants and version handling
+   - `src/protocol/negotiation.rs` - Version negotiation logic
+   - `src/proxy/forward.rs` - Forward proxy with version negotiation
+   - `src/transport/http_mcp.rs` - HTTP transport version handling
 
-## Essential Context Files to Read
+3. **Architecture Documents**:
+   - `plans/mcp-compliance/005-multi-version-architecture-design.md` - Multi-version architecture
+   - `plans/mcp-compliance/006-critical-version-bugs.md` - Bug #4: Version State Not Tracked Properly
 
-Start by reading these files in order:
+### Implementation Strategy
 
-1. **Task Specification**: `plans/mcp-compliance/tasks/phase-0-task-001-initialize-version-extraction.md`
-   - Contains detailed implementation plan and code examples
-   
-2. **Critical Bug Report**: `plans/mcp-compliance/006-critical-version-bugs.md`
-   - Explains the severity and impact of this bug
+#### Phase 1: Design VersionState Structure
+1. Create comprehensive VersionState struct to replace simple VersionInfo
+2. Track multiple version sources:
+   - Requested version (from client initialize)
+   - Negotiated version (after handshake)
+   - Transport version (from HTTP headers)
+   - Negotiation method (initialize-only vs dual-channel)
 
-3. **Current Implementation**: 
-   - `shadowcat/src/session/manager.rs` (lines 783-800) - Where bug exists
-   - `shadowcat/src/session/store.rs` - Session structure that needs updating
-   - `shadowcat/src/transport/mod.rs` - Current version constants
+#### Phase 2: Implement State Transitions
+1. Define valid state transitions
+2. Add validation for version changes
+3. Prevent renegotiation after initial handshake
+4. Handle version conflicts between channels
 
-4. **MCP Specifications** (for reference):
-   - `specs/mcp/docs/specification/2025-06-18/basic/lifecycle.mdx` - Initialize handshake
-   - `specs/mcp/docs/specification/2025-03-26/basic/lifecycle.mdx` - Older version for comparison
+#### Phase 3: Integrate with Session Management
+1. Update Session struct to use new VersionState
+2. Migrate existing VersionInfo usage
+3. Update session manager to track state changes
+4. Add proper error handling for invalid transitions
 
-## Implementation Strategy
+#### Phase 4: Add Dual-Channel Validation
+1. Validate HTTP header matches negotiated version (for 2025-06-18+)
+2. Detect and reject version conflicts
+3. Add proper error types for version mismatches
+4. Update reverse proxy to use version state
 
-### Phase 1: Create Protocol Module (30 min)
-1. Create new file `shadowcat/src/protocol/mod.rs`
-2. Define version constants and supported versions array
-3. Implement `extract_protocol_version()` helper function
-4. Add `is_version_supported()` validation function
+#### Phase 5: Testing and Documentation
+1. Unit tests for state transitions
+2. Integration tests for version tracking
+3. Tests for dual-channel consistency
+4. Update documentation
 
-### Phase 2: Update Session Structure (45 min)
-1. Modify `shadowcat/src/session/store.rs`
-2. Add `VersionInfo` struct with requested/negotiated fields
-3. Add `set_requested_version()` method to Session
-4. Implement negotiation_required flag logic
+### Detailed Objectives
 
-### Phase 3: Fix Initialize Handler (45 min)
-1. Update `shadowcat/src/session/manager.rs:783-800`
-2. Extract params and call version extraction helper
-3. Store version in session state
-4. Add debug logging for version tracking
+1. **Create VersionState struct** with:
+   - `requested: Option<String>` - Version from initialize request
+   - `negotiated: Option<String>` - Version after negotiation
+   - `transport_version: Option<String>` - Version from HTTP headers
+   - `negotiation_method: NegotiationMethod` enum (InitializeOnly, DualChannel)
+   - `state: VersionStatePhase` enum (Uninitialized, Requested, Negotiated, Validated)
 
-### Phase 4: Add Tests (60 min)
-1. Create unit tests in protocol module
-2. Test version extraction with valid/invalid params
-3. Test version support checking
-4. Create integration test for full flow
+2. **Implement state machine** for version transitions:
+   - Uninitialized → Requested (on initialize request)
+   - Requested → Negotiated (on initialize response)
+   - Negotiated → Validated (on HTTP header match for dual-channel)
+   - Prevent invalid transitions and renegotiation
 
-### Phase 5: Validate and Clean Up (30 min)
-1. Run all tests: `cargo test`
-2. Format code: `cargo fmt`
-3. Check for issues: `cargo clippy --all-targets -- -D warnings`
-4. Update compliance tracker
+3. **Add validation methods**:
+   - `validate_transition()` - Check if state change is allowed
+   - `validate_consistency()` - Check dual-channel consistency
+   - `is_finalized()` - Check if version is locked
+   - `get_active_version()` - Get the current active version
 
-## Success Criteria Checklist
+4. **Update existing code**:
+   - Replace VersionInfo with VersionState in Session
+   - Update session manager to use new state methods
+   - Modify forward/reverse proxies to track state properly
+   - Add logging for state transitions
 
-- [ ] Protocol version successfully extracted from initialize params
-- [ ] Version stored correctly in session state
-- [ ] Unsupported versions flagged for negotiation
-- [ ] Missing version handled with appropriate default ("2025-03-26")
-- [ ] All unit tests passing
-- [ ] Integration test demonstrates end-to-end flow
+### Success Criteria Checklist
+
+- [ ] VersionState struct created with all required fields
+- [ ] State machine implemented with proper transitions
+- [ ] Validation methods prevent invalid state changes
+- [ ] Session struct updated to use VersionState
+- [ ] Forward proxy tracks version state correctly
+- [ ] Reverse proxy validates dual-channel consistency
+- [ ] All existing tests still pass
+- [ ] New tests for version state management
+- [ ] Tests for invalid transition rejection
+- [ ] Tests for dual-channel validation
 - [ ] No clippy warnings
-- [ ] Debug logging added for version tracking
-- [ ] Code formatted with `cargo fmt`
+- [ ] Code properly formatted with cargo fmt
+- [ ] Documentation updated
+- [ ] Compliance tracker updated
 
-## Commands to Use
+### Commands to Use
 
 ```bash
 # Navigate to shadowcat directory
-cd shadowcat
-
-# Create new protocol module
-mkdir -p src/protocol
+cd /Users/kevin/src/tapwire/shadowcat
 
 # Run tests frequently
-cargo test protocol::
-cargo test session::manager::tests::
-cargo test version_extraction
+cargo test version
+cargo test session
 
-# Check your work
+# Run specific test modules
+cargo test session::store::tests
+cargo test protocol::
+
+# Check for compilation errors
+cargo build
+
+# Format code
 cargo fmt
+
+# Run clippy
 cargo clippy --all-targets -- -D warnings
 
-# Run specific test with output
-cargo test test_extract_version_from_valid_params -- --nocapture
+# Run all tests
+cargo test
+
+# Commit changes (in shadowcat repo)
+git add -A
+git commit -m "feat: implement comprehensive version state management"
+git push
+
+# Update parent repo
+cd ..
+git add shadowcat
+git commit -m "feat: add version state management to shadowcat"
+git push
 ```
 
-## Expected Deliverables
+### Expected Deliverables
 
-By the end of this session, you should have:
+1. **New file**: `src/protocol/version_state.rs`
+   - VersionState struct
+   - VersionStatePhase enum
+   - NegotiationMethod enum
+   - State transition logic
+   - Validation methods
 
-1. **New Files Created**:
-   - `shadowcat/src/protocol/mod.rs` - Protocol version handling module
-   - `shadowcat/tests/version_extraction_test.rs` - Integration tests
+2. **Modified files**:
+   - `src/session/store.rs` - Replace VersionInfo with VersionState
+   - `src/session/manager.rs` - Update to use new state management
+   - `src/proxy/forward.rs` - Track state transitions
+   - `src/proxy/reverse.rs` - Add dual-channel validation
+   - `src/protocol/mod.rs` - Export new version_state module
 
-2. **Files Modified**:
-   - `shadowcat/src/session/store.rs` - Added VersionInfo to Session
-   - `shadowcat/src/session/manager.rs` - Fixed initialize handler
-   - `shadowcat/src/lib.rs` - Added protocol module export
-
-3. **Tests Passing**:
-   - Unit tests for version extraction
-   - Unit tests for version validation
-   - Integration test for initialize flow
-
-4. **Documentation**:
-   - Updated `plans/mcp-compliance/compliance-tracker.md` with task completion
+3. **Test files**:
+   - Add tests in version_state.rs module
+   - Update existing session tests
+   - Add integration tests for state tracking
 
 ## Important Notes
 
@@ -145,7 +207,7 @@ By the end of this session, you should have:
 - **Test incrementally** as you build each component
 - **Run `cargo fmt`** after implementing new functionality
 - **Run `cargo clippy --all-targets -- -D warnings`** before any commit
-- **Update the refactor tracker** when the task is complete
+- **Update the compliance tracker** when the task is complete
 - **Focus on the current phase objectives**
 
 ## Model Usage Guidelines
@@ -167,28 +229,43 @@ By the end of this session, you should have:
 11. Update project documentation and tracker as needed
 12. Commit changes with clear, descriptive messages
 
-## Using the rust-code-reviewer
+## Current Phase Status
 
-If you encounter complex Rust patterns or need to ensure memory safety, use the `rust-code-reviewer` subagent to:
-- Validate ownership and borrowing patterns
-- Check async/await usage with tokio
-- Verify error handling with Result types
-- Ensure no unwrap()/expect() in production code
+**Phase 0: Critical Version Bug Fixes**
+- Task 0.1: Fix Initialize Version Extraction ✅
+- Task 0.2: Fix HTTP Default Version ✅
+- Task 0.3: Implement Version Negotiation Response ✅
+- **Task 0.4: Add Version State Management** 🎯 CURRENT
+- Task 0.5: Handle Dual-Channel Version Conflicts ⏳
 
-## Next Steps After Completion
+After completing Task 0.4, Task 0.5 will be ready to start, which will complete Phase 0.
 
-Once Task 0.1 is complete:
-- Task 0.2 (Fix HTTP Default Version) can run in parallel
-- Task 0.3 (Version Negotiation Response) depends on 0.1 completion
-- Update tracker to mark Task 0.1 as complete
-- Create new session for next task if context window > 70%
+## Key Technical Context
 
-## References
+### Current Version Support
+- **Minimum supported**: 2025-03-26 (initialize-only negotiation)
+- **Current target**: 2025-06-18 (dual-channel negotiation)
+- **Latest supported**: 2025-06-18 (defined in LATEST_SUPPORTED_VERSION constant)
 
-- Compliance Tracker: `plans/mcp-compliance/compliance-tracker.md`
-- Task File: `plans/mcp-compliance/tasks/phase-0-task-001-initialize-version-extraction.md`
-- Bug Report: `plans/mcp-compliance/006-critical-version-bugs.md`
-- MCP 2025-06-18 Spec: `specs/mcp/docs/specification/2025-06-18/`
-- MCP 2025-03-26 Spec: `specs/mcp/docs/specification/2025-03-26/`
+### Version Negotiation Flow
+1. Client sends initialize with protocolVersion
+2. Server responds with same or alternative version
+3. For 2025-06-18+: HTTP headers must match negotiated version
+4. Proxy must track and validate consistency
 
-Good luck! This fix is critical for MCP compliance and will unblock many other tasks.
+### Known Issues to Address
+- Version state is not properly tracked through session lifecycle
+- No validation of state transitions
+- Dual-channel consistency not enforced (only warned)
+- No clear separation between negotiation methods
+
+## Notes from Previous Session
+
+- Version negotiation is working but needs better state management
+- Memory leak in request tracking has been fixed
+- TTL-based cleanup is implemented (60 seconds)
+- Bounded size protection prevents DoS attacks
+- RwLock improves concurrent read performance
+- All constants are centralized for maintainability
+
+Start by reading the existing VersionInfo implementation and understanding how it's currently used throughout the codebase, then design the enhanced VersionState structure to properly track the complete version lifecycle.
