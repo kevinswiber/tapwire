@@ -1,8 +1,8 @@
-# MCP Compliance Phase 0 - Task 0.4: Add Version State Management
+# MCP Compliance Phase 0 - Task 0.5: Handle Dual-Channel Version Conflicts
 
 ## Context
 
-You are working on the Shadowcat MCP proxy implementation in the Tapwire project. The project is currently at 10% completion (3 of 29 tasks) for MCP compliance, with Phase 0 at 60% complete (3 of 5 tasks).
+You are working on the Shadowcat MCP proxy implementation in the Tapwire project. The project is currently at 14% completion (4 of 29 tasks) for MCP compliance, with Phase 0 at 80% complete (4 of 5 tasks). This is the FINAL task in Phase 0.
 
 ### What Has Been Completed
 
@@ -22,21 +22,26 @@ You are working on the Shadowcat MCP proxy implementation in the Tapwire project
    - Modified forward proxy to intercept initialize responses
    - Track initialize requests by ID for response matching
    - Negotiate versions when client/server mismatch
-   - Fixed memory leak and added TTL-based cleanup for tracked requests
-   - Added LATEST_SUPPORTED_VERSION constant for maintainability
+
+4. **Task 0.4**: Add Version State Management ✅
+   - Created comprehensive VersionState struct with state machine
+   - Tracks requested/negotiated/transport versions
+   - State transitions: Uninitialized → Requested → Negotiated → Validated
+   - **BOTH** forward and reverse proxies track complete version lifecycle
+   - Added version constants module (`protocol::versions`)
+   - 17 new tests covering all scenarios
 
 ### Recent Improvements
-- Fixed critical memory leak in initialize request tracking
-- Implemented TTL-based cleanup (60s) for orphaned requests
-- Added bounded size protection (max 1000 tracked requests)
-- Switched from Mutex to RwLock for better performance
-- All tests passing with no clippy warnings
+- Fixed forward proxy bug where requested version wasn't tracked in session
+- Added complete version tracking to reverse proxy (was missing)
+- Created 5 comprehensive tests for reverse proxy version tracking
+- Established proxy mode parity guidelines
 
-## Current Task: Task 0.4 - Add Version State Management
+## Current Task: Task 0.5 - Handle Dual-Channel Version Conflicts
 
 ### Objective
 
-Create a comprehensive version state management system that tracks the complete version lifecycle throughout a session, including requested, negotiated, and transport versions. This will ensure proper version consistency across all protocol layers and enable better debugging of version-related issues.
+Implement proper enforcement of dual-channel version validation for MCP 2025-06-18, ensuring that HTTP headers match the negotiated version and providing proper error responses for conflicts. This must be implemented in BOTH forward and reverse proxy modes.
 
 ### Working Directory
 ```
@@ -45,96 +50,83 @@ Create a comprehensive version state management system that tracks the complete 
 
 ### Essential Context Files to Read
 
-1. **Task Specification** (if exists):
-   ```
-   plans/mcp-compliance/tasks/phase-0-task-004-version-state-management.md
-   ```
+1. **Current Implementation**:
+   - `src/protocol/version_state.rs` - VersionState with validation logic
+   - `src/protocol/mod.rs` - Version constants and helpers
+   - `src/proxy/forward.rs` - Forward proxy (check version handling)
+   - `src/proxy/reverse.rs` - Reverse proxy (check version handling)
+   - `src/transport/http_mcp.rs` - HTTP transport version extraction
 
-2. **Current Implementation**:
-   - `src/session/store.rs` - Current VersionInfo struct (lines 99-108)
-   - `src/session/manager.rs` - Session management and version tracking
-   - `src/protocol/mod.rs` - Protocol constants and version handling
-   - `src/protocol/negotiation.rs` - Version negotiation logic
-   - `src/proxy/forward.rs` - Forward proxy with version negotiation
-   - `src/transport/http_mcp.rs` - HTTP transport version handling
-
-3. **Architecture Documents**:
-   - `plans/mcp-compliance/005-multi-version-architecture-design.md` - Multi-version architecture
-   - `plans/mcp-compliance/006-critical-version-bugs.md` - Bug #4: Version State Not Tracked Properly
+2. **Architecture Documents**:
+   - `plans/mcp-compliance/006-critical-version-bugs.md` - Bug #5: Dual-Channel Conflicts
+   - `plans/mcp-compliance/compliance-tracker.md` - Task 0.5 details
 
 ### Implementation Strategy
 
-#### Phase 1: Design VersionState Structure
-1. Create comprehensive VersionState struct to replace simple VersionInfo
-2. Track multiple version sources:
-   - Requested version (from client initialize)
-   - Negotiated version (after handshake)
-   - Transport version (from HTTP headers)
-   - Negotiation method (initialize-only vs dual-channel)
+#### Phase 1: Analyze Current State
+1. Review how version validation currently works in both proxies
+2. Identify where warnings are logged vs errors returned
+3. Check HTTP response handling for version conflicts
+4. Understand current error flow
 
-#### Phase 2: Implement State Transitions
-1. Define valid state transitions
-2. Add validation for version changes
-3. Prevent renegotiation after initial handshake
-4. Handle version conflicts between channels
+#### Phase 2: Implement Strict Enforcement in Forward Proxy
+1. Ensure version mismatches return errors (not just warnings)
+2. Add proper error responses for HTTP clients
+3. Implement version downgrade prevention
+4. Add comprehensive tests
 
-#### Phase 3: Integrate with Session Management
-1. Update Session struct to use new VersionState
-2. Migrate existing VersionInfo usage
-3. Update session manager to track state changes
-4. Add proper error handling for invalid transitions
+#### Phase 3: Implement Strict Enforcement in Reverse Proxy
+1. Ensure HTTP header validation is enforced
+2. Return 400 Bad Request for version conflicts
+3. Prevent version downgrades
+4. Add comprehensive tests
 
-#### Phase 4: Add Dual-Channel Validation
-1. Validate HTTP header matches negotiated version (for 2025-06-18+)
-2. Detect and reject version conflicts
-3. Add proper error types for version mismatches
-4. Update reverse proxy to use version state
+#### Phase 4: Error Response Improvements
+1. Create clear error messages for version conflicts
+2. Add proper HTTP status codes (400 for client errors)
+3. Include diagnostic information in error responses
+4. Ensure consistent error format
 
-#### Phase 5: Testing and Documentation
-1. Unit tests for state transitions
-2. Integration tests for version tracking
-3. Tests for dual-channel consistency
-4. Update documentation
+#### Phase 5: Testing and Validation
+1. Test version mismatch scenarios in both proxies
+2. Test version downgrade prevention
+3. Test HTTP error responses
+4. Verify both proxies behave consistently
 
 ### Detailed Objectives
 
-1. **Create VersionState struct** with:
-   - `requested: Option<String>` - Version from initialize request
-   - `negotiated: Option<String>` - Version after negotiation
-   - `transport_version: Option<String>` - Version from HTTP headers
-   - `negotiation_method: NegotiationMethod` enum (InitializeOnly, DualChannel)
-   - `state: VersionStatePhase` enum (Uninitialized, Requested, Negotiated, Validated)
+1. **Enforce Dual-Channel Validation**:
+   - Version 2025-06-18 MUST have matching HTTP headers and negotiated version
+   - Version 2025-03-26 does NOT require HTTP header validation
+   - Mismatches must be rejected with proper errors
 
-2. **Implement state machine** for version transitions:
-   - Uninitialized → Requested (on initialize request)
-   - Requested → Negotiated (on initialize response)
-   - Negotiated → Validated (on HTTP header match for dual-channel)
-   - Prevent invalid transitions and renegotiation
+2. **Implement Version Downgrade Prevention**:
+   - Prevent clients from downgrading after negotiation
+   - Detect and reject attempts to use older versions
+   - Log security events for downgrade attempts
 
-3. **Add validation methods**:
-   - `validate_transition()` - Check if state change is allowed
-   - `validate_consistency()` - Check dual-channel consistency
-   - `is_finalized()` - Check if version is locked
-   - `get_active_version()` - Get the current active version
+3. **Improve Error Responses**:
+   - HTTP 400 Bad Request for version conflicts
+   - Clear error messages explaining the conflict
+   - Consistent error format across both proxies
 
-4. **Update existing code**:
-   - Replace VersionInfo with VersionState in Session
-   - Update session manager to use new state methods
-   - Modify forward/reverse proxies to track state properly
-   - Add logging for state transitions
+4. **Ensure Proxy Parity**:
+   - Both forward and reverse proxies must enforce equally
+   - Error messages must be consistent
+   - Tests must cover both modes
 
 ### Success Criteria Checklist
 
-- [ ] VersionState struct created with all required fields
-- [ ] State machine implemented with proper transitions
-- [ ] Validation methods prevent invalid state changes
-- [ ] Session struct updated to use VersionState
-- [ ] Forward proxy tracks version state correctly
-- [ ] Reverse proxy validates dual-channel consistency
+- [ ] Version mismatches return errors (not just warnings) in forward proxy
+- [ ] Version mismatches return errors (not just warnings) in reverse proxy
+- [ ] HTTP 400 Bad Request returned for version conflicts
+- [ ] Version downgrade attempts are detected and rejected
+- [ ] Clear error messages explain the specific conflict
+- [ ] Tests for version mismatch scenarios in forward proxy
+- [ ] Tests for version mismatch scenarios in reverse proxy
+- [ ] Tests for version downgrade prevention
+- [ ] Tests for HTTP error responses
 - [ ] All existing tests still pass
-- [ ] New tests for version state management
-- [ ] Tests for invalid transition rejection
-- [ ] Tests for dual-channel validation
 - [ ] No clippy warnings
 - [ ] Code properly formatted with cargo fmt
 - [ ] Documentation updated
@@ -148,11 +140,11 @@ cd /Users/kevin/src/tapwire/shadowcat
 
 # Run tests frequently
 cargo test version
-cargo test session
+cargo test proxy
 
 # Run specific test modules
-cargo test session::store::tests
-cargo test protocol::
+cargo test proxy::forward::tests
+cargo test proxy::reverse::tests
 
 # Check for compilation errors
 cargo build
@@ -166,38 +158,38 @@ cargo clippy --all-targets -- -D warnings
 # Run all tests
 cargo test
 
+# Test with logging to see warnings/errors
+RUST_LOG=shadowcat=debug cargo test
+
 # Commit changes (in shadowcat repo)
 git add -A
-git commit -m "feat: implement comprehensive version state management"
+git commit -m "feat: enforce dual-channel version validation with proper error handling"
 git push
 
 # Update parent repo
 cd ..
 git add shadowcat
-git commit -m "feat: add version state management to shadowcat"
+git commit -m "feat: complete Phase 0 with dual-channel conflict handling"
 git push
 ```
 
 ### Expected Deliverables
 
-1. **New file**: `src/protocol/version_state.rs`
-   - VersionState struct
-   - VersionStatePhase enum
-   - NegotiationMethod enum
-   - State transition logic
-   - Validation methods
+1. **Modified files**:
+   - `src/proxy/forward.rs` - Enforce version validation, return errors
+   - `src/proxy/reverse.rs` - Enforce HTTP header validation, return 400
+   - `src/error.rs` - Add specific error types if needed
+   - `src/protocol/version_state.rs` - Enhance validation if needed
 
-2. **Modified files**:
-   - `src/session/store.rs` - Replace VersionInfo with VersionState
-   - `src/session/manager.rs` - Update to use new state management
-   - `src/proxy/forward.rs` - Track state transitions
-   - `src/proxy/reverse.rs` - Add dual-channel validation
-   - `src/protocol/mod.rs` - Export new version_state module
+2. **Test files**:
+   - Add tests in forward.rs for version conflict scenarios
+   - Add tests in reverse.rs for HTTP header validation
+   - Test version downgrade prevention in both
 
-3. **Test files**:
-   - Add tests in version_state.rs module
-   - Update existing session tests
-   - Add integration tests for state tracking
+3. **Documentation**:
+   - Update comments explaining dual-channel enforcement
+   - Document error response format
+   - Update compliance tracker
 
 ## Important Notes
 
@@ -209,6 +201,18 @@ git push
 - **Run `cargo clippy --all-targets -- -D warnings`** before any commit
 - **Update the compliance tracker** when the task is complete
 - **Focus on the current phase objectives**
+
+## ⚠️ CRITICAL: Proxy Mode Parity
+
+**MUST implement in BOTH proxy modes:**
+- Forward Proxy (`src/proxy/forward.rs`)
+- Reverse Proxy (`src/proxy/reverse.rs`)
+
+Remember to:
+1. ✅ Implement in forward proxy
+2. ✅ Implement in reverse proxy
+3. ✅ Add tests for both modes
+4. ✅ Verify behavior consistency
 
 ## Model Usage Guidelines
 
@@ -235,37 +239,47 @@ git push
 - Task 0.1: Fix Initialize Version Extraction ✅
 - Task 0.2: Fix HTTP Default Version ✅
 - Task 0.3: Implement Version Negotiation Response ✅
-- **Task 0.4: Add Version State Management** 🎯 CURRENT
-- Task 0.5: Handle Dual-Channel Version Conflicts ⏳
+- Task 0.4: Add Version State Management ✅
+- **Task 0.5: Handle Dual-Channel Version Conflicts** 🎯 CURRENT (FINAL TASK)
 
-After completing Task 0.4, Task 0.5 will be ready to start, which will complete Phase 0.
+After completing Task 0.5, Phase 0 will be COMPLETE (100%), and Phase 1 (Core SSE Implementation) will be ready to begin.
 
 ## Key Technical Context
 
-### Current Version Support
-- **Minimum supported**: 2025-03-26 (initialize-only negotiation)
-- **Current target**: 2025-06-18 (dual-channel negotiation)
-- **Latest supported**: 2025-06-18 (defined in LATEST_SUPPORTED_VERSION constant)
+### Dual-Channel Negotiation (2025-06-18)
+- Version is negotiated via initialize request/response
+- HTTP headers MUST match the negotiated version
+- Mismatches indicate potential security issues or bugs
+- Must be strictly enforced
 
-### Version Negotiation Flow
-1. Client sends initialize with protocolVersion
-2. Server responds with same or alternative version
-3. For 2025-06-18+: HTTP headers must match negotiated version
-4. Proxy must track and validate consistency
+### Initialize-Only Negotiation (2025-03-26)
+- Version is negotiated ONLY via initialize
+- HTTP headers are not validated
+- This is the backward-compatible mode
 
-### Known Issues to Address
-- Version state is not properly tracked through session lifecycle
-- No validation of state transitions
-- Dual-channel consistency not enforced (only warned)
-- No clear separation between negotiation methods
+### Current Enforcement Status
+- VersionState validates and tracks mismatches
+- Reverse proxy returns ProtocolError for mismatches
+- Forward proxy may only warn (needs verification)
+- Need to ensure consistent strict enforcement
 
 ## Notes from Previous Session
 
-- Version negotiation is working but needs better state management
-- Memory leak in request tracking has been fixed
-- TTL-based cleanup is implemented (60 seconds)
-- Bounded size protection prevents DoS attacks
-- RwLock improves concurrent read performance
-- All constants are centralized for maintainability
+- VersionState already has validation logic in place
+- Reverse proxy has some enforcement but may need strengthening
+- Forward proxy version tracking was fixed but enforcement needs review
+- Tests exist for VersionState but need proxy-level conflict tests
+- Both proxies now track complete version lifecycle
 
-Start by reading the existing VersionInfo implementation and understanding how it's currently used throughout the codebase, then design the enhanced VersionState structure to properly track the complete version lifecycle.
+Start by examining how version conflicts are currently handled in both proxies, then implement strict enforcement with proper error responses and comprehensive tests.
+
+## Completion Criteria
+
+When this task is complete:
+- [ ] Phase 0 will be 100% complete (5 of 5 tasks)
+- [ ] All critical version bugs will be fixed
+- [ ] Dual-channel validation will be properly enforced
+- [ ] Both proxy modes will have consistent behavior
+- [ ] The codebase will be ready for Phase 1 (SSE Implementation)
+
+Good luck! This is the final step to complete Phase 0 of MCP compliance!
