@@ -244,3 +244,35 @@ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"
 # List recorded tapes
 shadowcat tape list
 ```
+
+### Phase 2 Progress Update (2025-08-07)
+- **Task 007: Implement Rate Limiting** ✅ **COMPLETED**
+  - Multi-tier rate limiting fully implemented using `governor` crate
+  - Added CLI arguments for all proxy modes (forward, reverse, replay)
+  - Supports global, per-IP, and per-session rate limiting
+  - HTTP 429 responses with proper headers (Retry-After, X-RateLimit-*)
+  - Metrics exposed via `/metrics` endpoint
+  - Integration tests created and passing
+  - No clippy warnings, code formatted
+
+### Implementation Details:
+- **Files Modified:**
+  - `src/main.rs`: Added rate limiting CLI arguments and integration
+  - `src/error.rs`: Added RateLimitError variant
+  - `src/proxy/reverse.rs`: Updated metrics endpoint to include rate limit stats
+  - `tests/integration_rate_limiting.rs`: New comprehensive test suite
+
+### CLI Usage Examples:
+```bash
+# Forward proxy with rate limiting
+shadowcat forward stdio --rate-limit --rate-limit-rpm 100 --rate-limit-burst 20 -- command
+
+# HTTP forward proxy with rate limiting  
+shadowcat forward http --port 8080 --target http://server --rate-limit --rate-limit-rpm 60
+
+# Reverse proxy with rate limiting
+shadowcat reverse --bind 127.0.0.1:8080 --upstream stdio --rate-limit --rate-limit-rpm 100
+
+# Replay server with rate limiting
+shadowcat replay tape.json --port 8080 --rate-limit --rate-limit-rpm 60
+```

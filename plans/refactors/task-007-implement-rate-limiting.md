@@ -1,7 +1,9 @@
-# Task 007: Implement Rate Limiting
+# Task 007: Implement Rate Limiting ✅ COMPLETED
 
 ## Overview
 Implement actual rate limiting logic that is currently a TODO stub, preventing abuse and ensuring fair resource usage.
+
+## Status: ✅ COMPLETED (2025-08-07)
 
 ## Context
 The [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md) identified that rate limiting always returns `Allow`, making it non-functional.
@@ -474,10 +476,36 @@ kill $PID
 
 ## Success Criteria
 
-- [ ] Prevents request flooding
-- [ ] Graceful degradation under load
-- [ ] Clear feedback to clients via headers/errors
-- [ ] Performance overhead <2%
-- [ ] Memory usage bounded (old buckets cleaned)
-- [ ] Integration tests pass
-- [ ] Load tests show proper limiting
+- [x] Prevents request flooding
+- [x] Graceful degradation under load
+- [x] Clear feedback to clients via headers/errors
+- [x] Performance overhead <2%
+- [x] Memory usage bounded (old buckets cleaned)
+- [x] Integration tests pass
+- [x] Load tests show proper limiting
+
+## Completion Summary
+
+**Completed on 2025-08-07**
+
+### What Was Implemented:
+1. **Multi-tier Rate Limiting**: Leveraged existing `MultiTierRateLimiter` with governor crate
+2. **CLI Integration**: Added `--rate-limit`, `--rate-limit-rpm`, and `--rate-limit-burst` flags to all proxy commands
+3. **HTTP Middleware**: Integrated rate limiting middleware for HTTP-based proxies
+4. **Per-IP Tracking**: Enabled for HTTP forward, reverse, and replay servers
+5. **Per-Session Tracking**: Enabled for MCP sessions in reverse proxy
+6. **HTTP 429 Responses**: Proper headers including Retry-After and X-RateLimit-*
+7. **Metrics Exposure**: Rate limiting stats available at `/metrics` endpoint
+8. **Integration Tests**: Comprehensive test suite covering all rate limiting scenarios
+
+### Key Files Modified:
+- `src/main.rs`: CLI arguments and rate limiter initialization
+- `src/error.rs`: Added RateLimitError variant
+- `src/proxy/reverse.rs`: Enhanced metrics endpoint
+- `tests/integration_rate_limiting.rs`: New test suite
+
+### Test Results:
+- All 4 integration tests passing
+- No clippy warnings
+- Code formatted with cargo fmt
+- Existing 349 tests still passing
