@@ -183,7 +183,7 @@ The agent follows specific quality gates:
 - Verify test coverage for critical paths
 - Monitor performance against 5% overhead target
 
-**Important** Make sure there are no clippy warnings with `cargo clippy -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems.
+**Important** Make sure there are no clippy warnings with `cargo clippy -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems. Also be sure to run `cargo fmt` after significant changes and/or before committing.
 
 ## Current Implementation Status
 
