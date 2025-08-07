@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Tapwire is a Model Context Protocol (MCP) developer proxy platform with two main components:
+
 1. **Tapwire**: The overall platform vision for MCP inspection, recording, and observability
 2. **Shadowcat**: The core Rust proxy implementation handling forward/reverse proxy, recording, and interception
 
@@ -13,6 +14,7 @@ Tapwire is a Model Context Protocol (MCP) developer proxy platform with two main
 ## Essential Commands
 
 ### Git Submodule Management
+
 ```bash
 # Clone with submodules
 git clone --recursive <tapwire-repo>
@@ -37,6 +39,7 @@ git push
 ```
 
 ### Shadowcat Development
+
 ```bash
 # Navigate to the Rust project
 cd shadowcat
@@ -58,10 +61,11 @@ cargo flamegraph
 
 # Code quality
 cargo fmt
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 ```
 
 ### Initial Setup (if dependencies not installed)
+
 ```bash
 cd shadowcat
 cargo add rmcp tokio --features tokio/full
@@ -75,6 +79,7 @@ cargo add thiserror anyhow
 ## Architecture Overview
 
 ### High-Level Components
+
 ```
 Tapwire (Platform)
 └── Shadowcat (Rust Proxy)
@@ -87,6 +92,7 @@ Tapwire (Platform)
 ```
 
 ### Key Design Decisions
+
 - **rmcp**: Official Rust MCP SDK for protocol implementation
 - **Tokio**: Async runtime (required by rmcp)
 - **SQLite**: Embedded storage for recordings and sessions
@@ -94,6 +100,7 @@ Tapwire (Platform)
 - **Session-Centric**: All operations organized around MCP sessions
 
 ### Module Communication Flow
+
 1. **Transport** receives MCP messages (stdio process or HTTP request)
 2. **Session Manager** tracks session lifecycle and associates frames
 3. **Interceptor Chain** processes messages (can pause/modify/block)
@@ -101,6 +108,7 @@ Tapwire (Platform)
 5. **Recorder** captures all traffic to persistent tapes
 
 ### Critical Files to Understand Architecture
+
 - `plans/001-initial-prd.md`: Overall Tapwire vision and requirements
 - `plans/002-shadowcat-architecture-plan.md`: Detailed technical design
 - `plans/003-shadowcat-developer-guide.md`: Implementation patterns and examples
@@ -110,6 +118,7 @@ Tapwire (Platform)
 ## MCP Protocol Implementation
 
 Key constants and requirements:
+
 - Protocol version: `2025-11-05`
 - Session header: `Mcp-Session-Id`
 - Version header: `MCP-Protocol-Version`
@@ -119,6 +128,7 @@ Key constants and requirements:
 ## Development Phases
 
 Currently in Phase 1 (Core Infrastructure):
+
 1. Transport abstraction and stdio implementation
 2. Basic forward proxy
 3. Session management
@@ -134,6 +144,7 @@ Week 1 target: `cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"i
 - **Performance Tests**: < 5% latency overhead target
 
 Run tests for specific modules during development:
+
 ```bash
 cargo test session::manager::tests
 cargo test interceptor::
@@ -142,6 +153,7 @@ cargo test interceptor::
 ## Error Handling Pattern
 
 All functions return `Result<T, ShadowcatError>` with context:
+
 ```rust
 use anyhow::Context;
 something.await.context("Failed to do something")?;
@@ -150,11 +162,13 @@ something.await.context("Failed to do something")?;
 ## Debugging
 
 Enable debug logging:
+
 ```bash
 RUST_LOG=shadowcat=debug,rmcp=trace cargo run
 ```
 
 For performance issues:
+
 ```bash
 cargo flamegraph --bin shadowcat -- forward stdio -- your-command
 ```
@@ -162,6 +176,7 @@ cargo flamegraph --bin shadowcat -- forward stdio -- your-command
 ## Git Commit Guidelines
 
 **Important**: When creating git commits:
+
 - **DO NOT** add Claude as a co-author of commits
 - **DO NOT** mention Claude Code in commit messages
 - Keep commit messages focused on the technical changes and their purpose
@@ -170,6 +185,7 @@ cargo flamegraph --bin shadowcat -- forward stdio -- your-command
 ## Rust Code Review Guidelines
 
 When reviewing Rust code in this project, use the specialized `rust-code-reviewer` agent for:
+
 - Memory safety verification and unsafe code auditing
 - Performance optimization and zero-cost abstractions
 - Async/await patterns with tokio
@@ -177,17 +193,19 @@ When reviewing Rust code in this project, use the specialized `rust-code-reviewe
 - Trait design and generic programming
 
 The agent follows specific quality gates:
+
 - Flag any unsafe code lacking safety documentation
 - Ensure public APIs have documentation
 - Check for unwrap()/expect() in production code
 - Verify test coverage for critical paths
 - Monitor performance against 5% overhead target
 
-**Important** Make sure there are no clippy warnings with `cargo clippy -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems. Also be sure to run `cargo fmt` after significant changes and/or before committing.
+**Important** Make sure there are no clippy warnings with `cargo clippy --all-targets -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems. Also be sure to run `cargo fmt` after significant changes and/or before committing.
 
 ## Current Implementation Status
 
 ### Shadowcat Core Modules
+
 - `src/transport/`: Transport abstraction with stdio, HTTP, and HTTP-MCP implementations
 - `src/proxy/`: Forward and reverse proxy implementations with circuit breakers and health checking
 - `src/session/`: Session management and storage
@@ -199,6 +217,7 @@ The agent follows specific quality gates:
 - `src/metrics/`: Performance metrics collection
 
 ### CLI Commands
+
 ```bash
 # Forward proxy modes
 shadowcat forward stdio -- command args
@@ -222,6 +241,7 @@ shadowcat intercept add-rule --file rule.yaml
 ```
 
 ### Key Dependencies
+
 - **rmcp**: MCP protocol implementation
 - **tokio**: Async runtime with full features
 - **axum**: HTTP server framework
@@ -234,6 +254,7 @@ shadowcat intercept add-rule --file rule.yaml
 ## Security Requirements
 
 ### Authentication and Authorization
+
 - OAuth 2.1 compliance for auth gateway
 - JWT validation with proper audience checking
 - PKCE (Proof Key for Code Exchange) support
@@ -241,12 +262,14 @@ shadowcat intercept add-rule --file rule.yaml
 - Resource server metadata discovery (RFC 9728)
 
 ### Transport Security
+
 - Localhost binding by default for development
 - Origin validation for HTTP transport
 - DNS rebinding protection
 - TLS termination for production deployments
 
 ### Audit and Compliance
+
 - Comprehensive event logging
 - Session tracking and replay capabilities
 - Rate limiting with configurable tiers
@@ -277,3 +300,4 @@ shadowcat intercept add-rule --file rule.yaml
 - **Transport Priority**: stdio for development, HTTP for production deployments
 - **Session Lifecycle**: All operations are session-scoped with proper cleanup
 - **Error Context**: Use `anyhow::Context` for rich error messages throughout the codebase
+

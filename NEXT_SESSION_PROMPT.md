@@ -1,15 +1,16 @@
 # Task 008: Complete Session Matching for Shadowcat
 
 ## Context
+
 You are working on the Shadowcat project, a high-performance Model Context Protocol (MCP) proxy written in Rust. The project is undergoing systematic refactoring based on a comprehensive review.
 
 ### Current Status
+
 - **Phase 1 (Critical Safety)**: ✅ COMPLETE - All 4 tasks finished
   - Removed 35 production unwraps
   - Fixed duplicate error types
   - Added request size limits
   - Fixed blocking I/O in async contexts
-  
 - **Phase 2 (Core Features)**: IN PROGRESS - 3/5 tasks complete
   - ✅ Task 005: Implement Record Command
   - ✅ Task 006: Implement Replay Command
@@ -18,6 +19,7 @@ You are working on the Shadowcat project, a high-performance Model Context Proto
   - ⏳ Task 009: Implement Session Cleanup
 
 ### Working Directory
+
 ```
 /Users/kevin/src/tapwire/shadowcat
 ```
@@ -25,13 +27,16 @@ You are working on the Shadowcat project, a high-performance Model Context Proto
 ## Objective: Complete Session Matching Implementation
 
 ### Problem Statement
+
 The session matching logic is marked as CRITICAL but has a TODO stub at `src/session/manager.rs:108`. This functionality is essential for:
+
 - Associating MCP requests with responses
 - Tracking session lifecycle
 - Managing session state transitions
 - Proper cleanup and resource management
 
 ### Essential Context Files to Read
+
 1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-008-session-matching.md`
 2. **Session Manager**: `src/session/manager.rs` - Current implementation with TODO
 3. **Session Module**: `src/session/mod.rs` - Session struct and types
@@ -42,6 +47,7 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
 ## Implementation Strategy
 
 ### Phase 1: Analysis (Start Here)
+
 1. Use TodoWrite tool to create task tracking list
 2. Examine `src/session/manager.rs` to understand current implementation
 3. Find the TODO at line 108 and analyze what's missing
@@ -49,12 +55,15 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
 5. Understand MCP message flow (initialize, requests, responses, shutdown)
 
 ### Phase 2: Core Implementation
+
 1. **Session State Machine**
+
    - Add SessionState enum (Initializing, Active, ShuttingDown, Closed, Failed)
    - Implement state transitions
    - Add validation for invalid transitions
 
 2. **Session ID Extraction**
+
    - Extract session IDs from MCP messages
    - Handle initialize requests (generate new session)
    - Extract from headers (Mcp-Session-Id)
@@ -66,7 +75,9 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
    - Clean up completed request-response pairs
 
 ### Phase 3: Lifecycle Management
+
 1. **Timeout Handling**
+
    - Implement cleanup for stale requests (30-second timeout)
    - Log warnings for timed-out requests
    - Prevent memory leaks from orphaned requests
@@ -77,7 +88,9 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
    - Remove pending requests for closed sessions
 
 ### Phase 4: Testing & Validation
+
 1. Write unit tests for:
+
    - Session creation from initialize
    - Request-response matching
    - State transitions
@@ -89,6 +102,7 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
    - Error recovery
 
 ## Success Criteria Checklist
+
 - [ ] TODO comment at `src/session/manager.rs:108` removed
 - [ ] Session matching handles all MCP message types:
   - [ ] initialize/initialized
@@ -107,6 +121,7 @@ The session matching logic is marked as CRITICAL but has a TODO stub at `src/ses
 ## Commands to Use
 
 ### Development Commands
+
 ```bash
 # Find the TODO
 rg "TODO.*session matching" --type rust
@@ -123,10 +138,11 @@ cargo watch -x check -x test
 
 # Format and lint
 cargo fmt
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 ```
 
 ### Verification Commands
+
 ```bash
 # Ensure TODO is removed
 rg "TODO" src/session/manager.rs
@@ -174,17 +190,20 @@ cargo test --release
 ## Expected Deliverables
 
 1. **Completed Session Matching Logic**
+
    - Session ID extraction from all message types
    - Request-response correlation
    - State machine for session lifecycle
    - Cleanup mechanisms for stale data
 
 2. **Comprehensive Tests**
+
    - Unit tests for all new functions
    - Integration tests for session lifecycle
    - Edge case handling tests
 
 3. **Documentation Updates**
+
    - Remove TODO comment
    - Add inline documentation for complex logic
    - Update refactor tracker with completion status
@@ -197,6 +216,7 @@ cargo test --release
 ## Critical Patterns to Follow
 
 Based on completed tasks, follow these patterns:
+
 - Use `anyhow::Context` for error context
 - Return `Result<T, SessionError>` from session functions
 - Use `Arc<RwLock<>>` for shared state (but justify usage)
@@ -214,3 +234,4 @@ Based on completed tasks, follow these patterns:
 Remember: Session matching is CRITICAL functionality that affects recording, replay, and interception features. Take care to implement it correctly and thoroughly test all scenarios.
 
 Good luck with Task 008!
+
