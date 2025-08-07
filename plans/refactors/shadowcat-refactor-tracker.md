@@ -4,16 +4,10 @@
 This document tracks the systematic refactoring of Shadowcat based on the [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md). Each phase must be completed and verified before proceeding to the next.
 
 ## Current Status
-- **Current Phase**: Phase 2 (6/7 tasks complete - Task 009.1 critical fixes needed)
-- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 Needs Critical Fixes (6/7 tasks)
-- **Production Readiness**: 90/100 ⚠️ - Critical issues in session cleanup
-- **Next Task**: Task 009.1 (Fix Critical Session Cleanup Design Flaws) - **CRITICAL**
-
-### ⚠️ CRITICAL ISSUES FOUND
-- **Deadlock in LRU eviction** - System will freeze when evicting sessions
-- **Race condition in metrics** - Can lead to negative session counts
-- **Memory leak in LRU queue** - Unbounded growth from duplicate entries
-- See [comprehensive review](../../reviews/session-cleanup-review-2025-08-07.md) for full details
+- **Current Phase**: Phase 2 (7/7 tasks complete) ✅
+- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 Complete (7/7)
+- **Production Readiness**: 98/100 ✅ - All critical issues fixed
+- **Next Task**: Phase 3 - Task 010 (Production Hardening)
 
 ## Phase 1: Critical Safety (Days 1-5)
 **Goal**: Eliminate all panic points and make the codebase crash-resistant
@@ -117,19 +111,20 @@ cargo clippy -- -D warnings
   - ✅ Configurable cleanup intervals and limits
   - ✅ Metrics tracking for cleanup operations
   - ✅ Tests for all cleanup scenarios
-  - ⚠️ **Critical issues found in code review** - see Task 009.1
-- [ ] [Task 009.1: Fix Critical Session Cleanup Design Flaws](./task-009.1-session-cleanup-fixes.md)
-  - 🔴 **CRITICAL**: Fix deadlock in LRU eviction
-  - 🔴 **CRITICAL**: Fix race condition in metrics
-  - 🟠 Fix memory leak in LRU queue (duplicate entries)
-  - 🟠 Improve O(n) cleanup performance
-  - 🟠 Add backpressure for request tracking
-  - See [comprehensive review](../../reviews/session-cleanup-review-2025-08-07.md)
+- ✅ **[Task 009.1: Fix Critical Session Cleanup Design Flaws](./task-009.1-session-cleanup-fixes.md)** ✅ **COMPLETED**
+  - ✅ Fixed deadlock in LRU eviction (released lock before delete_session)
+  - ✅ Fixed race condition in metrics (track active sessions separately)
+  - ✅ Fixed memory leak in LRU queue (HashSet for uniqueness)
+  - ✅ Improved cleanup performance (added expiry heap for O(log n))
+  - ✅ Added backpressure with rate limiting (100 req/s per session)
+  - ✅ Added 7 comprehensive concurrent tests
+  - ✅ All 31 session manager tests passing
+  - ✅ No deadlocks or race conditions under concurrent load
 
-### Success Criteria
+### Success Criteria ✅ **PHASE 2 COMPLETED** ✅
 - ✅ `shadowcat record` command works end-to-end **VERIFIED** ✅
 - ✅ `shadowcat replay` command works with recorded tapes **VERIFIED** ✅
-- ⚠️ Session cleanup has critical issues that must be fixed (Task 009.1)
+- ✅ Session cleanup works correctly without deadlocks **VERIFIED** ✅
 - ✅ Rate limiting enforces configured limits **VERIFIED** ✅
 - ✅ Session matching logic handles all MCP message types **VERIFIED** ✅
 - ✅ Old sessions are cleaned up automatically **VERIFIED** ✅
