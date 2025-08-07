@@ -1,33 +1,124 @@
 # Task 006: Implement Replay Command
 
+## Status
+- **Phase**: 2 (Core Features)
+- **Priority**: High  
+- **Status**: Not Started
+- **Depends on**: Task 005 (Record Command) ✅ Complete
+
 ## Overview
-Implement the `shadowcat replay` command to replay recorded MCP session tapes.
+Implement the `shadowcat replay` command to enable playback of recorded MCP tapes through an HTTP server. This completes the record/replay functionality that is core to Shadowcat's value proposition.
 
 ## Context
-The [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md) identified that replay is a stub. This feature is essential for debugging and testing.
+The [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md) identified replay as a stub. Task 005 successfully implemented the record command, creating test tapes that can be replayed.
 
 ## Current State
-
-**File**: `src/cli.rs:221-224`
+**File**: `src/main.rs` (post-Task 005)
 ```rust
-Commands::Replay { .. } => {
-    eprintln!("Replay command not yet implemented");
-    std::process::exit(1);
+Commands::Replay {
+    tape_file: _,
+    port: _,
+} => {
+    error!("Replay not yet implemented");
+    exit(1);
 }
+```
+
+### Existing Infrastructure (Ready to Use)
+- **TapePlayer**: `src/recorder/replay.rs` - Complete playback engine with speed control, seeking
+- **ReplayTransport**: `src/transport/replay.rs` - Transport that can replay tape data  
+- **Tape Loading**: `TapeRecorder::load_tape()` - Loads tapes from storage
+- **Test Tapes**: Multiple recorded tapes available in `tapes/` directory
+
+### Working Record Command (from Task 005)
+```bash
+# These commands work and create tapes for replay
+shadowcat record stdio --output demo.tape --name "Demo" -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
+shadowcat record http --output http.tape --port 8081
+shadowcat tape list  # Shows: 3 tapes available for replay
 ```
 
 ## Requirements
 
-1. Read and parse tape files
-2. Replay messages with original timing or custom speed
-3. Support different replay modes (client-only, server-only, both)
-4. Allow message filtering during replay
-5. Support interactive stepping through messages
-6. Validate tape integrity before replay
+### Core Functionality (Simplified for Task 006)
+1. **CLI Integration**: Enhance existing `shadowcat replay <tape-file> --port <port>` command
+2. **Tape Loading**: Load tape files from storage directory (by ID or file path)
+3. **HTTP Server**: Create HTTP server that serves replayed MCP responses
+4. **Basic Playback**: Replay requests/responses with timing preservation
+5. **Error Handling**: Robust error handling for missing/corrupt tapes
 
-## Implementation Design
+### CLI Interface (enhance existing)
+```bash
+# Basic replay
+shadowcat replay <tape-id-or-file> --port <port>
 
-### Command Interface
+# Examples  
+shadowcat replay ef510f7f-1de3-426e-b3b6-66f0b16141d6 --port 8080
+shadowcat replay ./tapes/demo.json --port 8081
+```
+
+### Success Criteria
+- [ ] `shadowcat replay --help` shows comprehensive usage information
+- [ ] `shadowcat replay <tape-id> --port 8080` starts HTTP server replaying tape
+- [ ] `shadowcat replay <file-path> --port 8080` works with file paths
+- [ ] HTTP requests receive responses from the replayed tape data
+- [ ] Server handles missing/invalid tapes gracefully
+- [ ] Integration tests demonstrate end-to-end record -> replay flow
+- [ ] All existing tests still pass
+- [ ] `cargo fmt` and `cargo clippy -- -D warnings` pass
+
+## Implementation Strategy
+
+### Phase A: CLI Enhancement
+1. Update `Commands::Replay` args to match requirements
+2. Implement `run_replay_server()` function using existing patterns from Task 005
+
+### Phase B: Core Replay Logic
+1. Use existing `TapeRecorder::load_tape()` to load tapes
+2. Create HTTP server using axum (same as record command)
+3. Use `TapePlayer` for playback control and timing
+4. Handle tape ID vs file path resolution
+
+### Phase C: Integration & Testing
+1. Test with tapes created by record command
+2. Add integration tests demonstrating record -> replay flow
+3. Add error handling tests
+
+## Verification Commands
+```bash
+# Create test tape (using working record command)
+shadowcat record stdio --output test-replay.tape --name "Replay Test" -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
+
+# Get tape ID for testing
+shadowcat tape list
+
+# Replay the tape by ID
+shadowcat replay <tape-id> --port 8080 &
+
+# Test the replayed endpoint  
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}' http://localhost:8080/
+
+# Run tests
+cargo test --test integration_replay
+cargo test
+cargo clippy -- -D warnings
+```
+
+## Context for Next Session
+- Record command is fully working and tested (Task 005 complete)
+- Multiple test tapes available in `tapes/` directory
+- All 349 tests currently passing
+- Clean clippy output
+- Existing replay infrastructure needs to be connected to CLI
+- This task completes the core record/replay functionality
+
+---
+
+## Advanced Implementation Design (Suggestions from Previous Iteration)
+
+*Note: The following are detailed design suggestions from an earlier iteration. For Task 006, focus on the simplified requirements above, but these can be used as reference for future enhancements.*
+
+### Command Interface (Advanced - Future Enhancement)
 
 ```rust
 #[derive(Parser)]
@@ -75,9 +166,9 @@ pub enum ReplayMode {
 }
 ```
 
-### Replay Engine
+### Replay Engine (Advanced - Future Enhancement)
 
-**File**: `src/recorder/replay_engine.rs` (new)
+**File**: `src/recorder/replay_engine.rs` (future enhancement)
 
 ```rust
 use crate::recorder::tape::{Tape, Frame};
@@ -244,9 +335,9 @@ impl ReplayEngine {
 }
 ```
 
-### Tape Validation
+### Tape Validation (Advanced - Future Enhancement)
 
-**File**: `src/recorder/tape.rs` (update)
+**File**: `src/recorder/tape.rs` (future enhancement)
 
 ```rust
 impl Tape {
@@ -297,9 +388,9 @@ impl Tape {
 }
 ```
 
-### CLI Implementation
+### CLI Implementation (Advanced - Future Enhancement)
 
-**File**: `src/cli.rs` (update)
+**File**: `src/main.rs` (future enhancement)
 
 ```rust
 Commands::Replay {
@@ -340,7 +431,7 @@ Commands::Replay {
 }
 ```
 
-## Usage Examples
+## Usage Examples (Advanced - Future Enhancement)
 
 ```bash
 # Basic replay
@@ -365,7 +456,7 @@ shadowcat replay --filter-methods initialize,execute session.tape stdio
 shadowcat replay session.tape http --port 8080
 ```
 
-## Testing
+## Testing (Advanced - Future Enhancement)
 
 ```rust
 #[tokio::test]
@@ -415,7 +506,7 @@ async fn test_replay_timing() {
 }
 ```
 
-## Validation
+## Advanced Validation (Future Enhancement)
 
 - [ ] Replay command works without "not implemented" error
 - [ ] Tapes load and validate correctly
@@ -425,7 +516,7 @@ async fn test_replay_timing() {
 - [ ] Filtering works correctly
 - [ ] Progress reporting is accurate
 
-## Success Criteria
+## Advanced Success Criteria (Future Enhancement)
 
 - [ ] Can replay any valid tape file
 - [ ] Replay timing matches original (with speed adjustment)

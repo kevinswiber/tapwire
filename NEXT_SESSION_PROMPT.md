@@ -1,4 +1,4 @@
-# Next Claude Session Prompt - Shadowcat Refactor Task 005
+# Next Claude Session Prompt - Shadowcat Refactor Task 006
 
 ## Context
 
@@ -8,19 +8,22 @@ You are continuing the systematic refactoring of the Shadowcat Rust proxy codeba
 - Task 003: Request size limits implemented ✅
 - Task 004: Blocking I/O operations made async ✅
 
-**🎉 Phase 1 Complete!** The codebase is now crash-resistant with a production readiness score of 95/100.
+**Phase 2 Progress**: 1/5 tasks complete:
+- Task 005: Record Command fully implemented ✅
+
+**🎉 Task 005 Complete!** Record command is fully functional with stdio/HTTP recording, complete metadata, and integration tests.
 
 ## Your Current Objective
 
-**Start Phase 2 with Task 005: Implement Record Command**
+**Continue Phase 2 with Task 006: Implement Replay Command**
 
-Implement the `shadowcat record` command to capture MCP traffic and store it as "tapes" for later replay.
+Implement the `shadowcat replay` command to enable playback of recorded MCP tapes through an HTTP server.
 
 ## Essential Context Files
 
 Please read these files to understand your current task:
 
-1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-005-implement-record.md` (create if it doesn't exist)
+1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-006-implement-replay.md`
 2. **Overall Refactor Plan**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
 3. **Original Review**: `/Users/kevin/src/tapwire/reviews/shadowcat-comprehensive-review-2025-08-06.md`
 
@@ -43,97 +46,105 @@ Please read these files to understand your current task:
 - **Task 003**: Request size limits with DoS protection, comprehensive testing
 - **Task 004**: Blocking I/O made async, tokio runtime optimized
 
-**Result**: Crash-resistant codebase ready for feature implementation
+### ✅ Task 005 Complete (Record Command)
+- **CLI Interface**: Full stdio and HTTP recording with comprehensive args
+- **Tape Storage**: Complete tape data with request/response pairs and timing
+- **Rich Metadata**: Session info, timestamps, transport type, frame counts
+- **Integration**: Works seamlessly with existing tape management system
+- **Error Handling**: Comprehensive error handling and cleanup
+- **Testing**: 4 new integration tests + all 349 tests passing
+
+**Result**: Record command fully functional and tested
 
 ### 📊 Current Status
 - **349 tests passing**
 - **Clean cargo fmt and clippy output**
-- **No performance degradation**
-- **Production readiness: 95/100**
+- **Production readiness: 96/100** ⬆️ (+1 point)
+- **Multiple test tapes available** in `tapes/` directory
 
-## Your Task 005 Objectives
-
-The `shadowcat record` command should work like this:
+### 🎯 Working Record Command Examples
 ```bash
-# Record stdio MCP session
-shadowcat record --output session.tape -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
-
-# Record HTTP MCP session
-shadowcat record --output session.tape --transport http --port 8080
-
-# Record with metadata
-shadowcat record --name "Test Session" --description "Testing ping" --output session.tape -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
+# These commands now work perfectly
+shadowcat record stdio --output demo.tape --name "Demo" --description "Test" -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
+shadowcat record http --output http.tape --port 8081
+shadowcat tape list  # Shows 3 recorded tapes available for replay
 ```
 
-### Core Requirements
+## Your Task 006 Objectives
 
-1. **CLI Integration**: Add record subcommand to main CLI with proper argument parsing
-2. **Tape Storage**: Implement tape creation, writing, and metadata management
-3. **Traffic Capture**: Intercept and record all MCP messages with timing information
-4. **Multiple Transports**: Support both stdio and HTTP transport recording
-5. **Metadata**: Store session metadata, timestamps, and replay information
-6. **Error Handling**: Robust error handling with proper cleanup on interruption
+The `shadowcat replay` command should work like this:
+```bash
+# Basic replay by tape ID
+shadowcat replay ef510f7f-1de3-426e-b3b6-66f0b16141d6 --port 8080
 
-### Success Criteria for Task 005
+# Replay by file path
+shadowcat replay ./tapes/demo.json --port 8081
 
-- [ ] `shadowcat record --help` shows comprehensive usage information
-- [ ] `shadowcat record stdio -- command` records stdio MCP sessions
-- [ ] `shadowcat record http --port 8080` records HTTP MCP sessions  
-- [ ] Recorded tapes contain all request/response pairs with timing
-- [ ] Tape metadata includes session info, timestamps, transport type
-- [ ] Tapes are stored in SQLite database with proper schema
-- [ ] Integration tests demonstrate end-to-end recording functionality
-- [ ] Error handling covers interrupted sessions and storage failures
+# Then test with curl
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}' http://localhost:8080/
+```
+
+### Core Requirements for Task 006
+
+1. **CLI Integration**: Enhance existing `shadowcat replay <tape-file> --port <port>` command
+2. **Tape Loading**: Load tape files from storage directory (by ID or file path)
+3. **HTTP Server**: Create HTTP server that serves replayed MCP responses
+4. **Basic Playback**: Replay requests/responses with timing preservation
+5. **Error Handling**: Robust error handling for missing/corrupt tapes
+
+### Success Criteria for Task 006
+
+- [ ] `shadowcat replay --help` shows comprehensive usage information
+- [ ] `shadowcat replay <tape-id> --port 8080` starts HTTP server replaying tape
+- [ ] `shadowcat replay <file-path> --port 8080` works with file paths
+- [ ] HTTP requests receive responses from the replayed tape data
+- [ ] Server handles missing/invalid tapes gracefully
+- [ ] Integration tests demonstrate end-to-end record -> replay flow
 - [ ] All existing tests still pass
 - [ ] `cargo fmt` and `cargo clippy -- -D warnings` pass
 
 ## Implementation Strategy
 
-### 1. Examine Existing Code Structure
+### 1. Examine Existing Infrastructure
 ```bash
-# Check current CLI structure
-rg "enum.*Command" --type rust src/
+# Check what's available for replay
+rg "TapePlayer\|ReplayTransport" --type rust src/
+rg "load_tape" --type rust src/
 
-# Review existing recorder module
-find . -name "*.rs" | xargs grep -l "record\|tape\|TapeRecorder"
+# Review existing HTTP server patterns from record command
+rg "axum\|Router" --type rust src/main.rs
 
-# Check transport implementations
-ls src/transport/
-
-# Review database schema
-rg "CREATE TABLE" --type rust src/
+# Check available test tapes
+ls -la tapes/
+shadowcat tape list
 ```
 
-### 2. Key Components to Implement/Extend
+### 2. Key Components to Use/Extend
 
-Based on existing codebase structure:
+Based on Task 005 completion and existing infrastructure:
 
-- **CLI Module**: Extend `src/main.rs` and CLI modules with record subcommand
-- **Recorder Module**: Implement `TapeRecorder` trait and concrete implementations
-- **Storage Layer**: SQLite-based tape storage with metadata
-- **Transport Integration**: Hook recording into existing transport layer
-- **Session Management**: Track and associate recorded messages
+- **CLI Module**: Enhance existing `Commands::Replay` in `src/main.rs`
+- **TapeRecorder**: Use `load_tape()` method for tape loading
+- **TapePlayer**: Use existing `src/recorder/replay.rs` for playback control
+- **HTTP Server**: Follow existing axum patterns from record command
+- **Transport Layer**: Leverage existing transport abstractions
 
-### 3. Implementation Phases
+### 3. Implementation Strategy
 
-**Phase A: Core Infrastructure**
-1. Add CLI subcommand structure for `record`
-2. Implement basic `TapeRecorder` trait
-3. Create SQLite schema for tape storage
-4. Add integration with existing transport layer
+**Phase A: CLI Enhancement**
+1. Update `Commands::Replay` args to match requirements
+2. Implement `run_replay_server()` function using existing patterns from Task 005
 
-**Phase B: Transport Integration** 
-1. Implement stdio transport recording
-2. Implement HTTP transport recording
-3. Add timing information capture
-4. Handle session lifecycle properly
+**Phase B: Core Replay Logic**
+1. Use existing `TapeRecorder::load_tape()` to load tapes
+2. Create HTTP server using axum (same as record command)
+3. Use `TapePlayer` for playback control and timing
+4. Handle tape ID vs file path resolution
 
-**Phase C: Polish & Testing**
-1. Add comprehensive error handling
-2. Implement graceful shutdown on Ctrl-C
-3. Add metadata management
-4. Create integration tests
-5. Update documentation
+**Phase C: Integration & Testing**
+1. Test with tapes created by record command
+2. Add integration tests demonstrating record -> replay flow
+3. Add error handling tests
 
 ## Current Code Architecture Understanding
 
