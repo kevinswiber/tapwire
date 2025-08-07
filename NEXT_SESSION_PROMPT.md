@@ -1,26 +1,22 @@
-# Task 008.1: Fix Session Matching Design Flaws
+# Task 009.1: Fix Critical Session Cleanup Design Flaws
 
 ## Context
 
-You are working on the Shadowcat project, a high-performance Model Context Protocol (MCP) proxy written in Rust. The project is undergoing systematic refactoring based on a comprehensive review.
+You are working on the Shadowcat project, a high-performance Model Context Protocol (MCP) proxy written in Rust. Task 009 (Session Cleanup) was completed but a comprehensive code review revealed **CRITICAL design flaws** that must be fixed immediately before production deployment.
 
 ### Current Status
 
 - **Phase 1 (Critical Safety)**: ✅ COMPLETE - All 4 tasks finished
-  - Removed 35 production unwraps
-  - Fixed duplicate error types
-  - Added request size limits
-  - Fixed blocking I/O in async contexts
-  
-- **Phase 2 (Core Features)**: IN PROGRESS - 4/5 core tasks complete + 1 critical fix needed
+- **Phase 2 (Core Features)**: 6/7 tasks complete - Task 009.1 CRITICAL fixes needed
   - ✅ Task 005: Record Command implemented
   - ✅ Task 006: Replay Command implemented
   - ✅ Task 007: Rate Limiting implemented
-  - ✅ Task 008: Session Matching implemented (but with critical flaws)
-  - 🔴 **Task 008.1: Fix Session Matching Design Flaws** (YOUR CURRENT TASK - BLOCKER)
-  - ⏳ Task 009: Session Cleanup (blocked by 008.1)
+  - ✅ Task 008: Session Matching implemented
+  - ✅ Task 008.1: Session Matching Design Flaws fixed
+  - ✅ Task 009: Session Cleanup implemented
+  - 🔴 **Task 009.1: Fix Critical Session Cleanup Design Flaws** (YOUR CURRENT TASK)
 
-- **Production Readiness**: 96/100 (-2 points due to critical issues)
+- **Production Readiness**: 90/100 ⚠️ (reduced from 98 due to critical issues)
 
 ### Working Directory
 
@@ -28,147 +24,116 @@ You are working on the Shadowcat project, a high-performance Model Context Proto
 /Users/kevin/src/tapwire/shadowcat
 ```
 
-## Objective: Fix Critical Design Flaws in Session Matching
+## Critical Issues to Fix
 
-### Problem Statement
+### 🔴 CRITICAL Issue 1: Deadlock in LRU Eviction
 
-Task 008 successfully implemented session matching functionality, but review discovered 10 critical design flaws that make the feature non-functional and potentially dangerous in production. These MUST be fixed before proceeding to Task 009.
+**Location**: `src/session/manager.rs:383-402`
 
-### Critical Issues (Priority Order)
+The `evict_lru_sessions()` method holds a write lock on `lru_queue` while calling `delete_session()`, which also tries to acquire the same write lock. This creates a **guaranteed deadlock** that will freeze the system.
 
-1. **🔴 Memory Leak**: Pending requests never cleaned up for ended sessions
-2. **🔴 Race Condition**: Shutdown detection has TOCTOU bug between check and process
-3. **🔴 InterceptContext Metadata Never Populated**: Session matching is completely non-functional
-4. **🔴 No Session Recovery**: Lost session context cannot be recovered
-5. **🟡 State Confusion**: SessionState and SessionStatus overlap and conflict
-6. **🟡 No DoS Protection**: Unbounded pending_requests HashMap
-7. **🟡 Fragile Detection**: Initialized response detection assumes specific structure
-8. **🟡 Error Handling**: State modifications continue after failures
-9. **🟢 Session Tags Never Set**: Feature exists but is never used
-10. **🟢 No Transactional Guarantees**: Multiple state updates without atomicity
+### 🔴 CRITICAL Issue 2: Race Condition in Metrics
 
-### Essential Context Files to Read
+**Location**: `src/session/manager.rs:341-346`
 
-1. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-008-1-session-matching-fixes.md`
-2. **Session Manager**: `src/session/manager.rs` - Contains memory leak and race conditions
-3. **Session Store**: `src/session/store.rs` - Has state confusion issues
-4. **Forward Proxy**: `src/proxy/forward.rs` - Where InterceptContext is created without metadata
-5. **Interceptor Rules**: `src/interceptor/rules.rs` - Expects metadata that's never provided
-6. **Refactor Tracker**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
+Metrics incorrectly assume all deleted sessions were active, leading to incorrect or negative session counts.
 
-## Implementation Strategy
+### 🟠 HIGH Priority Issues
 
-### Phase 1: Critical Memory & Safety Fixes (MUST DO FIRST)
+- **Memory Leak in LRU Queue**: Duplicate entries cause unbounded growth
+- **O(n) Cleanup Performance**: Linear scan of all sessions
+- **Missing Backpressure**: No rate limiting on request tracking
 
-1. **Fix Memory Leak in pending_requests**
-   - Add session-scoped cleanup when sessions end
-   - Modify `complete_session()` and `fail_session()` to clean up pending requests
-   - Consider two-level HashMap: `HashMap<SessionId, HashMap<RequestId, PendingRequest>>`
+## Essential Files to Review
 
-2. **Fix Race Condition in Shutdown Detection**
-   - Make `is_shutdown_response()` atomic with removal
-   - Use `remove()` instead of separate `get()` and later `remove()`
-   - Store request type in PendingRequest
+1. **Code Review Document**: `/Users/kevin/src/tapwire/reviews/session-cleanup-review-2025-08-07.md`
+   - Contains detailed analysis and recommended fixes for all issues
+2. **Task Definition**: `/Users/kevin/src/tapwire/plans/refactors/task-009.1-session-cleanup-fixes.md`
+3. **Session Manager**: `src/session/manager.rs` - Primary focus for fixes
+4. **Refactor Tracker**: `/Users/kevin/src/tapwire/plans/refactors/shadowcat-refactor-tracker.md`
 
-3. **Populate InterceptContext Metadata**
-   - In `src/proxy/forward.rs`, look up session before creating InterceptContext
-   - Add metadata for frame_count, session_duration_ms, session_tags
-   - Make session matching actually functional
+## Implementation Priority
 
-4. **Add Session Recovery Mechanism**
-   - Add fallback in `extract_session_id()` to use current session context
-   - Pass session ID through transport layer
-   - Log warnings when session context is lost
+### Immediate (Must fix before ANY other work):
 
-### Phase 2: Design Improvements (IMPORTANT)
+1. **Fix the deadlock in `evict_lru_sessions`**
+   - Release lock before calling `delete_session`
+   - See review document for exact fix
 
-1. **Consolidate State Management**
-   - Either remove SessionStatus or SessionState (pick one)
-   - If keeping both, clearly define relationship
-   - Add invariant checks
+2. **Fix race condition in metrics**
+   - Track active sessions separately
+   - Only decrement active count for actually active sessions
 
-2. **Add DoS Protection**
-   - Limit pending requests per session (e.g., max 1000)
-   - Add global limit
-   - Return errors when exceeded
+### Short-term (Fix in this session):
 
-3. **Improve Response Detection**
-   - Track request types in pending_requests
-   - Match responses based on original request type
-   - Remove fragile protocol-specific assumptions
+3. **Replace VecDeque with LinkedHashMap for LRU**
+   - Prevents duplicate entries
+   - Maintains O(1) operations
 
-### Phase 3: Robustness (NICE TO HAVE)
+4. **Improve cleanup performance**
+   - Consider priority queue for O(log n) cleanup
+   - Or at minimum, optimize the linear scan
 
-1. **Transactional State Updates**
-   - Collect all changes first
-   - Apply atomically or rollback
-   - Use Unit of Work pattern
-
-2. **Implement Session Tagging**
-   - Define automatic tags (e.g., "long-running", "high-volume")
-   - Add tagging logic in process_message_for_session
+5. **Add backpressure for request tracking**
+   - Implement rate limiting per session
+   - Prevent system overload from rapid requests
 
 ## Success Criteria Checklist
 
-- [ ] No memory leaks - pending_requests cleaned up with sessions
-- [ ] No race conditions - atomic operations for concurrent access
-- [ ] InterceptContext metadata properly populated from session
-- [ ] Session matching actually works (test with interceptor rules)
-- [ ] Session recovery mechanism in place
-- [ ] State consistency guaranteed (SessionState vs SessionStatus resolved)
-- [ ] DoS protection with request limits
-- [ ] All 359+ existing tests still passing
-- [ ] New tests for all fixes passing
+- [ ] No deadlocks in LRU eviction (test with concurrent operations)
+- [ ] Metrics accurately track active/cleaned sessions
+- [ ] LRU queue maintains unique entries only
+- [ ] Cleanup performance improved from O(n)
+- [ ] Request tracking has proper backpressure
+- [ ] All existing tests still pass
+- [ ] New concurrent tests added and passing
+- [ ] Memory usage remains bounded under load
 - [ ] Clean `cargo fmt` output
 - [ ] Clean `cargo clippy --all-targets -- -D warnings` output
 
 ## Commands to Use
 
-### Development Commands
+### Testing Commands
 
 ```bash
-# Find the memory leak location
-rg "pending_requests" --type rust
+# Test for deadlocks
+cargo test evict_lru --release -- --test-threads=1
 
-# Check where InterceptContext is created
-rg "InterceptContext::new" --type rust -A 5
+# Test concurrent operations
+cargo test concurrent_cleanup
 
-# Run session tests
-cargo test session::
-cargo test intercept::
+# Check for memory leaks (if valgrind available)
+valgrind --leak-check=full ./target/debug/shadowcat session cleanup --all
 
-# Test with debug logging
-RUST_LOG=shadowcat=debug cargo test session_matching
+# Verify metrics accuracy
+cargo test metrics_accuracy
 
-# Check for race conditions
-cargo test --release -- --test-threads=1
-
-# Watch for changes
-cargo watch -x check -x test
+# Run all session tests
+cargo test session
 
 # Format and lint
 cargo fmt
 cargo clippy --all-targets -- -D warnings
 ```
 
-### Verification Commands
+### Development Workflow
 
-```bash
-# Ensure no memory leaks
-valgrind --leak-check=full ./target/debug/shadowcat forward stdio -- echo '{}'
-
-# Run all tests
-cargo test
-
-# Check session matching works
-cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"initialize","id":1}'
-
-# Stress test for DoS protection
-for i in {1..10000}; do echo '{"jsonrpc":"2.0","method":"test","id":'$i'}'; done | cargo run -- forward stdio -- cat
-```
+1. Create todo list with TodoWrite tool
+2. Read the comprehensive review document first
+3. Fix CRITICAL issues first (deadlock and race condition)
+4. Test each fix incrementally
+5. Add concurrent tests for each fix
+6. Fix HIGH priority issues
+7. Run full test suite
+8. Update refactor tracker when complete
 
 ## Important Notes
 
+- **This is a CRITICAL blocker** - The system cannot be deployed with these issues
+- **The deadlock will freeze production** - Must be fixed immediately
+- **Follow the exact fixes in the review document** - They have been carefully designed
+- **Test with concurrent operations** - Single-threaded tests won't catch these issues
+- **Consider using `parking_lot::RwLock`** - Better performance and deadlock detection
 - **Always use TodoWrite tool** to track your progress through the task
 - **Start with examining existing code** to understand current architecture
 - **Follow established patterns** from previous implementations
@@ -199,51 +164,23 @@ for i in {1..10000}; do echo '{"jsonrpc":"2.0","method":"test","id":'$i'}'; done
 
 ## Expected Deliverables
 
-1. **Fixed Memory Management**
-   - No memory leaks in pending_requests
-   - Proper cleanup on session end
-   - DoS protection with limits
-
-2. **Working Session Matching**
-   - InterceptContext metadata populated
-   - Session matching rules functional
-   - Session recovery mechanism
-
-3. **Consistent State Management**
-   - SessionState/SessionStatus confusion resolved
-   - Atomic state updates
-   - No race conditions
-
-4. **Comprehensive Tests**
-   - Tests for memory leak prevention
-   - Tests for race condition fixes
-   - Tests for session matching with metadata
-   - Tests for DoS protection
-
-5. **Clean Code**
-   - No clippy warnings
-   - Properly formatted with cargo fmt
-   - Following established project patterns
-
-## Critical Patterns to Follow
-
-Based on completed tasks, follow these patterns:
-
-- Use `anyhow::Context` for error context
-- Return proper Result types from all functions
-- Use Arc<RwLock<>> only when justified (document why)
-- Add tracing logs for debugging
-- Handle all error cases explicitly (no unwraps)
-- Use #[instrument] on key functions
+1. **Fixed `evict_lru_sessions`** - No deadlock possibility
+2. **Fixed metrics tracking** - Accurate active/cleaned counts
+3. **LinkedHashMap LRU** - No duplicate entries
+4. **Improved cleanup algorithm** - Better than O(n) if possible
+5. **Backpressure mechanism** - Rate limiting on requests
+6. **Comprehensive concurrent tests** - Prove fixes work under load
+7. **Updated documentation** - Document the fixes and why they were needed
 
 ## Start Here
 
-1. First, create a TodoWrite list with the major implementation steps
-2. Read `src/session/manager.rs` to understand the memory leak
-3. Check `src/proxy/forward.rs` to see where InterceptContext lacks metadata
-4. Begin with Phase 1 critical fixes (memory leak first)
-5. Test frequently as you build
+1. First, create a TodoWrite list with the critical fixes
+2. Read `/Users/kevin/src/tapwire/reviews/session-cleanup-review-2025-08-07.md` thoroughly
+3. Fix the deadlock IMMEDIATELY - this is the highest priority
+4. Test the deadlock fix with concurrent operations
+5. Then proceed with the race condition fix
+6. Continue with HIGH priority issues
 
-Remember: This is a CRITICAL BLOCKER. Task 009 cannot proceed until these issues are fixed. The session matching feature is currently non-functional and has memory leaks that could cause production outages.
+Remember: These are not theoretical issues - they are **guaranteed bugs** that will cause production failures. The fixes in the review document have been carefully designed to resolve them properly.
 
-Good luck with Task 008.1!
+Good luck with Task 009.1!
