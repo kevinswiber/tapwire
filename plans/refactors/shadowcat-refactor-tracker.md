@@ -4,10 +4,16 @@
 This document tracks the systematic refactoring of Shadowcat based on the [comprehensive review](../../reviews/shadowcat-comprehensive-review-2025-08-06.md). Each phase must be completed and verified before proceeding to the next.
 
 ## Current Status
-- **Current Phase**: Phase 2 (5/6 tasks complete)
-- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 In Progress (5/6 tasks)
-- **Production Readiness**: 98/100 ✅ - Session matching fully operational
-- **Next Task**: Task 009 (Session Cleanup) ready to proceed
+- **Current Phase**: Phase 2 (6/7 tasks complete - Task 009.1 critical fixes needed)
+- **Overall Progress**: Phase 1 Complete (4/4), Phase 2 Needs Critical Fixes (6/7 tasks)
+- **Production Readiness**: 90/100 ⚠️ - Critical issues in session cleanup
+- **Next Task**: Task 009.1 (Fix Critical Session Cleanup Design Flaws) - **CRITICAL**
+
+### ⚠️ CRITICAL ISSUES FOUND
+- **Deadlock in LRU eviction** - System will freeze when evicting sessions
+- **Race condition in metrics** - Can lead to negative session counts
+- **Memory leak in LRU queue** - Unbounded growth from duplicate entries
+- See [comprehensive review](../../reviews/session-cleanup-review-2025-08-07.md) for full details
 
 ## Phase 1: Critical Safety (Days 1-5)
 **Goal**: Eliminate all panic points and make the codebase crash-resistant
@@ -63,6 +69,7 @@ cargo clippy -- -D warnings
 
 ## Phase 2: Core Features (Days 6-10)
 **Goal**: Implement all advertised but missing functionality
+**Status**: 6/7 tasks complete - Critical fixes required for Task 009.1
 
 ### Tasks
 - [x] **[Task 005: Implement Record Command](./task-005-implement-record.md)** ✅ **COMPLETED**
@@ -104,11 +111,25 @@ cargo clippy -- -D warnings
   - ✅ Added DoS protection (1000/session, 10000 total limits)
   - ✅ Improved response detection with type-based matching
   - ✅ All 366+ tests passing
-- [ ] [Task 009: Implement Session Cleanup](./task-009-session-cleanup.md)
+- ✅ [Task 009: Implement Session Cleanup](./task-009-session-cleanup.md)
+  - ✅ Comprehensive cleanup with TTL and LRU policies
+  - ✅ CLI session management commands
+  - ✅ Configurable cleanup intervals and limits
+  - ✅ Metrics tracking for cleanup operations
+  - ✅ Tests for all cleanup scenarios
+  - ⚠️ **Critical issues found in code review** - see Task 009.1
+- [ ] [Task 009.1: Fix Critical Session Cleanup Design Flaws](./task-009.1-session-cleanup-fixes.md)
+  - 🔴 **CRITICAL**: Fix deadlock in LRU eviction
+  - 🔴 **CRITICAL**: Fix race condition in metrics
+  - 🟠 Fix memory leak in LRU queue (duplicate entries)
+  - 🟠 Improve O(n) cleanup performance
+  - 🟠 Add backpressure for request tracking
+  - See [comprehensive review](../../reviews/session-cleanup-review-2025-08-07.md)
 
 ### Success Criteria
 - ✅ `shadowcat record` command works end-to-end **VERIFIED** ✅
 - ✅ `shadowcat replay` command works with recorded tapes **VERIFIED** ✅
+- ⚠️ Session cleanup has critical issues that must be fixed (Task 009.1)
 - ✅ Rate limiting enforces configured limits **VERIFIED** ✅
 - ✅ Session matching logic handles all MCP message types **VERIFIED** ✅
 - ✅ Old sessions are cleaned up automatically **VERIFIED** ✅
