@@ -66,7 +66,7 @@ transport.send(envelope).await?;
 - [ ] `cargo build` succeeds completely (binary and lib)
 - [ ] `cargo test` passes
 - [ ] No clippy warnings with `-D warnings`
-- [ ] Update tracker.md with completion
+- [ ] Update plans/transport-context-refactor/transport-context-tracker.md with completion
 
 ## Remember
 
