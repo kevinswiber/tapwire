@@ -1,78 +1,156 @@
-# Next Session Prompt - MCP Compliance Task 1.5
+# Next Session: Phase 0 - Task F.1: Create Protocol Version Manager
 
-## Current Status
-- **Project**: Tapwire/Shadowcat MCP Compliance Initiative
-- **Progress**: 31.0% complete (9 of 29 tasks)
-- **Phase 1**: 80% complete (4 of 5 tasks)
-- **Just Completed**: Task 1.4 - SSE Session Integration
+## Context
 
-## Completed in Previous Session (Task 1.4)
-1. ✅ Created complete SSE session integration module
-2. ✅ Implemented SessionAwareSseManager with lifecycle management
-3. ✅ Added session-scoped event tracking and ID generation
-4. ✅ Integrated session headers (Mcp-Session-Id, MCP-Protocol-Version)
-5. ✅ Automatic session expiry with configurable timeouts
-6. ✅ All 85 SSE tests passing (up from 72), no clippy warnings
+We are implementing SSE proxy integration with MCP message handling capabilities in Shadowcat. The unified tracker (`plans/proxy-sse-message-tracker.md`) coordinates this work across 7 phases with 120-140 hours of effort.
 
-## Key Implementation Notes from Task 1.4
-- **Session Integration Complete**: Full session-aware SSE management with lifecycle hooks
-- **No block_on() Pattern**: Successfully maintained async state machine pattern throughout
-- **Module Structure**: Clean separation between session state (`session/sse_integration.rs`) and SSE management (`transport/sse/session.rs`)
-- **Thread Safety**: All shared state uses Arc<RwLock> for concurrent access
-- **Performance**: Efficient session lookup with HashMap, connection limits enforced
+### Current Status
+- **Phase**: Phase 0 - Foundation Components (Week 1)
+- **Task**: F.1 - Create Protocol Version Manager
+- **Duration**: 2 hours
+- **Dependencies**: None (this is the first task)
 
-## Next Task: 1.5 - SSE Performance Optimization
+### What Has Been Completed
+- Comprehensive planning and architecture design
+- Created unified tracker interleaving SSE and MCP work
+- Generated detailed task specifications
+- Created foundation and glue task implementation guides
+- Established integration coordination between initiatives
 
-**File**: `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-005-sse-performance.md`
+## Objective
 
-### Objectives
-1. Profile SSE implementation for bottlenecks
-2. Optimize buffer management and parsing
-3. Implement connection pooling
-4. Add performance benchmarks
-5. Ensure < 5% latency overhead target
+Implement the Protocol Version Manager as the first foundation component. This will be the single source of truth for MCP protocol version handling throughout the codebase, supporting both 2025-03-26 (with batching) and 2025-06-18 versions.
 
-### Foundation from Task 1.4
-- Complete session integration with `SessionAwareSseManager`
-- Session-scoped event tracking with `SessionEventIdGenerator`
-- Lifecycle hooks and automatic expiry monitoring
-- Connection limits and proper resource cleanup
+## Essential Context Files to Read
 
-### Phase 1 Completion
-With Task 1.5, Phase 1 (Core SSE Implementation) will be complete. This final task focuses on performance optimization to ensure the implementation meets the < 5% latency overhead target.
+1. **Primary Tracker**: `plans/proxy-sse-message-tracker.md`
+2. **Task Details**: `plans/integration-tasks/foundation-tasks.md` (Task F.1 section)
+3. **Integration Guide**: `plans/integration-coordination.md`
+4. **Existing Protocol Module**: `shadowcat/src/protocol/` (to understand current implementation)
 
-## Key Files
-- **Main work area**: `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/`
-- **Session system**: `/Users/kevin/src/tapwire/shadowcat/src/session/`
-- **Compliance tracker**: `/Users/kevin/src/tapwire/plans/mcp-compliance/compliance-tracker.md`
-- **Task spec**: `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-004-sse-session-integration.md`
+## Working Directory
 
-## Commands to Run First
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
-cargo test sse -- --quiet  # Verify all 67 tests still pass
-cargo clippy --all-targets -- -D warnings  # Check for warnings
 ```
 
-## Important Context
-- Shadowcat is a git submodule - commit changes in shadowcat repo first, then update parent
-- Target < 5% performance overhead for all operations
-- Session timeout defaults: 30 minutes total, 5 minutes idle
-- Max 10 connections per session by default
+## Task Details
 
-## Success Criteria for Task 1.4
-- [ ] SSE connections properly associated with sessions
-- [ ] Session ID headers included in all SSE requests
-- [ ] Event IDs scoped to sessions as per spec
-- [ ] Clean connection cleanup on session termination
-- [ ] Session state preserved across reconnections
-- [ ] Multiple streams per session properly managed
-- [ ] Session expiry handled gracefully
-- [ ] Proper isolation between sessions
-- [ ] Test coverage for session scenarios
+### Deliverables
+1. Create `src/mcp/protocol.rs` with:
+   - `ProtocolVersion` enum for 2025-03-26 and 2025-06-18
+   - Version detection from headers
+   - Capability detection (e.g., batching support)
+   - Version negotiation logic
+   - Default version handling (2025-03-26 for backwards compatibility)
 
-## Notes
-- The SSE implementation is now very robust with excellent error handling
-- Performance has been optimized based on rust-code-reviewer analysis
-- Documentation is comprehensive - use it as a reference
-- The async patterns are critical - follow them carefully to avoid deadlocks
+2. Create comprehensive tests demonstrating:
+   - Version parsing from strings
+   - Header extraction
+   - Default behavior
+   - Capability detection
+   - Version negotiation scenarios
+
+### Implementation Strategy
+
+#### Phase 1: Module Setup (15 min)
+1. Create `src/mcp/` directory if it doesn't exist
+2. Create `src/mcp/mod.rs` with module exports
+3. Create `src/mcp/protocol.rs` file
+4. Update `src/lib.rs` to include the mcp module
+
+#### Phase 2: Core Implementation (60 min)
+1. Implement `ProtocolVersion` enum with variants for each version
+2. Add `FromStr` implementation for parsing version strings
+3. Create version capability detection methods (supports_batching, etc.)
+4. Implement `VersionNegotiator` for handling version negotiation
+5. Add header extraction utilities
+
+#### Phase 3: Testing (30 min)
+1. Write unit tests for version parsing
+2. Test default version behavior
+3. Test version negotiation scenarios
+4. Test capability detection
+
+#### Phase 4: Integration (15 min)
+1. Ensure the module compiles with the rest of the codebase
+2. Run `cargo fmt` to format the code
+3. Run `cargo clippy --all-targets -- -D warnings` to check for issues
+4. Update the tracker with completion status
+
+## Commands to Use
+
+```bash
+# Create the MCP module directory
+mkdir -p src/mcp
+
+# Run tests as you implement
+cargo test mcp::protocol
+
+# Format your code
+cargo fmt
+
+# Check for issues
+cargo clippy --all-targets -- -D warnings
+
+# Run all tests to ensure nothing broke
+cargo test
+```
+
+## Success Criteria Checklist
+
+- [ ] `src/mcp/protocol.rs` created with full implementation
+- [ ] `ProtocolVersion` enum supports both 2025-03-26 and 2025-06-18
+- [ ] Version parsing from strings works correctly
+- [ ] Default version is 2025-03-26 for backwards compatibility
+- [ ] `supports_batching()` returns true only for 2025-03-26
+- [ ] `VersionNegotiator` can negotiate between client and server versions
+- [ ] All tests pass
+- [ ] No clippy warnings
+- [ ] Code is properly formatted
+- [ ] Tracker updated with completion status
+
+## Important Notes
+
+- **Always use TodoWrite tool** to track your progress through the task
+- **Start with examining existing code** to understand current architecture
+- **Follow established patterns** from previous implementations
+- **Test incrementally** as you build each component
+- **Run `cargo fmt`** after implementing new functionality
+- **Run `cargo clippy --all-targets -- -D warnings`** before any commit
+- **Update the refactor tracker** when the task is complete
+- **Focus on the current phase objectives**
+
+## Model Usage Guidelines
+
+- **IMPORTANT** Be mindful of model capabilities. Assess whether Claude Opus or Claude Sonnet would be best for each step. When there's a benefit to a model change, pause and recommend it. Be mindful of the context window. When the context window has less than 15% availability, suggest creating a new Claude session and output a good prompt, referencing all available plans, tasks, and completion files that are relevant. Save the prompt into NEXT_SESSION_PROMPT.md.
+
+## Development Workflow
+
+1. Create todo list with TodoWrite tool to track progress
+2. Examine existing codebase architecture and established patterns
+3. Study current implementations related to the task
+4. Design the solution approach and identify key components
+5. Implement functionality incrementally with frequent testing
+6. Add comprehensive error handling following project patterns
+7. Create tests demonstrating functionality works correctly
+8. Run tests after each significant change to catch issues early
+9. Run `cargo fmt` to ensure consistent code formatting
+10. Run `cargo clippy -- -D warnings` to catch potential issues
+11. Update project documentation and tracker as needed
+12. Commit changes with clear, descriptive messages
+
+## Example Implementation Reference
+
+The task details in `plans/integration-tasks/foundation-tasks.md` provide a complete implementation example. Use this as a guide, but adapt based on the existing codebase patterns and any specific requirements discovered during implementation.
+
+## Next Steps After This Task
+
+Once F.1 is complete, the next task will be:
+- **F.2**: Build Minimal MCP Parser (4 hours, no dependencies)
+
+This will build on the Protocol Version Manager to create a lightweight parser for extracting basic MCP message information.
+
+---
+
+**Session Goal**: Complete the Protocol Version Manager implementation with comprehensive tests and documentation, setting a solid foundation for all subsequent SSE and MCP work.
