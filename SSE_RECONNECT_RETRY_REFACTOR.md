@@ -338,10 +338,29 @@ httpdate = "1.0.3"  # For parsing HTTP-date format
 - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/client.rs` - HTTP client creating errors
 - `/Users/kevin/src/tapwire/shadowcat/src/proxy/reverse.rs` - Could benefit from same retry logic
 
+## Phase 2: Comprehensive Rate Limit Support (Complete)
+
+Date: 2025-08-08
+
+We implemented Phase 2 by adding comprehensive retry hint extraction and integrating it into the SSE flow.
+
+- New module:
+  - `shadowcat/src/retry/http.rs`: `HttpRetryInfo` with parsing for `Retry-After`, `X-RateLimit-*`, and `RateLimit-*`, and `suggested_delay(now)`.
+  - Exported via `shadowcat/src/retry/mod.rs` and `shadowcat/src/lib.rs`.
+- Error propagation:
+  - `SseConnectionError::Http` now includes `retry_info: Option<HttpRetryInfo>` in `shadowcat/src/transport/sse/connection.rs`.
+- Client population:
+  - `shadowcat/src/transport/sse/client.rs` populates `retry_info` on all HTTP error paths (GET/POST, including early failures and JSON parse errors).
+- Reconnect preference:
+  - `shadowcat/src/transport/sse/reconnect.rs` now prefers `retry_info.suggested_delay(SystemTime::now())`, then falls back to `retry_after`, then exponential backoff. Delay remains capped at 5 minutes.
+- Tests: Full suite green after wiring; existing reconnection hint test covers hint usage.
+
+Notes:
+- Metrics/logging for hint source selection are not yet added (deferred to Phase 3/rollout polishing).
+
 ## Next Steps
 
-- Phase 2: Comprehensive rate limit support using `X-RateLimit-*` and `RateLimit-*` headers. Create an `HttpRetryInfo` struct and feed its `suggested_delay()` as a hint to the reconnection strategy. Add metrics/logging to track server-hint vs backoff usage.
-- Phase 3: Extract a reusable retry module usable by both SSE and regular HTTP flows (e.g., reverse proxy). Unify strategy interfaces and ensure type-safe, testable injection of hints.
+- Phase 3: Extract a reusable retry module usable by both SSE and regular HTTP flows (e.g., reverse proxy). Unify strategy interfaces and ensure type-safe, testable injection of hints. Add structured metrics and logs for hint source and chosen delay, and adopt in reverse proxy retry logic.
 
 ## Context for Next Session
 
