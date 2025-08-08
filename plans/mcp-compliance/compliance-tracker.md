@@ -11,11 +11,11 @@
 Shadowcat has critical MCP specification compliance issues that prevent interoperability with standard MCP clients/servers. This tracker organizes the remediation work into manageable phases and tasks, each designed to fit within a single Claude session.
 
 ### Progress Update (2025-08-08)
-- **Tasks Completed**: 7 of 29 (24.1%)
+- **Tasks Completed**: 8 of 29 (27.6%)
 - **Phase 0 Progress**: 5 of 5 tasks (100%) ✅
-- **Phase 1 Progress**: 2 of 5 tasks (40%) - SSE Parser and Connection Management complete
-- **Key Achievement**: Full SSE Connection Management with thread-safe pool and Stream implementation
-- **Next Action**: Begin Task 1.3 - SSE Reconnection Logic
+- **Phase 1 Progress**: 3 of 5 tasks (60%) - SSE Parser, Connection Management, and Reconnection complete
+- **Key Achievement**: Complete SSE Reconnection with exponential backoff, Last-Event-ID support, and health monitoring
+- **Next Action**: Begin Task 1.4 - SSE Session Integration
 
 ## Phase Overview
 
@@ -216,30 +216,39 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - ✅ Type aliases for complex types
 **Ready for Task 1.3**: Foundation solid with all critical issues addressed
 
-### Task 1.3: SSE Reconnection Logic 🎯 NEXT
+### Task 1.3: SSE Reconnection Logic ✅ COMPLETED
 **File**: [`tasks/phase-1-task-003-sse-reconnection.md`](tasks/phase-1-task-003-sse-reconnection.md) ✅ Generated
-**Duration**: 3-4 hours
-**Status**: Not Started
+**Duration**: 3-4 hours (Actual: ~4 hours)
+**Status**: Completed (2025-08-08)
 **Dependencies**: Tasks 1.1, 1.2 ✅
 **Deliverables**:
-- [ ] Implement exponential backoff with jitter
-- [ ] Add Last-Event-ID support for resumability
-- [ ] Handle server retry hints
-- [ ] Connection health monitoring
-- [ ] Event deduplication after resumption
-- [ ] Tests for network failures
-**Foundation from Task 1.2**:
-- SseConnectionManager with health_check() method ready for integration
-- Last-Event-ID tracking already in SseConnection
-- ConnectionState enum includes Reconnecting state
-- Proper error handling with context for retry decisions
-**Key Considerations**:
-- Honor SSE `retry` field from server for reconnection timing
-- Integrate with existing connection pool limits
-- Consider backpressure handling for slow consumers
-- Hook into interceptor chain for recording/replay
+- [x] Implement exponential backoff with jitter
+- [x] Add Last-Event-ID support for resumability
+- [x] Handle server retry hints
+- [x] Connection health monitoring
+- [x] Event deduplication after resumption
+- [x] Tests for network failures
+**Implementation Details**:
+- Created `src/transport/sse/reconnect.rs` with comprehensive reconnection logic
+- ReconnectionManager with configurable exponential backoff strategy
+- EventTracker for deduplication with circular buffer (max 1000 events)
+- HealthMonitor for proactive connection health checks
+- ReconnectingStream implementing futures::Stream with automatic reconnection
+- Server retry hints honored from SSE `retry:` field
+- Last-Event-ID header sent on reconnection for resumability
+- Differentiates between retryable (5xx, network) and non-retryable (4xx) errors
+- Integration with SseHttpClient via `open_reconnecting_stream()` method
+- 5 unit tests passing (backoff, retry logic, event tracking, health monitoring)
+- All clippy warnings resolved, code formatted
+**Key Features**:
+- Exponential backoff with 25% jitter to prevent thundering herd
+- Configurable retry limits (default: 10 attempts)
+- Idle timeout detection (default: 5 minutes)
+- Event deduplication using VecDeque with capacity limits
+- Thread-safe with Arc<Mutex> for state management
+- Async Stream implementation with proper poll semantics
 
-### Task 1.4: SSE Session Integration ⏳
+### Task 1.4: SSE Session Integration 🎯 NEXT
 **File**: [`tasks/phase-1-task-004-sse-session-integration.md`](tasks/phase-1-task-004-sse-session-integration.md) ✅ Generated
 **Duration**: 3-4 hours
 **Status**: Not Started
