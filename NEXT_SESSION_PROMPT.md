@@ -1,8 +1,8 @@
-# Phase 1, Task 1.2: SSE Connection Management
+# Phase 1, Task 1.3: SSE Reconnection Logic
 
 ## Context
 
-You are working on the Shadowcat MCP proxy implementation in the Tapwire project. Phase 0 (Critical Version Bug Fixes) has been COMPLETED with all 5 tasks finished successfully. Phase 1 Task 1.1 (SSE Event Parser) has also been completed. The project is now at 20.7% overall completion (6 of 29 tasks).
+You are working on the Shadowcat MCP proxy implementation in the Tapwire project. Phase 0 (Critical Version Bug Fixes) has been COMPLETED with all 5 tasks finished successfully. Phase 1 Tasks 1.1 (SSE Event Parser) and 1.2 (SSE Connection Management) have also been completed. The project is now at 24.1% overall completion (7 of 29 tasks).
 
 ### Phase 0 Achievements
 - ✅ All critical version bugs fixed
@@ -10,108 +10,118 @@ You are working on the Shadowcat MCP proxy implementation in the Tapwire project
 - ✅ Version downgrade prevention implemented
 - ✅ Both proxy modes have version state parity
 - ✅ Performance optimized after thorough code review
-- ✅ 419+ tests passing, no clippy warnings
 
-### Phase 1 Task 1.1 Achievements
-- ✅ Comprehensive SSE Event Parser implemented
-- ✅ 48 SSE-specific tests passing
-- ✅ Full SSE specification compliance
-- ✅ Support for both MCP versions (2025-03-26 and 2025-06-18)
-- ✅ Async Stream trait implementation with tokio
-- ✅ Edge case handling (BOM, CRLF, comments, malformed data)
+### Phase 1 Achievements So Far
+- ✅ Task 1.1: Comprehensive SSE Event Parser (48 tests passing)
+- ✅ Task 1.2: SSE Connection Management with thread-safe pooling (62 total SSE tests)
+  - Fixed critical race conditions and performance issues
+  - Integrated with Phase 0 protocol module
+  - Added health_check() method for proactive cleanup
+  - Optimized Stream polling implementation
 
 ### Working Directory
 ```
 /Users/kevin/src/tapwire/shadowcat
 ```
 
-## Current Task: SSE Connection Management
+## Current Task: SSE Reconnection Logic
 
 ### Objective
-Implement persistent SSE connection management for the MCP Streamable HTTP transport, handling multiple concurrent streams, connection lifecycle, and proper resource cleanup.
+Implement automatic reconnection for SSE connections with exponential backoff, Last-Event-ID support, and proper error recovery for the MCP Streamable HTTP transport.
 
 ### Task Details
-**File**: `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-002-sse-connection-management.md`
-**Duration**: 4-5 hours
-**Priority**: CRITICAL - Required for SSE-based communication
-**Dependencies**: Task 1.1 ✅ (SSE Event Parser - Complete)
+**File**: `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-003-sse-reconnection.md`
+**Duration**: 3-4 hours
+**Priority**: CRITICAL - Required for production-ready SSE
+**Dependencies**: Tasks 1.1 ✅, 1.2 ✅ (Complete)
 
 ## Essential Context Files to Read
 
 1. **Task Specification**: 
-   - `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-002-sse-connection-management.md`
+   - `/Users/kevin/src/tapwire/plans/mcp-compliance/tasks/phase-1-task-003-sse-reconnection.md`
 
 2. **MCP SSE Specification**:
    - `/Users/kevin/src/tapwire/specs/mcp/docs/specification/2025-06-18/basic/transports.mdx` (Streamable HTTP section)
-   - `/Users/kevin/src/tapwire/specs/mcp/docs/specification/2025-03-26/basic/transports.mdx` (for comparison)
 
-3. **Existing SSE Parser** (from Task 1.1):
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/mod.rs`
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/parser.rs`
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/event.rs`
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/buffer.rs`
+3. **Existing SSE Implementation** (from Tasks 1.1 & 1.2):
+   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/connection.rs` (has Reconnecting state)
+   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/manager.rs` (has health_check method)
+   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/client.rs` (HTTP client integration)
+   - `/Users/kevin/src/tapwire/shadowcat/src/transport/sse/event.rs` (has retry field support)
 
-4. **Existing Transport Infrastructure**:
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/mod.rs`
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/http.rs`
-   - `/Users/kevin/src/tapwire/shadowcat/src/transport/http_mcp.rs`
+4. **Protocol Module** (for version management):
+   - `/Users/kevin/src/tapwire/shadowcat/src/protocol/mod.rs`
 
-5. **Session Management** (for integration context):
-   - `/Users/kevin/src/tapwire/shadowcat/src/session/mod.rs`
+## Foundation Already in Place
+
+From Task 1.2, you have:
+- ✅ SseConnectionManager with `health_check()` method ready for integration
+- ✅ Last-Event-ID tracking already in SseConnection
+- ✅ ConnectionState enum includes Reconnecting state
+- ✅ Proper error handling with context for retry decisions
+- ✅ Thread-safe connection pool with limits
+- ✅ Optimized Stream implementation
 
 ## Implementation Strategy
 
-### Phase 1: Connection Structure (45 min)
-1. Create `src/transport/sse/connection.rs`
-2. Define `SseConnection` struct with state tracking
-3. Implement connection lifecycle methods
-4. Add connection state enum (Connecting, Connected, Reconnecting, Closed, Failed)
-5. Export from SSE module
+### Phase 1: Reconnection Policy (45 min)
+1. Create `src/transport/sse/reconnect.rs`
+2. Define ReconnectPolicy struct with exponential backoff
+3. Implement jitter calculation for thundering herd prevention
+4. Add retry budget to prevent infinite retries
+5. Honor server `retry` hints from SSE events
 
-### Phase 2: Connection Manager (1.5 hours)
-1. Create `src/transport/sse/manager.rs`
-2. Implement `SseConnectionManager` with thread-safe storage
-3. Add POST request handling with SSE/JSON detection
-4. Add GET request support for server-initiated streams
-5. Implement connection pool with limits
-6. Add cleanup and resource management
+### Phase 2: Connection Monitor (1 hour)
+1. Add connection health monitoring to manager
+2. Detect disconnections and trigger reconnection
+3. Track Last-Event-ID for resumption
+4. Implement reconnection state machine
+5. Handle different error types (4xx vs 5xx)
 
-### Phase 3: HTTP Client Integration (1.5 hours)
-1. Create `src/transport/sse/client.rs`
-2. Integrate with hyper for HTTP requests
-3. Handle Content-Type detection (application/json vs text/event-stream)
-4. Add proper header management (MCP-Protocol-Version, Mcp-Session-Id, Accept)
-5. Implement response routing (immediate JSON vs SSE stream)
-6. Handle 202 Accepted for notifications
+### Phase 3: Reconnection Implementation (1 hour)
+1. Integrate reconnection logic into SseConnectionStream
+2. Automatic reconnection on connection drop
+3. Pass Last-Event-ID header on reconnection
+4. Update connection state during reconnection
+5. Emit reconnection events for observability
 
-### Phase 4: Stream Adapter (45 min)
-1. Create async Stream implementation for SSE connections
-2. Integrate with existing SseParser from Task 1.1
-3. Add backpressure handling
-4. Implement proper cleanup on drop
-5. Track last-event-id for resumability
+### Phase 4: Event Deduplication (45 min)
+1. Track recent event IDs in circular buffer
+2. Filter duplicate events after reconnection
+3. Handle edge cases (buffer overflow, ID reuse)
+4. Add metrics for duplicate detection
 
-### Phase 5: Testing (45 min)
-1. Unit tests for connection creation and lifecycle
-2. Tests for multiple concurrent connections
-3. Tests for POST vs GET request handling
-4. Tests for Content-Type detection
-5. Integration tests with mock HTTP server
-6. Error handling and cleanup tests
+### Phase 5: Testing (30 min)
+1. Unit tests for reconnection policy
+2. Tests for connection failure scenarios
+3. Tests for Last-Event-ID resumption
+4. Integration tests with mock server
+5. Chaos tests for network failures
 
 ## Success Criteria Checklist
 
-- [ ] Can establish SSE connections via POST and GET
-- [ ] Properly parse Content-Type headers for SSE detection
-- [ ] Handle both single JSON responses and SSE streams
-- [ ] Support multiple simultaneous connections per session
-- [ ] Clean connection shutdown without resource leaks
-- [ ] Error handling for network failures
-- [ ] Connection state tracking and monitoring
-- [ ] Integration with existing HTTP transport layer
+- [ ] Automatic reconnection with exponential backoff
+- [ ] Jitter to prevent thundering herd
+- [ ] Last-Event-ID header for resumption
+- [ ] Honor server retry hints
+- [ ] Different handling for 4xx vs 5xx errors
+- [ ] Event deduplication after reconnection
+- [ ] Connection health monitoring
+- [ ] Retry budget to prevent infinite loops
 - [ ] Comprehensive test coverage
 - [ ] No clippy warnings
 - [ ] All tests passing
+
+## Key Considerations
+
+1. **SSE Retry Field**: The parser already supports the `retry` field - use it to update reconnection timing
+2. **Connection Pool Limits**: Ensure reconnections respect the max connections limit
+3. **Backpressure**: Consider what happens if events accumulate during reconnection
+4. **Observability**: Add tracing for reconnection attempts and outcomes
+5. **Error Categories**: 
+   - 4xx errors (client errors) - don't retry or use longer backoff
+   - 5xx errors (server errors) - retry with exponential backoff
+   - Network errors - retry with exponential backoff
 
 ## Commands to Use
 
@@ -119,20 +129,14 @@ Implement persistent SSE connection management for the MCP Streamable HTTP trans
 # Navigate to shadowcat
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Create new module files
-touch src/transport/sse/connection.rs
-touch src/transport/sse/manager.rs
-touch src/transport/sse/client.rs
+# Create new module file
+touch src/transport/sse/reconnect.rs
 
 # Run tests for SSE module
 cargo test sse
 
-# Run specific connection tests
-cargo test sse::connection
-cargo test sse::manager
-
-# Run all tests
-cargo test
+# Run specific reconnection tests
+cargo test sse::reconnect
 
 # Check compilation
 cargo build
@@ -148,104 +152,50 @@ git add -A
 git status
 ```
 
-## Implementation Details from Task File
+## Implementation Notes
 
-### MCP Requirements to Implement
-1. **POST Requests**:
-   - Include `Accept: application/json, text/event-stream` header
-   - Handle JSON response OR SSE stream response
-   - SSE stream should remain open until response sent
-   - Return 202 Accepted for notifications/responses with no body
-
-2. **GET Requests**:
-   - Include `Accept: text/event-stream` header
-   - Used for server-initiated communication only
-   - May remain open indefinitely
-   - Handle 405 Method Not Allowed gracefully
-
-3. **Multiple Connections**:
-   - Support multiple SSE streams simultaneously
-   - Each stream is independent (no broadcasting)
-   - Track connections per session
-
-### Core Types to Implement
-
-```rust
-pub struct SseConnection {
-    id: Uuid,
-    stream: Pin<Box<dyn Stream<Item = Result<SseEvent, SseError>> + Send>>,
-    session_id: Option<String>,
-    last_event_id: Option<String>,
-    created_at: Instant,
-    state: ConnectionState,
-}
-
-pub struct SseConnectionManager {
-    connections: Arc<RwLock<HashMap<Uuid, SseConnection>>>,
-    http_client: Arc<HttpClient>,
-    max_connections: usize,
-    session_id: Option<String>,
-    protocol_version: String,
-}
-
-pub enum SseResponse {
-    Json(serde_json::Value),
-    Stream(Uuid),  // Connection ID for streaming response
-}
+### Exponential Backoff Formula
 ```
+delay = min(initial_delay * (2 ^ attempt), max_delay)
+jitter = random(0, delay * jitter_factor)
+final_delay = delay + jitter
+```
+
+### Typical Values
+- Initial delay: 1 second
+- Max delay: 30 seconds
+- Jitter factor: 0.3 (30%)
+- Max retries: 10
+
+### Error Handling Strategy
+- Network errors: Immediate retry with backoff
+- 5xx errors: Retry with backoff
+- 429 (Too Many Requests): Honor Retry-After header
+- 4xx errors (except 429): Don't retry or use extended backoff
+- Parse errors: Don't retry
 
 ## Important Notes
 
 - **Always use TodoWrite tool** to track your progress through the task
-- **Start with examining existing code** to understand current architecture
-- **Follow established patterns** from previous implementations
 - **Test incrementally** as you build each component
+- **Consider edge cases** like rapid disconnection/reconnection cycles
 - **Run `cargo fmt`** after implementing new functionality
 - **Run `cargo clippy --all-targets -- -D warnings`** before any commit
-- **Update the refactor tracker** when the task is complete
-- **Focus on the current phase objectives**
-
-## Model Usage Guidelines
-
-- **IMPORTANT** Be mindful of model capabilities. Assess whether Claude Opus or Claude Sonnet would be best for each step. When there's a benefit to a model change, pause and recommend it. Be mindful of the context window. When the context window has less than 15% availability, suggest creating a new Claude session and output a good prompt, referencing all available plans, tasks, and completion files that are relevant. Save the prompt into NEXT_SESSION_PROMPT.md.
-
-## Development Workflow
-
-1. Create todo list with TodoWrite tool to track progress
-2. Examine existing codebase architecture and established patterns
-3. Study current implementations related to the task
-4. Design the solution approach and identify key components
-5. Implement functionality incrementally with frequent testing
-6. Add comprehensive error handling following project patterns
-7. Create tests demonstrating functionality works correctly
-8. Run tests after each significant change to catch issues early
-9. Run `cargo fmt` to ensure consistent code formatting
-10. Run `cargo clippy -- -D warnings` to catch potential issues
-11. Update project documentation and tracker as needed
-12. Commit changes with clear, descriptive messages (only when asked)
+- **Update the compliance tracker** when the task is complete
 
 ## Next Steps After This Task
 
-Once Task 1.2 is complete:
+Once Task 1.3 is complete:
 - Update `/Users/kevin/src/tapwire/plans/mcp-compliance/compliance-tracker.md`
-- Proceed to Task 1.3: SSE Reconnection Logic
-- Build on the connection manager to add automatic reconnection
+- Proceed to Task 1.4: SSE Session Integration
+- Build on reconnection to integrate with session management
 
 ## Performance Targets
 
 Remember the project performance requirements:
 - **Latency overhead**: < 5% p95 for typical tool calls
 - **Memory usage**: < 100MB for 1000 concurrent sessions
-- **Connection limits**: 10 connections per session default
-- **Buffer size**: 8KB default, configurable
+- **Reconnection delay**: Minimal impact on message delivery
+- **CPU usage**: Efficient backoff calculations
 
-## Integration Points
-
-This task integrates with:
-1. **SSE Parser** (Task 1.1): Use existing parser for event processing
-2. **HTTP Transport**: Extend current HTTP transport capabilities
-3. **Session Manager**: Associate connections with sessions
-4. **Protocol Module**: Use version management from Phase 0
-5. **Metrics**: Track connection statistics
-
-Good luck with the SSE Connection Management implementation!
+Good luck with the SSE Reconnection Logic implementation!
