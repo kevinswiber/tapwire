@@ -14,7 +14,7 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - **Tasks Completed**: 8 of 29 (27.6%)
 - **Phase 0 Progress**: 5 of 5 tasks (100%) ✅
 - **Phase 1 Progress**: 3 of 5 tasks (60%) - SSE Parser, Connection Management, and Reconnection complete
-- **Key Achievement**: Complete SSE Reconnection with proper async state machine (fixed critical `block_on()` anti-pattern)
+- **Key Achievement**: Production-ready SSE Reconnection with comprehensive documentation and optimizations
 - **Next Action**: Begin Task 1.4 - SSE Session Integration
 
 ## Phase Overview
@@ -218,16 +218,20 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 
 ### Task 1.3: SSE Reconnection Logic ✅ COMPLETED
 **File**: [`tasks/phase-1-task-003-sse-reconnection.md`](tasks/phase-1-task-003-sse-reconnection.md) ✅ Generated
-**Duration**: 3-4 hours (Actual: ~4 hours including critical fix)
+**Duration**: 3-4 hours (Actual: ~6 hours including critical fixes, optimizations, and documentation)
 **Status**: Completed (2025-08-08)
 **Dependencies**: Tasks 1.1, 1.2 ✅
 **Deliverables**:
 - [x] Implement exponential backoff with jitter
 - [x] Add Last-Event-ID support for resumability
-- [x] Handle server retry hints
+- [x] Handle server retry hints from SSE
 - [x] Connection health monitoring
 - [x] Event deduplication after resumption
 - [x] Tests for network failures
+- [x] Comprehensive async state machine documentation
+- [x] Performance optimizations based on code review
+- [x] Robust HTTP error handling with status codes
+
 **Implementation Details**:
 - Created `src/transport/sse/reconnect.rs` with comprehensive reconnection logic
 - ReconnectionManager with configurable exponential backoff strategy
@@ -238,19 +242,34 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - Last-Event-ID header sent on reconnection for resumability
 - Differentiates between retryable (5xx, network) and non-retryable (4xx) errors
 - Integration with SseHttpClient via `open_reconnecting_stream()` method
-- 5 unit tests passing (backoff, retry logic, event tracking, health monitoring)
-- All 67 SSE tests passing, no clippy warnings
-**Critical Fix Applied**:
-- ✅ **Fixed `block_on()` anti-pattern**: Original implementation incorrectly used `block_on()` inside Stream::poll_next
-- ✅ **Proper async state machine**: Implemented AsyncOperation enum to handle async operations without blocking
-- ✅ **Non-blocking poll**: All async operations now properly polled without blocking the executor
-**Key Features**:
-- Exponential backoff with 25% jitter to prevent thundering herd
-- Configurable retry limits (default: 10 attempts)
-- Idle timeout detection (default: 5 minutes)
-- Event deduplication using VecDeque with capacity limits
-- Thread-safe with Arc<RwLock> for state management
-- Async Stream implementation with proper poll semantics (no blocking!)
+
+**Critical Fixes & Improvements**:
+1. **Fixed `block_on()` anti-pattern**: Replaced with proper AsyncOperation state machine
+2. **Performance optimizations**:
+   - Eliminated string allocations in `is_duplicate()` using `iter().any()`
+   - Cached Arc references to avoid repeated cloning in hot path
+   - Improved HTTP status parsing with proper numeric extraction
+3. **Refactored HTTP error handling**:
+   - Changed `SseConnectionError::Http(String)` to structured variant with `Option<u16>` status
+   - Eliminated brittle string parsing for status codes
+   - Type-safe retry logic using actual status codes
+4. **Added comprehensive documentation**:
+   - ASCII art diagrams explaining the async state machine
+   - Sequence diagrams for async operation flow
+   - DO/DON'T examples for common pitfalls
+   - Step-by-step event processing walkthrough
+
+**Test Coverage**:
+- 5 unit tests for reconnection logic
+- Enhanced tests for HTTP status code handling
+- All 67 SSE tests passing
+- Doctests fixed and passing
+- No clippy warnings
+
+**Future Enhancement Identified**:
+- TODO: Extract and respect Retry-After header for 429/503 responses
+- Design documented in `/Users/kevin/src/tapwire/SSE_RECONNECT_RETRY_REFACTOR.md`
+- Would enable server-friendly retry behavior and faster recovery
 
 ### Task 1.4: SSE Session Integration 🎯 NEXT
 **File**: [`tasks/phase-1-task-004-sse-session-integration.md`](tasks/phase-1-task-004-sse-session-integration.md) ✅ Generated
@@ -647,6 +666,7 @@ If context window becomes limited:
 | 2025-08-07 | 1.2 | Generated all Phase 1 task files with detailed implementation plans | Claude |
 | 2025-08-08 | 1.3 | Completed Task 1.2 with comprehensive code review and critical fixes | Claude |
 | 2025-08-08 | 1.4 | Completed Task 1.3 with critical async fix (removed block_on anti-pattern) | Claude |
+| 2025-08-08 | 1.5 | Task 1.3 enhancements: perf optimizations, HTTP error refactor, comprehensive docs | Claude |
 
 ---
 
