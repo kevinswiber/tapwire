@@ -49,7 +49,13 @@ This is the primary tracker for implementing SSE proxy integration with MCP mess
 
 ## Work Phases
 
-### Phase 0: Foundation Components (Week 1)
+### ⚠️ PREREQUISITE: Transport Context Refactor
+**MUST BE COMPLETED FIRST**: The transport layer needs refactoring to properly separate protocol concerns from transport metadata. See [Transport Context Refactor Tracker](transport-context-refactor/transport-context-tracker.md) for details.
+
+**Duration**: 30-40 hours (1 week)  
+**Impact**: Enables proper SSE metadata handling throughout the system
+
+### Phase 0: Foundation Components (Week 2)
 Build shared components that both SSE and MCP initiatives need.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
