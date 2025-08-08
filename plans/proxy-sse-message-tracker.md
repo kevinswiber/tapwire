@@ -54,7 +54,7 @@ Build shared components that both SSE and MCP initiatives need.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| F.1 | **Create Protocol Version Manager** | 2h | None | ⬜ Not Started | | [Task Details](#f1-protocol-version-manager) |
+| F.1 | **Create Protocol Version Manager** | 2h | None | ✅ Completed | 2025-08-08 | [Task Details](#f1-protocol-version-manager) |
 | F.2 | **Build Minimal MCP Parser** | 4h | None | ⬜ Not Started | | [Task Details](#f2-minimal-mcp-parser) |
 | F.3 | **Implement Batch Handler** | 3h | F.1, F.2 | ⬜ Not Started | | [Task Details](#f3-batch-handler) |
 | F.4 | **Create Unified Event ID Generator** | 2h | None | ⬜ Not Started | | [Task Details](#f4-event-id-generator) |
