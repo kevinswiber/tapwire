@@ -358,11 +358,47 @@ We implemented Phase 2 by adding comprehensive retry hint extraction and integra
 Notes:
 - Metrics/logging for hint source selection are not yet added (deferred to Phase 3/rollout polishing).
 
+## Phase 3: Enhancements (Complete)
+
+Date: 2025-08-08
+
+We implemented targeted improvements to make the system more configurable, observable, and robust:
+
+- Configurability:
+  - Added `max_hint_delay` to `ReconnectionConfig` to cap server-provided delays (default 5 minutes).
+  - Centralized header names in `retry/http.rs` constants to avoid typos and enable reuse.
+- Observability:
+  - Reconnection path logs whether a server hint was applied and the chosen delay.
+  - `HttpRetryInfo::hint_with_source()` exposes both delay and source for future metrics.
+- Tests:
+  - `test_retry_hint_capped_by_max`: verifies cap enforcement.
+  - `test_retry_after_wins_over_rate_limit_reset`: verifies Retry-After precedence over reset.
+  - `test_past_reset_time_returns_zero_delay`: ensures past reset becomes zero delay.
+
+All tests pass and clippy is clean with `-D warnings`.
+
 ## Next Steps
 
-- Phase 3: Extract a reusable retry module usable by both SSE and regular HTTP flows (e.g., reverse proxy). Unify strategy interfaces and ensure type-safe, testable injection of hints. Add structured metrics and logs for hint source and chosen delay, and adopt in reverse proxy retry logic.
+- Reusable retry across HTTP flows (reverse proxy): adopt `HttpRetryInfo` for non-SSE paths and unify hint handling.
+- Metrics: add counters and histograms for hint usage and delays (see below).
+- Optional jitter on hint delays to reduce thundering herd effects.
+- Per-endpoint policy: allow overrides (e.g., ignore hints for specific upstreams, adjust caps).
+- Adaptive strategy: adjust backoff based on historical success post-hint; integrate with circuit breaker.
 
-## Context for Next Session
+## Metrics (Planned)
+
+- `mcp_sse_retry_hint_total{source="retry_after|x_rate_limit|rate_limit"}`
+- `mcp_sse_retry_fallback_total`
+- `mcp_sse_retry_delay_seconds` (histogram)
+
+## Potential Improvements
+
+- Parse additional standardized forms (e.g., structured RateLimit headers if adopted by providers).
+- Apply small jitter to hint-derived delays (configurable) to avoid synchronized retries.
+- Deduplicate header parsing across transports by introducing a thin HTTP middleware that populates `HttpRetryInfo`.
+- Propagate correlation IDs across retries for better tracing.
+- Add configuration to clamp extremely small server hints to a minimum delay to avoid retry storms.
+
 
 ---
 
