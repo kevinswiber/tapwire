@@ -1,75 +1,70 @@
-# Next Session: Transport Context Refactor - Phase 3 (Binary & Tests)
+# Next Session Prompt
 
-## 🎉 Phase 2 Complete!
-The library now compiles successfully with the new MessageEnvelope architecture. All core modules have been updated and type aliases removed.
+## 🎉 Transport Context Refactor COMPLETE!
 
-## Current Status
-Read `shadowcat/plans/transport-context-refactor/PROGRESS.md` for full details of what was accomplished.
+The Transport Context Refactor is 100% finished! We successfully refactored Shadowcat's transport layer to use the new MessageEnvelope architecture, separating protocol messages from transport metadata. All tests are passing and the code is clippy-clean.
 
-### What's Done:
-- ✅ MessageEnvelope replaces Frame everywhere in the library
-- ✅ MessageDirection replaces Direction 
-- ✅ ProtocolMessage used directly (no TransportMessage alias)
-- ✅ All recorder, proxy, transport, and session modules updated
-- ✅ Library builds with zero errors!
+**Refactor Stats:**
+- Completed in 17.5 hours (vs 60 hour estimate - 71% reduction!)
+- All 3 phases complete
+- Zero backward compatibility needed (no users yet)
+- Clean, maintainable architecture ready for SSE
 
-### What's Left:
-- ❌ main.rs still uses old Frame references (9 errors)
-- ❌ Tests haven't been run yet
-- ❌ Minor warnings about unused imports
+## What's Ready Now
 
-## Phase 3 Goals (~4.5 hours)
+With the Transport Context Refactor complete, we can now proceed with:
 
-### 1. Fix main.rs Binary (2 hours)
-The main binary has 9 compilation errors, all related to old Frame usage:
-- 4 instances of `shadowcat::session::Frame::new` need updating
-- Transport.send() calls need MessageEnvelope instead of ProtocolMessage
-- Fix transport_message_to_json function
-- Update frame.direction access to frame.context.direction
+1. **SSE Proxy Integration** - The main goal! TransportContext now properly handles SSE metadata
+2. **Enhanced Metrics** - Context provides all needed metadata for detailed metrics
+3. **Better Error Handling** - Full context available everywhere for debugging
 
-### 2. Run and Fix Tests (2 hours)
+## Recommended Next Task: SSE Proxy Integration
+
+**Reference**: `plans/proxy-sse-message-tracker.md`
+
+The SSE proxy work was blocked on the Transport Context Refactor. Now that it's complete, we can:
+
+1. Implement SSE-specific transport using the new TransportContext
+2. Handle SSE event types, IDs, and retry logic properly
+3. Build the reverse proxy SSE support we need
+
+### Quick Start for SSE Work
+
 ```bash
-cd /Users/kevin/src/tapwire/shadowcat
-cargo test
-```
-Fix any test failures related to the refactor.
+cd shadowcat
 
-### 3. Clean Up (30 minutes)
-- Remove unused imports causing warnings
-- Run `cargo clippy --all-targets -- -D warnings`
-- Run `cargo fmt`
+# Review the SSE proxy plan
+cat ../plans/proxy-sse-message-tracker.md
 
-## Key Patterns to Apply
+# The new TransportContext::sse() is ready to use:
+# - Event ID tracking
+# - Event type support
+# - Retry timing
+# - Last-Event-ID handling
 
-When you see Frame::new, replace with:
-```rust
-let context = MessageContext::new(
-    session_id,
-    MessageDirection::ClientToServer, // or ServerToClient
-    TransportContext::stdio(), // or appropriate transport
-);
-let envelope = MessageEnvelope::new(message, context);
+# Start with implementing SseTransport using the new envelope system
 ```
 
-When Transport.send() expects MessageEnvelope:
-```rust
-// Wrap the ProtocolMessage
-let envelope = MessageEnvelope::new(
-    protocol_message,
-    MessageContext::new(session_id, direction, transport_context)
-);
-transport.send(envelope).await?;
-```
+## Alternative Tasks
 
-## Success Criteria
+If not continuing with SSE, here are other high-value tasks:
 
-- [ ] `cargo build` succeeds completely (binary and lib)
-- [ ] `cargo test` passes
-- [ ] No clippy warnings with `-D warnings`
-- [ ] Update plans/transport-context-refactor/transport-context-tracker.md with completion
+1. **Performance Benchmarking** - Measure the impact of the refactor
+2. **Enhanced Interceptors** - Use the new context for smarter interception
+3. **Session Metrics** - Build detailed metrics using MessageContext
+4. **Protocol Version Negotiation** - Improve using context metadata
 
-## Remember
+## Key Files to Reference
 
-This is the final phase of a very successful refactor that's already saved 75% of the estimated time. The hard architectural work is done - this is just updating the binary and ensuring quality.
+- `src/transport/envelope.rs` - The new MessageEnvelope system
+- `plans/transport-context-refactor/PROGRESS.md` - Detailed refactor notes
+- `plans/proxy-sse-message-tracker.md` - SSE proxy requirements
 
-Good luck!
+## Notes
+
+- All code is clean and tested
+- No technical debt from the refactor
+- Architecture is ready for any transport type
+- We have full flexibility with no external users
+
+The foundation is solid. Time to build the SSE proxy! 🚀
