@@ -1,5 +1,13 @@
 # Next Session: Phase 0 - Task F.3: Implement Batch Handler
 
+## ⚠️ IMPORTANT UPDATE: Transport Context Refactor Complete!
+
+The Transport Context Refactor has been completed, introducing the MessageEnvelope system. This significantly improves our SSE integration foundation:
+- `TransportMessage` is now `ProtocolMessage`
+- New `MessageEnvelope` wraps messages with full context
+- `TransportContext::Sse` already has all SSE metadata fields
+- See `SSE_INTEGRATION_UPDATES.md` for full details
+
 ## Context
 
 We are implementing SSE proxy integration with MCP message handling capabilities in Shadowcat. The unified tracker (`plans/proxy-sse-message-tracker.md`) coordinates this work across 7 phases with 120-140 hours of effort.
@@ -35,7 +43,8 @@ Implement a Batch Handler that provides shared logic for handling MCP batch mess
 2. **Task Details**: `plans/integration-tasks/foundation-tasks.md` (Task F.3 section)
 3. **Protocol Version Manager**: `shadowcat/src/mcp/protocol.rs` (completed in F.1)
 4. **Minimal Parser**: `shadowcat/src/mcp/early_parser.rs` (completed in F.2)
-5. **Existing Transport**: `shadowcat/src/transport/mod.rs` (understand TransportMessage)
+5. **NEW Transport System**: `shadowcat/src/transport/mod.rs` (ProtocolMessage replaces TransportMessage)
+6. **NEW Envelope System**: `shadowcat/src/transport/envelope.rs` (MessageEnvelope, TransportContext::Sse)
 
 ## Working Directory
 
@@ -61,6 +70,7 @@ cd /Users/kevin/src/tapwire/shadowcat
    - Grouping messages by type (Request/Response/Notification)
    - Handling edge cases (empty arrays, single messages)
    - Version-specific behavior (no batching for 2025-06-18)
+   - ⚠️ Note: Use ProtocolMessage instead of TransportMessage
 
 3. Update `src/mcp/mod.rs` to export the new batch handler
 
@@ -235,7 +245,7 @@ pub struct GroupedMessages {
 
 Once F.3 is complete, the remaining Phase 0 tasks are:
 - **F.4**: Create Unified Event ID Generator (2 hours, no dependencies)
-- **F.5**: Build Message Context Structure (2 hours, depends on F.1)
+- **F.5**: Build Message Context Structure (⚠️ May be redundant - MessageContext already exists in envelope.rs)
 
 After completing Phase 0, we'll move to Phase 1 (SSE Transport with MCP Awareness).
 
