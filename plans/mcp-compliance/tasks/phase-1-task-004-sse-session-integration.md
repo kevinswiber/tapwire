@@ -54,6 +54,13 @@ From the MCP Streamable HTTP specification:
 
 ## Implementation Plan
 
+### Foundation from Task 1.3
+The following components from Task 1.3 provide a solid foundation for session integration:
+- **AsyncOperation State Machine**: Use the same pattern for session lifecycle management (no `block_on()`!)
+- **EventTracker**: Can be enhanced to support session-scoped event tracking
+- **ReconnectingStream**: Already handles Last-Event-ID, needs session context added
+- **HealthMonitor**: Can be adapted for session-level health monitoring
+
 ### Module Structure
 ```
 src/transport/sse/
@@ -119,6 +126,7 @@ pub struct SessionAwareSseManager {
     base_manager: Arc<SseConnectionManager>,
     session_store: Arc<RwLock<HashMap<SessionId, SseSessionState>>>,
     config: SessionSseConfig,
+    // IMPORTANT: No block_on() in async contexts! Use the AsyncOperation pattern from Task 1.3
 }
 
 impl SessionAwareSseManager {
@@ -165,8 +173,10 @@ impl Stream for SessionStream {
     type Item = Result<SseEvent, SessionError>;
     
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        // CRITICAL: Follow the AsyncOperation pattern from Task 1.3
+        // DO NOT use block_on() or any blocking operations here!
         // Check session validity
-        // Forward to inner stream
+        // Forward to inner stream  
         // Update session activity
     }
 }
@@ -407,6 +417,21 @@ After completing this task:
 1. Task 1.5: Performance optimization and benchmarks
 2. Begin Phase 2: Multi-version architecture
 
+## Critical Implementation Notes
+
+### Async Pattern Requirements (from Task 1.3)
+1. **Never use `block_on()`** in Stream::poll_next or any poll method
+2. **Use AsyncOperation state machine** for managing async operations in poll context
+3. **Store futures as state** and poll them incrementally, don't await directly
+4. **Use mem::replace** for clean state transitions
+5. **Re-poll when needed** by returning `self.poll_next(cx)`
+
+### Key Patterns to Reuse
+- **EventTracker**: Extend for session-scoped event deduplication
+- **ReconnectingStream**: Add session context to existing implementation
+- **HealthMonitor**: Create session-level instances for lifecycle management
+- **Thread-safe state**: Use Arc<RwLock> for session store (read-heavy)
+
 ## Notes
 
 - Consider session persistence for recovery
@@ -414,3 +439,4 @@ After completing this task:
 - Document session timeout behavior
 - Add session inspection/debugging tools
 - Consider rate limiting per session
+- Review `/Users/kevin/src/tapwire/plans/mcp-compliance/implementation-notes/task-1.3-async-patterns.md` for async patterns

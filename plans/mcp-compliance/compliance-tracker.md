@@ -14,7 +14,7 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - **Tasks Completed**: 8 of 29 (27.6%)
 - **Phase 0 Progress**: 5 of 5 tasks (100%) ✅
 - **Phase 1 Progress**: 3 of 5 tasks (60%) - SSE Parser, Connection Management, and Reconnection complete
-- **Key Achievement**: Complete SSE Reconnection with exponential backoff, Last-Event-ID support, and health monitoring
+- **Key Achievement**: Complete SSE Reconnection with proper async state machine (fixed critical `block_on()` anti-pattern)
 - **Next Action**: Begin Task 1.4 - SSE Session Integration
 
 ## Phase Overview
@@ -218,7 +218,7 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 
 ### Task 1.3: SSE Reconnection Logic ✅ COMPLETED
 **File**: [`tasks/phase-1-task-003-sse-reconnection.md`](tasks/phase-1-task-003-sse-reconnection.md) ✅ Generated
-**Duration**: 3-4 hours (Actual: ~4 hours)
+**Duration**: 3-4 hours (Actual: ~4 hours including critical fix)
 **Status**: Completed (2025-08-08)
 **Dependencies**: Tasks 1.1, 1.2 ✅
 **Deliverables**:
@@ -239,20 +239,28 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - Differentiates between retryable (5xx, network) and non-retryable (4xx) errors
 - Integration with SseHttpClient via `open_reconnecting_stream()` method
 - 5 unit tests passing (backoff, retry logic, event tracking, health monitoring)
-- All clippy warnings resolved, code formatted
+- All 67 SSE tests passing, no clippy warnings
+**Critical Fix Applied**:
+- ✅ **Fixed `block_on()` anti-pattern**: Original implementation incorrectly used `block_on()` inside Stream::poll_next
+- ✅ **Proper async state machine**: Implemented AsyncOperation enum to handle async operations without blocking
+- ✅ **Non-blocking poll**: All async operations now properly polled without blocking the executor
 **Key Features**:
 - Exponential backoff with 25% jitter to prevent thundering herd
 - Configurable retry limits (default: 10 attempts)
 - Idle timeout detection (default: 5 minutes)
 - Event deduplication using VecDeque with capacity limits
-- Thread-safe with Arc<Mutex> for state management
-- Async Stream implementation with proper poll semantics
+- Thread-safe with Arc<RwLock> for state management
+- Async Stream implementation with proper poll semantics (no blocking!)
 
 ### Task 1.4: SSE Session Integration 🎯 NEXT
 **File**: [`tasks/phase-1-task-004-sse-session-integration.md`](tasks/phase-1-task-004-sse-session-integration.md) ✅ Generated
 **Duration**: 3-4 hours
 **Status**: Not Started
-**Dependencies**: Tasks 1.1-1.3
+**Dependencies**: Tasks 1.1-1.3 ✅
+**Foundation from Task 1.3**:
+- ReconnectingStream with proper async state machine ready for session integration
+- EventTracker can be enhanced for session-scoped tracking
+- HealthMonitor ready for session lifecycle coordination
 **Deliverables**:
 - [ ] Link SSE connections to MCP sessions
 - [ ] Track SSE streams per session
@@ -260,6 +268,10 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 - [ ] Coordinate session lifecycle with connections
 - [ ] Session-aware reconnection
 - [ ] End-to-end tests
+**Implementation Considerations**:
+- Build on the AsyncOperation state machine pattern from Task 1.3
+- Consider session-scoped event ID namespacing
+- Ensure reconnection preserves session context
 
 ### Task 1.5: SSE Performance Optimization ⏳
 **File**: [`tasks/phase-1-task-005-sse-performance.md`](tasks/phase-1-task-005-sse-performance.md) ✅ Generated
@@ -509,11 +521,11 @@ Shadowcat has critical MCP specification compliance issues that prevent interope
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| Tasks Completed | 5/29 | 29 | 🟡 |
-| Phases Completed | 1/6 | 6 | 🟡 |
+| Tasks Completed | 8/29 | 29 | 🟡 |
+| Phases Completed | 0/6 | 6 | 🟡 |
 | Phase 0 Progress | 5/5 | 5 | ✅ |
-| Phase 1 Progress | 0/5 | 5 | ⏳ |
-| MCP Compliance | ~35% | 100% | 🟡 |
+| Phase 1 Progress | 3/5 | 5 | 🟡 |
+| MCP Compliance | ~40% | 100% | 🟡 |
 | Test Coverage | Growing | 90%+ | 🟡 |
 | Critical Bugs | 0 | 0 | ✅ |
 
@@ -634,6 +646,7 @@ If context window becomes limited:
 | 2025-08-07 | 1.1 | Phase 0 completion, Task 0.5 with post-review improvements | Claude |
 | 2025-08-07 | 1.2 | Generated all Phase 1 task files with detailed implementation plans | Claude |
 | 2025-08-08 | 1.3 | Completed Task 1.2 with comprehensive code review and critical fixes | Claude |
+| 2025-08-08 | 1.4 | Completed Task 1.3 with critical async fix (removed block_on anti-pattern) | Claude |
 
 ---
 
