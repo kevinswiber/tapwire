@@ -84,15 +84,19 @@ Target Architecture:
 ### Phase 0: Analysis and Design (Week 1, Day 1-2)
 Analyze current usage, understand protocol layers, and design migration strategy.
 
-| ID | Task | Duration | Dependencies | Status | Owner | Notes |
-|----|------|----------|--------------|--------|-------|-------|
-| A.0 | **Analyze MCP Protocol Specifications** | 2h | None | ⬜ Not Started | | Understand protocol vs transport layers |
-| A.1 | **Analyze TransportMessage Usage** | 3h | A.0 | ⬜ Not Started | | Map all 90 files using TransportMessage |
-| A.2 | **Design MessageEnvelope Structure** | 2h | A.0, A.1 | ⬜ Not Started | | Define new types and traits |
-| A.3 | **Create Migration Strategy** | 2h | A.2 | ⬜ Not Started | | Plan incremental migration path |
-| A.4 | **Document Breaking Changes** | 1h | A.3 | ⬜ Not Started | | Identify unavoidable breaks |
+| ID | Task | Duration | Dependencies | Status | Owner | Task File |
+|----|------|----------|--------------|--------|-------|-----------|
+| A.0 | **Analyze MCP Protocol Specifications** | 2h | None | ⬜ Not Started | | [📄 Task Details](tasks/A.0-mcp-protocol-analysis.md) |
+| A.1 | **Analyze TransportMessage Usage** | 3h | A.0 | ⬜ Not Started | | [📄 Task Details](tasks/A.1-transport-message-usage-analysis.md) |
+| A.2 | **Design MessageEnvelope Structure** | 2h | A.0, A.1 | ⬜ Not Started | | [📄 Task Details](tasks/A.2-design-message-envelope.md) |
+| A.3 | **Create Migration Strategy** | 2h | A.2 | ⬜ Not Started | | [📄 Task Details](tasks/A.3-create-migration-strategy.md) |
+| A.4 | **Document Breaking Changes** | 1h | A.3 | ⬜ Not Started | | [📄 Task Details](tasks/A.4-document-breaking-changes.md) |
 
 **Phase 0 Total**: 10 hours
+
+**Analysis Output Directory**: `analysis/`
+- All findings and analysis documents will be stored here
+- See individual task files for specific deliverables
 
 ### Phase 1: Core Infrastructure (Week 1, Day 2-3)
 Build the new transport context system alongside existing code.
@@ -149,141 +153,12 @@ Ensure everything works and is documented.
 
 ## Implementation Details
 
-### New Type Definitions
+See task files for detailed designs:
+- **Type Definitions**: See [A.2-design-message-envelope.md](tasks/A.2-design-message-envelope.md)
+- **Migration Strategy**: See [A.3-create-migration-strategy.md](tasks/A.3-create-migration-strategy.md)
+- **Breaking Changes**: See [A.4-document-breaking-changes.md](tasks/A.4-document-breaking-changes.md)
 
-```rust
-// src/transport/envelope.rs
-
-/// Wraps an MCP-level message with full context
-#[derive(Debug, Clone)]
-pub struct MessageEnvelope {
-    /// The MCP semantic message (may need enhancement)
-    pub message: McpMessage,
-    /// Full message context including transport and direction
-    pub context: MessageContext,
-}
-
-/// Enhanced MCP message with proper semantics
-#[derive(Debug, Clone)]
-pub enum McpMessage {
-    Request {
-        id: String,
-        method: String,
-        params: Value,
-    },
-    Response {
-        id: String,
-        result: Option<Value>,
-        error: Option<Value>,
-    },
-    Notification {
-        method: String,
-        params: Value,
-        direction: MessageDirection,  // NEW: Critical for routing
-    },
-}
-
-/// Message direction for proper routing
-#[derive(Debug, Clone)]
-pub enum MessageDirection {
-    ClientToServer,
-    ServerToClient,
-}
-
-/// Complete context for message handling
-#[derive(Debug, Clone)]
-pub struct MessageContext {
-    /// Which transport this came from/going to
-    pub transport_type: TransportType,
-    /// Session identifier
-    pub session_id: SessionId,
-    /// MCP protocol version in use
-    pub protocol_version: ProtocolVersion,
-    /// Optional correlation ID for request/response matching
-    pub correlation_id: Option<String>,
-    /// Transport-specific metadata
-    pub transport_metadata: TransportMetadata,
-    /// Message direction (redundant with notification direction but useful for all messages)
-    pub direction: MessageDirection,
-    /// Timestamp when received/sent
-    pub timestamp: std::time::Instant,
-}
-
-/// Transport-specific metadata variants
-#[derive(Debug, Clone)]
-pub enum TransportMetadata {
-    /// Standard I/O transport (no additional metadata)
-    Stdio,
-    
-    /// HTTP transport metadata
-    Http {
-        headers: HeaderMap,
-        status_code: Option<u16>,
-        method: Option<http::Method>,
-        uri: Option<http::Uri>,
-    },
-    
-    /// Server-Sent Events metadata
-    Sse {
-        event_id: Option<String>,
-        event_type: Option<String>,
-        retry_after: Option<u64>,
-        last_event_id: Option<String>,
-    },
-    
-    /// Future: WebSocket metadata
-    WebSocket {
-        frame_type: ws::FrameType,
-        is_final: bool,
-    },
-}
-
-/// Extended Transport trait with context support
-#[async_trait]
-pub trait TransportWithContext: Transport {
-    /// Receive message with full context
-    async fn receive_with_context(&mut self) -> TransportResult<MessageEnvelope>;
-    
-    /// Send message with specific context
-    async fn send_with_context(&mut self, envelope: MessageEnvelope) -> TransportResult<()>;
-}
-```
-
-### Migration Strategy
-
-#### Step 1: Parallel Implementation (Non-breaking)
-- Add new types alongside existing ones
-- Implement `TransportWithContext` trait
-- Provide default implementations that create minimal context
-
-#### Step 2: Gradual Adoption
-- Update transports one by one to support context
-- Add context extraction in proxy layers
-- Interceptors can start using context when available
-
-#### Step 3: Full Migration
-- Once all critical paths support context, deprecate old methods
-- Update remaining components
-- Remove compatibility shims
-
-### Backward Compatibility
-
-```rust
-/// Compatibility extension for existing Transport trait
-impl<T: Transport> TransportWithContext for T {
-    default async fn receive_with_context(&mut self) -> TransportResult<MessageEnvelope> {
-        let message = self.receive().await?;
-        Ok(MessageEnvelope {
-            message,
-            context: TransportContext::default_for(self.transport_type()),
-        })
-    }
-    
-    default async fn send_with_context(&mut self, envelope: MessageEnvelope) -> TransportResult<()> {
-        self.send(envelope.message).await
-    }
-}
-```
+Key design decisions will be documented in `analysis/message-envelope-design.md` after Phase 0 completion.
 
 ## Success Criteria
 
@@ -327,32 +202,31 @@ This refactor directly enables the following SSE integration tasks:
 
 ## Session Planning Guidelines
 
-### Optimal Session Structure
-1. **Review** (10 min): Review this tracker and current TransportMessage usage
-2. **Implementation** (2-3 hours): Focus on one phase at a time
+### Phase 0: Analysis Tasks
+- **Start with**: Task A.0 - MCP Protocol Analysis
+- **Task files**: See `tasks/` directory for detailed instructions
+- **Output to**: `analysis/` directory for all findings
+- **Duration**: ~10 hours total for all analysis tasks
+
+### Implementation Phases (1-4)
+1. **Review** (10 min): Review tracker and relevant task file
+2. **Implementation** (2-3 hours): Focus on one component at a time
 3. **Testing** (30 min): Test both old and new code paths
-4. **Documentation** (15 min): Update migration guide
-5. **Handoff** (10 min): Document any compatibility issues found
+4. **Documentation** (15 min): Update analysis/migration documents
+5. **Handoff** (10 min): Update tracker and progress metrics
+
+### Critical Documentation
+- **All analysis outputs** must be written to `analysis/` directory
+- **Task details** are in `tasks/` directory - no need to duplicate
+- **Progress tracking** should update both tracker and analysis/README.md
 
 ### Using the rust-code-reviewer
-For this refactor, the rust-code-reviewer should focus on:
-- Ensuring zero-cost abstractions where possible
-- Validating lifetime management for context data
-- Checking for unnecessary clones of large structures
-- Reviewing async trait implementations
-- Ensuring backward compatibility is maintained
-
-### Context Window Management
-- Focus on one transport at a time to minimize context
-- Keep the MessageEnvelope definition readily available
-- Reference existing TransportMessage usage patterns
-
-### Task Completion Criteria
-- [ ] New types compile without warnings
-- [ ] Existing tests still pass
-- [ ] New tests for context handling pass
-- [ ] No performance regression
-- [ ] Migration guide updated
+For implementation phases, the rust-code-reviewer should focus on:
+- Zero-cost abstractions
+- Lifetime management for context data
+- Avoiding unnecessary clones
+- Async trait implementations
+- Backward compatibility
 
 ## Critical Implementation Guidelines
 
@@ -402,11 +276,11 @@ Track migration progress:
 
 ## Next Actions
 
-1. **Immediate**: Analyze all 90 files using TransportMessage to understand usage patterns
-2. **Day 1**: Complete Phase 0 analysis and design
-3. **Day 2-3**: Implement core infrastructure (Phase 1)
-4. **Day 4-5**: Migrate transports (Phase 2)
-5. **Week 2**: Complete proxy migration and testing
+1. **Immediate**: Begin Phase 0 analysis tasks (see `tasks/` directory)
+2. **Day 1**: Complete A.0 and A.1 analysis tasks
+3. **Day 2**: Complete A.2, A.3, and A.4 design tasks
+4. **Day 3-4**: Implement Phase 1 core infrastructure
+5. **Week 2**: Complete remaining phases
 
 ## Notes
 

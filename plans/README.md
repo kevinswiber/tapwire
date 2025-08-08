@@ -2,29 +2,46 @@
 
 ## Active Development
 
-### 🎯 Primary Tracker
+### 🚨 Critical Prerequisite: Transport Context Refactor
+**[Transport Context Refactor](transport-context-refactor/transport-context-tracker.md)**  
+*This refactor must be completed before SSE integration can proceed. It addresses fundamental architectural issues with TransportMessage that block SSE proxy integration.*
+
+Status: **In Progress** | Duration: **30-40 hours** | Phases: **5**
+
+### Current Focus: Phase 0 - Analysis and Design
+Analyzing TransportMessage usage and designing the MessageEnvelope system:
+- **A.0**: MCP Protocol Specification Analysis (2h)
+- **A.1**: TransportMessage Usage Analysis (3h)  
+- **A.2**: Design MessageEnvelope Structure (2h)
+- **A.3**: Create Migration Strategy (2h)
+- **A.4**: Document Breaking Changes (1h)
+
+### ⏸️ Deferred: SSE Proxy Integration
 **[Unified Proxy-SSE-Message Tracker](proxy-sse-message-tracker.md)**  
-*This is the main execution tracker for implementing SSE transport with MCP message handling.*
+*Implementation deferred pending completion of Transport Context Refactor.*
 
-Status: **Ready to Start** | Duration: **120-140 hours** | Phases: **7**
+Status: **Blocked on Transport Refactor** | Duration: **120-140 hours** | Phases: **7**
 
-### Current Focus: Phase 0 - Foundation Components
-Building shared components needed by both SSE and MCP initiatives:
-- Protocol Version Manager
-- Minimal MCP Parser  
-- Batch Handler
-- Event ID Generator
-- Message Context Structure
+**Reason for Deferral**: The current `TransportMessage` enum conflates transport, protocol, and JSON-RPC layers. SSE integration requires proper separation of transport metadata (event IDs, retry hints) from protocol messages. The refactor will introduce `MessageEnvelope` to properly handle this separation.
 
 ## Plan Structure
 
 ```
 plans/
 ├── README.md (this file)
-├── proxy-sse-message-tracker.md   # 🎯 PRIMARY TRACKER
+├── proxy-sse-message-tracker.md   # ⏸️ DEFERRED (blocked on refactor)
 ├── integration-coordination.md     # How SSE and MCP work together
 │
-├── sse-proxy-integration/          # SSE Transport Implementation
+├── transport-context-refactor/     # 🚨 ACTIVE - Critical Prerequisite
+│   ├── transport-context-tracker.md # Main refactor tracker
+│   └── tasks/                      # Phase 0 analysis tasks
+│       ├── A.0-mcp-protocol-analysis.md
+│       ├── A.1-transport-message-usage-analysis.md
+│       ├── A.2-design-message-envelope.md
+│       ├── A.3-create-migration-strategy.md
+│       └── A.4-document-breaking-changes.md
+│
+├── sse-proxy-integration/          # SSE Transport Implementation (blocked)
 │   ├── sse-proxy-integration-tracker.md
 │   └── tasks/
 │       ├── task-1.1-cli-sse-option.md
@@ -50,10 +67,14 @@ plans/
 
 ## Quick Links
 
-### Execution
-- **[Unified Tracker](proxy-sse-message-tracker.md)** - Start here for implementation
-- **[Foundation Tasks](integration-tasks/foundation-tasks.md)** - Phase 0 components
-- **[Glue Tasks](integration-tasks/glue-tasks.md)** - Integration points
+### 🚨 Active Work
+- **[Transport Context Refactor](transport-context-refactor/transport-context-tracker.md)** - Current priority
+- **[Phase 0 Tasks](transport-context-refactor/tasks/)** - Analysis tasks to complete first
+
+### ⏸️ Deferred Execution
+- **[Unified Tracker](proxy-sse-message-tracker.md)** - Blocked on refactor
+- **[Foundation Tasks](integration-tasks/foundation-tasks.md)** - Phase 0 components (deferred)
+- **[Glue Tasks](integration-tasks/glue-tasks.md)** - Integration points (deferred)
 
 ### Reference Documentation
 - **[SSE Proxy Integration](sse-proxy-integration/sse-proxy-integration-tracker.md)** - SSE transport details
@@ -67,12 +88,13 @@ plans/
 
 ## Development Workflow
 
-1. **Check the unified tracker** for current phase and next tasks
-2. **Pick a task** from the current phase
-3. **Review task details** in the linked documentation
-4. **Implement** following the specifications
-5. **Test** using provided test cases
+1. **Check the transport context refactor tracker** for current phase and tasks
+2. **Complete Phase 0 analysis** before any implementation
+3. **Pick a task** from the current phase (A.0 through A.4)
+4. **Analyze thoroughly** following the task specifications
+5. **Document findings** in the specified locations
 6. **Update tracker** with completion status
+7. **After refactor completion**, resume SSE proxy integration work
 
 ## Architecture Goals
 
@@ -103,18 +125,20 @@ plans/
 ## Getting Started
 
 ```bash
-# 1. Review the unified tracker
-cat plans/proxy-sse-message-tracker.md
+# 1. Review the transport context refactor tracker
+cat plans/transport-context-refactor/transport-context-tracker.md
 
-# 2. Start with foundation components
-cat plans/integration-tasks/foundation-tasks.md
+# 2. Start with Phase 0 analysis tasks
+cat plans/transport-context-refactor/tasks/A.0-mcp-protocol-analysis.md
+cat plans/transport-context-refactor/tasks/A.1-transport-message-usage-analysis.md
 
-# 3. Run existing tests
+# 3. Understand the scope of changes
 cd shadowcat
-cargo test
+rg "TransportMessage" --type rust -l | wc -l  # 90 files affected
 
-# 4. Begin implementation
-# Start with F.1: Protocol Version Manager
+# 4. Begin analysis
+# Start with A.0: MCP Protocol Specification Analysis
+# Then A.1: TransportMessage Usage Analysis
 ```
 
 ## Contact
