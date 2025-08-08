@@ -1,74 +1,103 @@
-# Next Session: Complete Transport Context Refactor Phase 0
+# Next Session: Transport Context Refactor - Aggressive Implementation
 
-## Context
+## Critical Context: No Released Users = Freedom to Break Things
 
-We are completing Phase 0 of the Transport Context Refactor for Shadowcat. This refactor is **critical** for SSE proxy integration and addresses the fundamental issue where `TransportMessage` lacks direction information for notifications.
+**Important**: This project hasn't been released yet. We have ZERO external users. This means:
+- ✅ Break any API we want
+- ✅ Delete old code immediately  
+- ✅ No backward compatibility needed
+- ✅ No deprecation periods
+- ✅ Complete freedom to refactor
 
-### Current Status
-- **Phase 0**: 40% complete (2 of 5 tasks done)
-- **Analysis completed**: Protocol layers understood, usage mapped, impact assessed
-- **Remaining work**: Design the solution and migration strategy
+## Revised Approach (30-40 hours vs 60)
 
-## Key Resources
+### What We're Building
+- **MessageEnvelope** with full context (direction, session, transport metadata)
+- **Direct replacement** of TransportMessage (no compatibility layers)
+- **Clean architecture** without workarounds
 
-### Primary Tracker
-**Read this first**: `plans/transport-context-refactor/transport-context-tracker.md`
+### Phase 1: Core Refactor (This Session, ~8-10 hours)
 
-### Completed Analysis (Reference as needed)
-- `plans/transport-context-refactor/analysis/mcp-protocol-layers.md` - Protocol understanding
-- `plans/transport-context-refactor/analysis/transport-message-usage.md` - 34 files, 330 occurrences
-- `plans/transport-context-refactor/analysis/migration-impact.md` - 60 hour estimate
-- `plans/transport-context-refactor/analysis/current-workarounds.md` - 17 patterns to eliminate
-- `plans/transport-context-refactor/analysis/architecture-clarification.md` - Layer separation
+#### 1. Create New Types (2 hours)
+**File**: `shadowcat/src/transport/envelope.rs`
+- MessageEnvelope, MessageContext, MessageDirection
+- TransportContext with Http/Sse/Stdio variants
+- Delete old Direction enum immediately
 
-## Tasks for This Session
+#### 2. Replace TransportMessage (2 hours)
+**File**: `shadowcat/src/transport/protocol.rs`
+- Rename TransportMessage → ProtocolMessage everywhere
+- No type alias, just direct replacement
+- Update all imports
 
-### Task A.2: Design MessageEnvelope Structure (2 hours)
-**File**: `plans/transport-context-refactor/tasks/A.2-design-message-envelope.md`
+#### 3. Update Transport Trait (2 hours)
+**Files**: `shadowcat/src/transport/mod.rs`, all transport implementations
+```rust
+// Just change it directly - no compatibility needed
+pub trait Transport {
+    async fn receive(&mut self) -> Result<MessageEnvelope>;
+    async fn send(&mut self, envelope: MessageEnvelope) -> Result<()>;
+}
+```
 
-**Goal**: Create concrete Rust type definitions for:
-- `MessageEnvelope` wrapper type
-- `TransportContext` for transport metadata  
-- `SessionContext` for MCP session info
-- Conversion traits for compatibility
-
-**Key Requirements**:
-- Must solve the notification direction problem
-- Must preserve all 17 workaround functionalities
-- Must be zero-cost where possible
-- Must allow incremental migration
-
-### Task A.3: Create Migration Strategy (2 hours)
-**File**: `plans/transport-context-refactor/tasks/A.3-create-migration-strategy.md`
-
-**Goal**: Define the step-by-step migration plan:
-- Compatibility layer design
-- Migration phases and checkpoints
-- Feature flags or version toggles
-- Testing strategy for each phase
-
-### Task A.4: Document Breaking Changes (1 hour)
-**File**: `plans/transport-context-refactor/tasks/A.4-document-breaking-changes.md`
-
-**Goal**: Create clear documentation for:
-- What will break and why
-- Migration guide for developers
-- Timeline and deprecation notices
+#### 4. Update Core Components (4 hours)
+- **SessionManager**: Use MessageEnvelope directly
+- **Frame**: Delete it, just use MessageEnvelope
+- **Proxy**: Update to use envelopes
+- Fix tests as we go
 
 ## Working Directory
-
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 ```
 
+## Aggressive Refactoring Checklist
+
+- [ ] Delete `Direction` enum - use `MessageDirection`
+- [ ] Delete `Frame` struct - use `MessageEnvelope`  
+- [ ] Remove all 17 workaround patterns identified
+- [ ] Rename TransportMessage → ProtocolMessage everywhere
+- [ ] Update Transport trait - no backward compatibility
+- [ ] Fix all compilation errors directly
+- [ ] Update tests to use new types
+
+## Key Files to Update
+
+### Immediate Changes
+1. `src/transport/mod.rs` - Add envelope module, update trait
+2. `src/transport/stdio.rs` - Use MessageEnvelope
+3. `src/transport/http.rs` - Extract HTTP context
+4. `src/transport/http_mcp.rs` - Extract MCP headers
+5. `src/session/manager.rs` - Use envelopes throughout
+6. `src/session/store.rs` - Delete Frame, use MessageEnvelope
+
+### Delete These
+- Old Direction enum
+- Frame struct  
+- Session extraction heuristics
+- Direction inference code
+- All workarounds in `current-workarounds.md`
+
 ## Success Criteria
 
-- [ ] MessageEnvelope types defined in design document
-- [ ] Migration strategy with clear phases documented  
-- [ ] Breaking changes documented for stakeholders
-- [ ] All outputs in `plans/transport-context-refactor/analysis/` directory
-- [ ] Tracker updated with completion status
+- [ ] Code compiles with new types
+- [ ] Tests pass (after updating them)
+- [ ] No TransportMessage remains
+- [ ] No compatibility code
+- [ ] Clean architecture
 
-## Note
+## Benefits of Being Aggressive
 
-This completes Phase 0. The actual implementation (Phases 1-4) will be done in subsequent sessions, starting with core infrastructure, then transports, then proxy/session layers.
+1. **Faster**: 30-40 hours instead of 60
+2. **Cleaner**: No legacy code or compatibility layers
+3. **Simpler**: One code path, not two
+4. **Better**: Fix all naming and structure issues now
+
+## Remember
+
+- **We have no users to break**
+- **The compiler is our friend** - it will find everything we need to update
+- **Delete aggressively** - if it's old, remove it
+- **Move fast** - we can always fix issues since no one is using this yet
+
+Let's do this refactor RIGHT without any legacy baggage!
