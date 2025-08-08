@@ -5,8 +5,8 @@
 This tracker coordinates the refactoring of Shadowcat's transport layer to properly separate protocol concerns (JSON-RPC messages) from transport-specific metadata (HTTP headers, SSE events, stdio). This is a prerequisite for SSE proxy integration and must be completed before continuing with the proxy-sse-message-tracker.md work.
 
 **Last Updated**: 2025-08-08  
-**Total Estimated Duration**: 30-40 hours  
-**Status**: Planning
+**Total Estimated Duration**: 60 hours (revised from initial 30-40 hours based on analysis)  
+**Status**: Phase 0 Analysis 40% Complete
 
 ## Problem Statement
 
@@ -40,7 +40,7 @@ With SSE integration, we need to track transport-specific metadata like:
 - Session continuity across transports
 - Message direction and routing information
 
-The `TransportMessage` type is used in 90 files with 658 occurrences, making this a significant architectural change.
+The `TransportMessage` type is used in 34 files with 330 occurrences (corrected from initial estimate), making this a significant but manageable architectural change.
 
 ## Goals
 
@@ -86,17 +86,33 @@ Analyze current usage, understand protocol layers, and design migration strategy
 
 | ID | Task | Duration | Dependencies | Status | Owner | Task File |
 |----|------|----------|--------------|--------|-------|-----------|
-| A.0 | **Analyze MCP Protocol Specifications** | 2h | None | ⬜ Not Started | | [📄 Task Details](tasks/A.0-mcp-protocol-analysis.md) |
-| A.1 | **Analyze TransportMessage Usage** | 3h | A.0 | ⬜ Not Started | | [📄 Task Details](tasks/A.1-transport-message-usage-analysis.md) |
+| A.0 | **Analyze MCP Protocol Specifications** | 2h | None | ✅ Completed | | [📄 Task Details](tasks/A.0-mcp-protocol-analysis.md) |
+| A.1 | **Analyze TransportMessage Usage** | 3h | A.0 | ✅ Completed | | [📄 Task Details](tasks/A.1-transport-message-usage-analysis.md) |
 | A.2 | **Design MessageEnvelope Structure** | 2h | A.0, A.1 | ⬜ Not Started | | [📄 Task Details](tasks/A.2-design-message-envelope.md) |
 | A.3 | **Create Migration Strategy** | 2h | A.2 | ⬜ Not Started | | [📄 Task Details](tasks/A.3-create-migration-strategy.md) |
 | A.4 | **Document Breaking Changes** | 1h | A.3 | ⬜ Not Started | | [📄 Task Details](tasks/A.4-document-breaking-changes.md) |
 
 **Phase 0 Total**: 10 hours
 
-**Analysis Output Directory**: `analysis/`
-- All findings and analysis documents will be stored here
-- See individual task files for specific deliverables
+**Analysis Completed (A.0, A.1)**: 
+- ✅ [MCP Protocol Layers Analysis](analysis/mcp-protocol-layers.md) - Notifications ARE bidirectional, direction is implicit
+- ✅ [Architecture Clarification](analysis/architecture-clarification.md) - Clear separation of transport, MCP, and JSON-RPC layers
+- ✅ [TransportMessage Usage Analysis](analysis/transport-message-usage.md) - 34 files, 330 occurrences, no dead imports
+- ✅ [Migration Impact Assessment](analysis/migration-impact.md) - 60 hour total estimate, phased approach
+- ✅ [Current Workarounds Catalog](analysis/current-workarounds.md) - 17 workaround patterns identified
+
+**Key Findings**:
+1. **Notifications ARE bidirectional** - Both client→server and server→client, confirming our core assumption
+2. **Session Manager is central** - 44 occurrences, manages all routing and must be migrated carefully
+3. **No dead code** - All 34 files actively use TransportMessage (no simple wins)
+4. **17 workaround patterns** - Complex state management and context reconstruction throughout codebase
+5. **Direction is implicit** - Currently inferred from transport edge, breaks for notifications
+6. **Headers are lost** - HTTP/SSE metadata extracted but not propagated with messages
+
+**Remaining Phase 0 Work** (5 hours):
+- A.2: Design the MessageEnvelope structure based on findings
+- A.3: Create detailed migration strategy using the impact assessment
+- A.4: Document breaking changes for stakeholders
 
 ### Phase 1: Core Infrastructure (Week 1, Day 2-3)
 Build the new transport context system alongside existing code.
@@ -227,6 +243,28 @@ For implementation phases, the rust-code-reviewer should focus on:
 - Avoiding unnecessary clones
 - Async trait implementations
 - Backward compatibility
+
+## Next Session Focus
+
+### Immediate Next Steps (Phase 0 Completion)
+Complete the remaining Phase 0 analysis and design tasks:
+
+1. **Task A.2: Design MessageEnvelope Structure** (2 hours)
+   - Use the protocol layer analysis to inform design
+   - Address the 17 workarounds identified
+   - Create concrete Rust type definitions
+   
+2. **Task A.3: Create Migration Strategy** (2 hours)
+   - Build on the migration impact assessment
+   - Define specific migration phases and checkpoints
+   - Create compatibility layer design
+   
+3. **Task A.4: Document Breaking Changes** (1 hour)
+   - Summarize for stakeholders
+   - Create migration guide for developers
+   - Define deprecation timeline
+
+These tasks will complete Phase 0 and provide everything needed to begin implementation in Phase 1.
 
 ## Critical Implementation Guidelines
 

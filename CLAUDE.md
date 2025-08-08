@@ -292,6 +292,72 @@ shadowcat intercept add-rule --file rule.yaml
 5. **Security**: All auth-related changes need security review
 6. **Compatibility**: Maintain MCP protocol compliance
 
+## Planning and Task Management Process
+
+When tackling complex features or refactors, we use a structured planning approach to manage context and ensure progress across multiple Claude sessions:
+
+### 1. Create a Plan Directory
+For any significant feature or refactor, create a dedicated directory under `plans/`:
+```
+plans/
+├── feature-name/
+│   ├── feature-tracker.md      # Main tracking document
+│   ├── tasks/                   # Individual task files
+│   │   ├── A.0-first-task.md
+│   │   ├── A.1-second-task.md
+│   │   └── ...
+│   └── analysis/                # Output documents
+│       ├── findings.md
+│       └── README.md
+```
+
+### 2. Set Up the Tracker
+Copy `plans/tracker-template.md` to create your feature tracker:
+- Define the problem and goals clearly
+- Break work into phases that can be completed incrementally
+- Create a task table with duration estimates
+- Include risk assessment and success criteria
+
+### 3. Create Task Files
+Each task should be:
+- **Self-contained**: Completable in 1-3 hours within a single Claude session
+- **Well-defined**: Clear objectives, deliverables, and success criteria
+- **Sequenced**: Dependencies clearly marked
+- **Documented**: Outputs go to the `analysis/` directory
+
+Task files should include:
+- Objective and key questions to answer
+- Step-by-step process
+- Commands to run
+- Expected deliverables with location and structure
+- Success criteria checklist
+
+### 4. Use NEXT_SESSION_PROMPT.md
+At the end of each session, update `NEXT_SESSION_PROMPT.md` to set up the next session:
+- Focus on 1-3 tasks that fit in a single session (usually 5-10 hours of work)
+- Reference the tracker for full context
+- List specific task files to complete
+- Define clear success criteria
+- Keep it concise - the tracker holds the full context
+
+### 5. Track Progress
+- Update task status in both the tracker and task files
+- Write all findings to the `analysis/` directory
+- Update the tracker's key findings section
+- Clear completed todos with TodoWrite tool
+
+### Example Flow
+1. **Session 1**: Complete analysis tasks, update tracker, create NEXT_SESSION_PROMPT for design tasks
+2. **Session 2**: Complete design tasks, update tracker, create NEXT_SESSION_PROMPT for implementation Phase 1
+3. **Session 3**: Implement Phase 1, update tracker, continue...
+
+This process ensures:
+- **Context continuity** across sessions
+- **Clear progress tracking** 
+- **Manageable scope** per session
+- **Comprehensive documentation**
+- **Reduced cognitive load** by focusing on specific tasks
+
 ## Important Notes
 
 - **Submodule Workflow**: Always commit Shadowcat changes in the shadowcat repository first, then update the parent repository's submodule reference

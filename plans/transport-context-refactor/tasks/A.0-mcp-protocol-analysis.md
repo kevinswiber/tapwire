@@ -2,7 +2,7 @@
 
 **Duration**: 2 hours  
 **Dependencies**: None  
-**Status**: ⬜ Not Started  
+**Status**: ✅ Completed  
 
 ## Objective
 
