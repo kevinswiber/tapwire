@@ -10,15 +10,35 @@ This tracker coordinates the refactoring of Shadowcat's transport layer to prope
 
 ## Problem Statement
 
-The current `TransportMessage` enum conflates two concerns:
-1. **Protocol Layer**: JSON-RPC message structure (Request/Response/Notification)
-2. **Transport Layer**: How messages are delivered (HTTP, SSE, stdio)
+The current `TransportMessage` enum conflates multiple concerns across different protocol layers:
+
+### Protocol Layer Confusion
+1. **Transport Layer** (HTTP/SSE/stdio): How bytes are moved
+   - HTTP: Only has request/response semantics
+   - SSE: One-way server-to-client events  
+   - stdio: Bidirectional byte streams
+
+2. **MCP Protocol Layer**: Application-level semantics
+   - Request/Response/Notification patterns
+   - Bidirectional notifications (both client→server and server→client)
+   - Session management and correlation
+
+3. **JSON-RPC Layer**: Message framing and structure
+   - ID-based request/response correlation
+   - Method names and parameters
+   - Error handling
+
+The current `TransportMessage` appears to be at the MCP semantic level but lacks critical context:
+- **Notifications lack direction** (who is the source/destination?)
+- **No transport metadata** (HTTP headers, SSE event IDs)
+- **No session context** (which session, what protocol version)
 
 With SSE integration, we need to track transport-specific metadata like:
 - SSE event IDs, event types, retry hints
 - HTTP headers, status codes, content types
 - Stream state and correlation IDs
 - Session continuity across transports
+- Message direction and routing information
 
 The `TransportMessage` type is used in 90 files with 658 occurrences, making this a significant architectural change.
 
@@ -61,17 +81,18 @@ Target Architecture:
 
 ## Work Phases
 
-### Phase 0: Analysis and Design (Week 1, Day 1)
-Analyze current usage and design migration strategy.
+### Phase 0: Analysis and Design (Week 1, Day 1-2)
+Analyze current usage, understand protocol layers, and design migration strategy.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| A.1 | **Analyze TransportMessage Usage** | 3h | None | ⬜ Not Started | | Map all 90 files using TransportMessage |
-| A.2 | **Design MessageEnvelope Structure** | 2h | A.1 | ⬜ Not Started | | Define new types and traits |
+| A.0 | **Analyze MCP Protocol Specifications** | 2h | None | ⬜ Not Started | | Understand protocol vs transport layers |
+| A.1 | **Analyze TransportMessage Usage** | 3h | A.0 | ⬜ Not Started | | Map all 90 files using TransportMessage |
+| A.2 | **Design MessageEnvelope Structure** | 2h | A.0, A.1 | ⬜ Not Started | | Define new types and traits |
 | A.3 | **Create Migration Strategy** | 2h | A.2 | ⬜ Not Started | | Plan incremental migration path |
 | A.4 | **Document Breaking Changes** | 1h | A.3 | ⬜ Not Started | | Identify unavoidable breaks |
 
-**Phase 0 Total**: 8 hours
+**Phase 0 Total**: 10 hours
 
 ### Phase 1: Core Infrastructure (Week 1, Day 2-3)
 Build the new transport context system alongside existing code.
@@ -133,26 +154,57 @@ Ensure everything works and is documented.
 ```rust
 // src/transport/envelope.rs
 
-/// Wraps a TransportMessage with transport-specific context
+/// Wraps an MCP-level message with full context
 #[derive(Debug, Clone)]
 pub struct MessageEnvelope {
-    /// The protocol-level message (unchanged)
-    pub message: TransportMessage,
-    /// Transport-specific metadata
-    pub context: TransportContext,
+    /// The MCP semantic message (may need enhancement)
+    pub message: McpMessage,
+    /// Full message context including transport and direction
+    pub context: MessageContext,
 }
 
-/// Transport-specific context and metadata
+/// Enhanced MCP message with proper semantics
 #[derive(Debug, Clone)]
-pub struct TransportContext {
+pub enum McpMessage {
+    Request {
+        id: String,
+        method: String,
+        params: Value,
+    },
+    Response {
+        id: String,
+        result: Option<Value>,
+        error: Option<Value>,
+    },
+    Notification {
+        method: String,
+        params: Value,
+        direction: MessageDirection,  // NEW: Critical for routing
+    },
+}
+
+/// Message direction for proper routing
+#[derive(Debug, Clone)]
+pub enum MessageDirection {
+    ClientToServer,
+    ServerToClient,
+}
+
+/// Complete context for message handling
+#[derive(Debug, Clone)]
+pub struct MessageContext {
     /// Which transport this came from/going to
     pub transport_type: TransportType,
     /// Session identifier
     pub session_id: SessionId,
+    /// MCP protocol version in use
+    pub protocol_version: ProtocolVersion,
     /// Optional correlation ID for request/response matching
     pub correlation_id: Option<String>,
     /// Transport-specific metadata
-    pub metadata: TransportMetadata,
+    pub transport_metadata: TransportMetadata,
+    /// Message direction (redundant with notification direction but useful for all messages)
+    pub direction: MessageDirection,
     /// Timestamp when received/sent
     pub timestamp: std::time::Instant,
 }

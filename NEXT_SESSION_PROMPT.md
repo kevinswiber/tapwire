@@ -1,41 +1,62 @@
-# Next Session: Phase 0 - Task F.3: Implement Batch Handler
+# Next Session: Transport Context Refactor - Phase 0, Tasks A.0-A.1: MCP Specification and Usage Analysis
 
 ## Context
 
-We are implementing SSE proxy integration with MCP message handling capabilities in Shadowcat. The unified tracker (`plans/proxy-sse-message-tracker.md`) coordinates this work across 7 phases with 120-140 hours of effort.
+We are beginning a critical architectural refactor of Shadowcat's transport layer. This refactor is a **prerequisite** for SSE proxy integration and addresses a fundamental design issue where the `TransportMessage` enum conflates multiple protocol layers.
 
-### Current Status
-- **Phase**: Phase 0 - Foundation Components (Week 1)
-- **Task**: F.3 - Implement Batch Handler
-- **Duration**: 3 hours
-- **Dependencies**: F.1 (✅ Completed), F.2 (✅ Completed)
+### Current Situation
+- **Problem**: `TransportMessage` mixes three distinct layers:
+  1. **Transport Layer** (HTTP/SSE/stdio) - How bytes move
+  2. **MCP Protocol Layer** - Application semantics (bidirectional notifications!)
+  3. **JSON-RPC Layer** - Message framing and correlation
+- **Critical Issue**: Notifications lack direction (source/destination)
+- **Impact**: Used in 90 files with 658 occurrences
+- **Blocker**: SSE integration cannot proceed without proper layer separation
+- **Solution**: Design proper layer separation with MessageEnvelope system
 
 ### What Has Been Completed
-- **F.1: Protocol Version Manager** (✅ Completed 2025-08-08)
-  - Created `src/mcp/protocol.rs` with type-safe enum-based version management
-  - Supports both MCP versions (2025-03-26 with batching, 2025-06-18 without)
-  - Includes version negotiation, capability detection, and conversion traits
-  - All tests passing, no clippy warnings
+- **Transport Context Refactor Tracker created** (2025-08-08)
+  - Comprehensive plan for separating protocol from transport concerns
+  - Identified need for backward compatibility during migration
+  - Established 5-phase implementation approach
 
-- **F.2: Build Minimal MCP Parser** (✅ Completed 2025-08-08)
-  - Created `src/mcp/early_parser.rs` with lightweight MCP message parser
-  - Extracts message type (Request/Response/Notification), method names, and IDs
-  - Handles batch message parsing for 2025-03-26 version only
-  - Validates JSON-RPC 2.0 format
-  - Returns `ParsedInfo` with message count and individual messages
-  - 16 comprehensive tests, all passing
+- **MCP Parser Enhanced** (2025-08-08)
+  - Added SSE integration support to minimal parser
+  - Created TransportMessage conversion methods
+  - However, discovered the fundamental architectural issue requiring this refactor
 
-## Objective
+## Objectives
 
-Implement a Batch Handler that provides shared logic for handling MCP batch messages. This component will handle splitting batch messages into individual messages and combining responses into batches when needed, specifically for the 2025-03-26 protocol version which supports batching.
+### Task A.0: Analyze MCP Protocol Specifications (2 hours)
+Understand the proper protocol layering by studying the MCP specifications to ensure our refactor aligns with the actual protocol design.
+
+### Task A.1: Analyze TransportMessage Usage (3 hours)
+Conduct a comprehensive analysis of how `TransportMessage` is currently used across the codebase to inform the design of the new `MessageEnvelope` system and migration strategy.
 
 ## Essential Context Files to Read
 
-1. **Primary Tracker**: `plans/proxy-sse-message-tracker.md`
-2. **Task Details**: `plans/integration-tasks/foundation-tasks.md` (Task F.3 section)
-3. **Protocol Version Manager**: `shadowcat/src/mcp/protocol.rs` (completed in F.1)
-4. **Minimal Parser**: `shadowcat/src/mcp/early_parser.rs` (completed in F.2)
-5. **Existing Transport**: `shadowcat/src/transport/mod.rs` (understand TransportMessage)
+### MCP Specifications (CRITICAL - Read First!)
+1. **MCP 2025-06-18 Spec**: `specs/mcp/docs/specification/2025-06-18/`
+   - `protocol/index.mdx` - Protocol overview
+   - `transports/index.mdx` - Transport layer design
+   - `transports/http-sse.md` - HTTP/SSE specific requirements
+2. **MCP 2025-03-26 Spec**: `specs/mcp/docs/specification/2025-03-26/`
+   - `basic/architecture.mdx` - Architecture overview
+   - `basic/transports.mdx` - Transport requirements
+   - Focus on how notifications work bidirectionally
+
+### Implementation Files
+
+1. **Primary Tracker**: `plans/transport-context-refactor/transport-context-tracker.md`
+2. **Current Transport Definition**: `shadowcat/src/transport/mod.rs`
+3. **Transport Implementations**: 
+   - `shadowcat/src/transport/stdio.rs`
+   - `shadowcat/src/transport/http.rs`
+   - `shadowcat/src/transport/http_mcp.rs`
+4. **Proxy Usage**:
+   - `shadowcat/src/proxy/forward.rs`
+   - `shadowcat/src/proxy/reverse.rs`
+5. **Session Management**: `shadowcat/src/session/manager.rs`
 
 ## Working Directory
 
@@ -45,94 +66,131 @@ cd /Users/kevin/src/tapwire/shadowcat
 
 ## Task Details
 
-### Deliverables
-1. Create `src/mcp/batch.rs` with:
-   - `BatchHandler` struct that uses `ProtocolVersion` from F.1
-   - Method to check if batching should be used (`should_batch`)
-   - Method to split batch JSON into individual messages (`split_if_batch`)
-   - Method to combine messages into batch format (`combine_if_needed`)
-   - Method to group messages by type (`group_by_type`)
-   - `GroupedMessages` struct to organize messages by type
+### Task A.0 Deliverables: MCP Specification Analysis
 
-2. Create comprehensive tests demonstrating:
-   - Batch detection based on protocol version
-   - Splitting batch messages into individual messages
-   - Combining multiple messages into batches
-   - Grouping messages by type (Request/Response/Notification)
-   - Handling edge cases (empty arrays, single messages)
-   - Version-specific behavior (no batching for 2025-06-18)
+1. **Protocol Layer Analysis** (`plans/transport-context-refactor/analysis/mcp-protocol-layers.md`):
+   - Document the actual protocol layers in MCP
+   - Clarify notification directionality
+   - Map MCP concepts to transport concepts
+   - Identify what belongs at each layer
 
-3. Update `src/mcp/mod.rs` to export the new batch handler
+2. **Key Findings**:
+   - How do notifications actually work? (bidirectional?)
+   - What metadata does MCP require vs what transports provide?
+   - How should we handle message direction/routing?
+   - What's the relationship between JSON-RPC and MCP layers?
+
+### Task A.1 Deliverables: Usage Analysis
+
+1. **Usage Analysis Report** (`plans/transport-context-refactor/analysis/transport-message-usage.md`):
+   - Categorize the 90 files by how they use TransportMessage
+   - Identify which files just import vs actively manipulate
+   - Find patterns in how transport metadata is currently handled
+   - Locate where transport-specific logic is mixed with protocol logic
+
+2. **Impact Assessment** (`plans/transport-context-refactor/analysis/migration-impact.md`):
+   - Critical paths that must be migrated first
+   - Components that can use compatibility layer
+   - Potential breaking changes that cannot be avoided
+   - Performance-sensitive areas requiring benchmarks
+
+3. **Current Workarounds Catalog**:
+   - Document how HTTP headers are currently passed around
+   - Find where session IDs are tracked outside TransportMessage
+   - Identify any existing transport metadata handling patterns
 
 ### Implementation Strategy
 
-#### Phase 1: Module Setup (30 min)
-1. Create `src/mcp/batch.rs` file
-2. Import necessary dependencies (serde_json::Value, ProtocolVersion, MinimalMessage, MessageType)
-3. Define core types: `BatchHandler`, `GroupedMessages`
-4. Update `src/mcp/mod.rs` to include and export the batch handler
+#### Phase 0: MCP Specification Study (2 hours)
+1. Read MCP 2025-06-18 and 2025-03-26 specifications
+2. Document protocol layering architecture
+3. Understand notification model (bidirectional? source/dest?)
+4. Map JSON-RPC to MCP to Transport relationships
+5. Identify required metadata at each layer
 
-#### Phase 2: Core Implementation (1.5 hours)
-1. Implement `BatchHandler::new(version: ProtocolVersion)`
-2. Implement `should_batch()` to check if batching is appropriate
-3. Implement `split_if_batch()` to handle batch splitting
-4. Implement `combine_if_needed()` to create batches when needed
-5. Implement `group_by_type()` to organize messages
-6. Create `GroupedMessages` struct with utility methods
+#### Phase 1: Quantitative Analysis (45 min)
+1. Use grep/ripgrep to find all TransportMessage occurrences
+2. Categorize by file type and module
+3. Count actual usage vs imports
+4. Create usage heat map
 
-#### Phase 3: Testing (45 min)
-1. Test batch splitting for 2025-03-26 version
-2. Test that 2025-06-18 doesn't batch messages
-3. Test combining messages into batches
-4. Test message grouping by type
-5. Test edge cases (empty inputs, single messages)
-6. Test helper methods on GroupedMessages
+#### Phase 2: Qualitative Analysis (1.5 hours)
+1. Examine each major component's usage pattern
+2. Identify where transport metadata is needed but missing
+3. Find existing workarounds for transport-specific data
+4. Document coupling between protocol and transport
 
-#### Phase 4: Integration (15 min)
-1. Ensure compatibility with MinimalMessage from early_parser
-2. Verify the handler can work with TransportMessage conversions
-3. Run `cargo fmt` to format the code
-4. Run `cargo clippy --all-targets -- -D warnings`
-5. Run all tests to ensure nothing broke
-6. Update tracker with completion status
+#### Phase 3: Migration Planning (45 min)
+1. Prioritize components for migration
+2. Identify compatibility requirements
+3. Design incremental migration path
+4. Document risks and mitigation strategies
 
 ## Commands to Use
 
 ```bash
-# Create the new batch handler file
-touch src/mcp/batch.rs
+# Find all files with TransportMessage
+rg "TransportMessage" --type rust -l | sort > transport-message-files.txt
 
-# Run tests as you implement
-cargo test mcp::batch
+# Count occurrences per file
+rg "TransportMessage" --type rust -c | sort -t: -k2 -nr
 
-# Check specific test output
-cargo test mcp::batch -- --nocapture
+# Find actual usage patterns (not just imports)
+rg "TransportMessage::" --type rust -A 2 -B 2
 
-# Format your code
-cargo fmt
+# Find where headers are handled
+rg "HeaderMap|headers" --type rust -l | grep -E "(transport|proxy|session)"
 
-# Check for issues
-cargo clippy --all-targets -- -D warnings
+# Find session ID handling
+rg "SessionId|session_id" --type rust -l
 
-# Run all tests to ensure nothing broke
-cargo test
+# Check for existing metadata patterns
+rg "metadata|context|envelope" --type rust -l | grep -E "(transport|proxy)"
+
+# Analyze imports vs usage
+rg "use.*TransportMessage" --type rust
+rg "impl.*TransportMessage" --type rust
+rg "match.*TransportMessage" --type rust
 ```
+
+## Analysis Categories
+
+### 1. Import-Only Files
+Files that only import TransportMessage but don't manipulate it directly.
+- Can likely remain unchanged during initial migration
+- Will automatically benefit from compatibility layer
+
+### 2. Message Creators
+Files that construct TransportMessage instances.
+- Need migration to include context creation
+- Priority based on transport type
+
+### 3. Message Consumers
+Files that match on or destructure TransportMessage.
+- Need updates to handle context
+- May need both old and new paths during migration
+
+### 4. Message Transformers
+Files that modify or convert TransportMessage.
+- Critical for migration
+- Need careful context preservation
+
+### 5. Transport Implementations
+The actual transport layer implementations.
+- First to be migrated
+- Source of transport metadata
 
 ## Success Criteria Checklist
 
-- [ ] `src/mcp/batch.rs` created with full implementation
-- [ ] `BatchHandler` uses `ProtocolVersion` from F.1
-- [ ] Correctly splits batch messages for 2025-03-26 version
-- [ ] Properly combines messages into batches when appropriate
-- [ ] Groups messages by type (Request/Response/Notification)
-- [ ] Respects version-specific batching support
-- [ ] `GroupedMessages` provides useful utility methods
-- [ ] Comprehensive error handling
-- [ ] All tests pass
-- [ ] No clippy warnings
-- [ ] Code is properly formatted
-- [ ] Module exported in `src/mcp/mod.rs`
-- [ ] Tracker updated with completion status
+- [ ] All 90 files categorized by usage pattern
+- [ ] 658 occurrences mapped to actual usage vs imports
+- [ ] Critical migration paths identified
+- [ ] Existing transport metadata workarounds documented
+- [ ] Performance-sensitive areas flagged
+- [ ] Compatibility requirements clear
+- [ ] Migration phases prioritized
+- [ ] Analysis reports created in proper locations
+- [ ] Tracker updated with findings
 
 ## Important Notes
 
@@ -145,19 +203,23 @@ cargo test
 - **Update the refactor tracker** when the task is complete
 - **Focus on the current phase objectives**
 
-## Key Design Considerations
+## Key Questions to Answer
 
-1. **Version-Aware Batching**: Only the 2025-03-26 version supports batching. The handler must respect this constraint.
+### Protocol Understanding (Task A.0)
+1. **Are notifications truly bidirectional in MCP?**
+2. **How does MCP handle message routing/direction?**
+3. **What's the proper separation between JSON-RPC, MCP, and Transport layers?**
+4. **What metadata is required vs optional at each layer?**
+5. **How do different transports (HTTP vs SSE vs stdio) map to MCP semantics?**
 
-2. **Integration with Parser**: The batch handler works with `MinimalMessage` from the early parser, maintaining consistency.
-
-3. **Bidirectional Processing**: The handler supports both:
-   - Splitting incoming batch messages for processing
-   - Combining outgoing messages into batches for transmission
-
-4. **Performance**: Keep operations lightweight as this will be called frequently in the message pipeline.
-
-5. **Type Safety**: Use the MessageType enum from early_parser to ensure type safety when grouping messages.
+### Usage Analysis (Task A.1)
+1. **How many of the 658 occurrences are actual usage vs imports?**
+2. **Which components are tightly coupled to TransportMessage structure?**
+3. **Where is transport metadata currently being passed outside of TransportMessage?**
+4. **What existing patterns can we leverage for the new context system?**
+5. **Which files can remain unchanged with a compatibility layer?**
+6. **What are the riskiest parts of the migration?**
+7. **Where are notifications currently handled and do they track direction?**
 
 ## Model Usage Guidelines
 
@@ -178,81 +240,99 @@ cargo test
 11. Update project documentation and tracker as needed
 12. Commit changes with clear, descriptive messages
 
-## Example Implementation Structure
+## Expected Analysis Output Structure
 
-Based on the task details in `plans/integration-tasks/foundation-tasks.md`, the batch handler should follow this structure:
+### MCP Protocol Layer Analysis (A.0)
 
-```rust
-use serde_json::Value;
-use crate::mcp::protocol::ProtocolVersion;
-use crate::mcp::early_parser::{MinimalMessage, MessageType};
+```markdown
+# MCP Protocol Layer Analysis
 
-pub struct BatchHandler {
-    version: ProtocolVersion,
-}
+## Protocol Layers
+1. Transport Layer
+   - Purpose: ...
+   - Responsibilities: ...
+   
+2. MCP Protocol Layer
+   - Purpose: ...
+   - Responsibilities: ...
+   
+3. JSON-RPC Layer
+   - Purpose: ...
+   - Responsibilities: ...
 
-impl BatchHandler {
-    pub fn new(version: ProtocolVersion) -> Self {
-        Self { version }
-    }
-    
-    pub fn should_batch(&self, messages: &[MinimalMessage]) -> bool {
-        self.version.supports_batching() && messages.len() > 1
-    }
-    
-    pub fn split_if_batch(&self, value: Value) -> Vec<Value> {
-        match value {
-            Value::Array(arr) if self.version.supports_batching() => arr,
-            single => vec![single],
-        }
-    }
-    
-    pub fn combine_if_needed(&self, messages: Vec<Value>) -> Value {
-        if self.should_batch_values(&messages) {
-            Value::Array(messages)
-        } else {
-            messages.into_iter().next().unwrap_or(Value::Null)
-        }
-    }
-    
-    fn should_batch_values(&self, messages: &[Value]) -> bool {
-        self.version.supports_batching() && messages.len() > 1
-    }
-    
-    pub fn group_by_type(&self, messages: Vec<MinimalMessage>) -> GroupedMessages {
-        // Implementation here
-    }
-}
+## Notification Model
+- Directionality: [Bidirectional/Unidirectional]
+- Client→Server notifications: [Examples]
+- Server→Client notifications: [Examples]
+- Routing requirements: ...
 
-pub struct GroupedMessages {
-    pub requests: Vec<MinimalMessage>,
-    pub responses: Vec<MinimalMessage>,
-    pub notifications: Vec<MinimalMessage>,
-}
+## Required Refactor Changes
+- TransportMessage should be renamed to McpMessage
+- Notifications need direction field
+- Transport metadata must be separate
+```
+
+### TransportMessage Usage Analysis (A.1)
+
+```markdown
+# TransportMessage Usage Analysis
+
+## Summary
+- Total files: 90
+- Total occurrences: 658
+- Actual usage: X
+- Import-only: Y
+
+## Usage Categories
+
+### Category 1: Import-Only (X files)
+- File list...
+- Can use compatibility layer
+
+### Category 2: Message Creators (X files)
+- File list...
+- Migration priority: HIGH/MEDIUM/LOW
+
+### Category 3: Message Consumers (X files)
+...
+
+## Critical Paths
+1. Path 1: Description
+2. Path 2: Description
+
+## Existing Workarounds
+- Workaround 1: Description
+- Workaround 2: Description
+
+## Migration Recommendations
+1. Phase 1: Components...
+2. Phase 2: Components...
 ```
 
 ## Next Steps After This Task
 
-Once F.3 is complete, the remaining Phase 0 tasks are:
-- **F.4**: Create Unified Event ID Generator (2 hours, no dependencies)
-- **F.5**: Build Message Context Structure (2 hours, depends on F.1)
+Once A.1 is complete, the next tasks in Phase 0 are:
+- **A.2**: Design MessageEnvelope Structure (2 hours, depends on A.1)
+- **A.3**: Create Migration Strategy (2 hours, depends on A.2)
+- **A.4**: Document Breaking Changes (1 hour, depends on A.3)
 
-After completing Phase 0, we'll move to Phase 1 (SSE Transport with MCP Awareness).
+After Phase 0 analysis, we'll move to Phase 1 implementation of the core infrastructure.
 
 ## Related Context
 
-- The batch handler is essential for:
-  - SSE transport when handling 2025-03-26 protocol messages
-  - Reverse proxy when processing batch requests
-  - Interceptors that need to process message groups
-  - Recorders that need to maintain batch integrity
+This analysis is critical because:
+- It determines the scope of the refactor
+- It identifies risks and compatibility requirements
+- It shapes the MessageEnvelope design
+- It prioritizes the migration order
+- It prevents breaking changes in unexpected places
 
-- Key integration points:
-  - Must work seamlessly with `MinimalMcpParser` from F.2
-  - Will be used by SSE transport (S.2) for batch processing
-  - Required by reverse proxy (R.1) for batch request handling
-  - Foundation for correlation engine (M.4) batch support
+The findings will directly influence:
+- The design of TransportContext and MessageEnvelope
+- The compatibility layer implementation
+- The migration phases and timeline
+- The testing strategy
 
 ---
 
-**Session Goal**: Complete the Batch Handler implementation with comprehensive tests and documentation, ensuring proper handling of MCP batch messages for the 2025-03-26 protocol version while maintaining clean separation of concerns.
+**Session Goal**: Complete a thorough analysis of TransportMessage usage across the codebase, producing actionable reports that will guide the design and implementation of the transport context refactor. This analysis is the foundation for successfully separating protocol from transport concerns without breaking the existing system.
