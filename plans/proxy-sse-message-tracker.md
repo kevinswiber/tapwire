@@ -6,7 +6,7 @@ This is the primary tracker for implementing SSE proxy integration with MCP mess
 
 **Last Updated**: 2025-08-10  
 **Total Estimated Duration**: ~~120-140 hours~~ → 118-138 hours (F.5 exists from refactor)  
-**Status**: Phase 0 Complete, Phase 1 In Progress (S.1 & S.2 Complete)
+**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅
 
 ## Transport Naming Clarification
 
@@ -101,8 +101,8 @@ Implement SSE transport that understands MCP messages from the start.
 | S.1 | Add SSE Transport CLI Option | 2h | None | ✅ Completed | 2025-08-10 | [Details](sse-proxy-integration/tasks/task-1.1-cli-sse-option.md) |
 | S.2 | **Create MCP-Aware SSE Transport Wrapper** | 4h | F.1-F.4, S.1 | ✅ Completed | 2025-08-10 | Uses MessageContext from refactor |
 | S.2.5 | **Fix CLI Transport Naming Confusion** | 1h | S.1, S.2 | ✅ Completed | 2025-08-10 | [Details](sse-proxy-integration/tasks/task-1.2.5-fix-cli-naming.md) |
-| S.3 | Integrate with Forward Proxy | 3h | S.2 | ⬜ Not Started | | From SSE Task 1.3 |
-| S.4 | **Add MCP Parser Hooks to Transport** | 2h | S.2, F.2 | ⬜ Not Started | | [Task Details](#s4-parser-hooks) |
+| S.3 | Integrate with Forward Proxy | 3h | S.2 | ✅ Completed | 2025-08-10 | ForwardProxy now supports SSE |
+| S.4 | **Add MCP Parser Hooks to Transport** | 2h | S.2, F.2 | ✅ Completed | 2025-08-10 | Parser integrated in send/receive |
 
 **Phase 1 Total**: ~~11 hours~~ → 12 hours (added S.2.5)
 
