@@ -6,7 +6,7 @@ This tracker coordinates the optimization of Shadowcat's CLI refactor to transfo
 
 **Last Updated**: 2025-08-10  
 **Total Estimated Duration**: 60-70 hours  
-**Status**: Planning
+**Status**: Phase B In Progress (50% Complete)
 
 ## Goals
 
@@ -77,7 +77,7 @@ Create ergonomic library APIs and core functionality
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | B.1 | **Implement Builder Patterns** | 6h | Phase A | ✅ Complete | | [Details](tasks/B.1-builder-patterns.md) - All tests passing! |
-| B.2 | **Add Graceful Shutdown** | 4h | B.1 | ⬜ Not Started | | [Details](tasks/B.2-graceful-shutdown.md) |
+| B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 679 tests passing, full shutdown system |
 | B.3 | **Create Library Facade** | 3h | B.1, B.2 | ⬜ Not Started | | [Details](tasks/B.3-library-facade.md) |
 | B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
@@ -251,11 +251,30 @@ If context window becomes limited:
 
 ## Next Actions
 
-1. **Fix remaining build errors from B.1** before proceeding to B.2
-2. **Continue with B.2: Add Graceful Shutdown** after build is clean
-3. **Complete remaining Phase B tasks** (B.3-B.6)
+1. **B.3: Create Library Facade** - Design high-level API for common use cases (3 hours)
+2. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
+3. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
+4. **B.6: Add Basic Integration Tests** - Test builders in real scenarios (2 hours)
+
+## Progress Summary
+
+- **Phase A**: 100% Complete (7 hours) ✅
+- **Phase B**: 50% Complete (10 of 20 hours)
+  - B.1: ✅ Builder Patterns (6h)
+  - B.2: ✅ Graceful Shutdown (4h) 
+  - B.3-B.6: ⬜ Not Started (10h remaining)
+- **Phase C**: 0% Complete (27 hours)
+- **Overall**: ~25% Complete (17 of 60-70 hours)
 
 ## Notes
+
+### B.2 Completion Summary (2025-08-10)
+- Implemented comprehensive shutdown system with ShutdownController and ShutdownToken
+- Added shutdown support to SessionManager, ForwardProxy, ReverseProxy, and TapeRecorder
+- Integrated signal handling (Ctrl+C) in main.rs
+- Created 7 comprehensive tests for shutdown scenarios
+- Updated CLAUDE.md with 5 new clippy warning patterns discovered during implementation
+- All 679 tests passing, no clippy warnings
 
 - The refactor branch is in a git worktree at `/Users/kevin/src/tapwire/shadowcat-cli-refactor`
 - Main branch already has the CLI refactor merged
