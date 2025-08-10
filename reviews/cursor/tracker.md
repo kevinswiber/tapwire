@@ -52,10 +52,10 @@ Assess public APIs, trait design, error types, and module visibility.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Transport trait and implementations review** | 2h | A.* | 🔄 In Progress | | Enriched doc with defaults/timeout/headers/shutdown proposals; `analysis/api/transport.md`. |
-| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | 🔄 In Progress | | Added lifecycle, interceptor mapping, metrics, context accuracy; `analysis/api/proxy-session.md`. |
-| C.3 | **Error handling and Result flows** | 1.5h | A.* | 🔄 In Progress | | Added taxonomy and mapping proposals; `analysis/api/errors.md`. |
-| C.4 | **Public API docs and examples** | 1h | C.1–C.3 | 🔄 In Progress | | Created `analysis/api/docs.md` v0.1 with forward/reverse examples, shutdown and error guidance. |
+| C.1 | **Transport trait and implementations review** | 2h | A.* | ✅ Complete | | Finalized docs with `TransportConfig` citation, timeout/size limit enforcement, header casing, shutdown, concurrency adapter; `analysis/api/transport.md`. |
+| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | ✅ Complete | | Added cooperative shutdown guidance, interceptor behavior mapping, accurate `TransportContext` recording, metrics/state counters; `analysis/api/proxy-session.md`. |
+| C.3 | **Error handling and Result flows** | 1.5h | A.* | ✅ Complete | | Locked taxonomy (-32600, -32603 with 502/504, -32001, -32002, -32010), added transport timeout citations and `error.data` guidance; `analysis/api/errors.md`. |
+| C.4 | **Public API docs and examples** | 1h | C.1–C.3 | 🔄 In Progress | | Upgraded `analysis/api/docs.md` to v0.2; added shutdown token example, context construction snippets, interceptor behaviors. |
 
 **Phase C Total**: 6.5 hours
 
@@ -140,12 +140,12 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Continue Phase C: finalize C.1–C.3 docs with any remaining gaps; iterate on `analysis/api/docs.md` with small runnable snippets if desired.
+1. Finish Phase C by completing C.4 (`analysis/api/docs.md` v0.2 already drafted); optionally add a compact error mapping table.
 2. After Phase C, create a fresh worktree snapshot of Shadowcat at latest `main` (do not rebase current snapshot) and run a delta audit. Add addendum sections to each relevant analysis doc noting changes since commit `eec52c8`, preserving existing citations.
 
 ---
 
-**Document Version**: 0.4  
+**Document Version**: 0.5  
 **Created**: 2025‑08‑10  
 **Last Modified**: 2025‑08‑10  
 **Author**: Cursor GPT‑5 Reviewer
@@ -157,3 +157,4 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 | 2025‑08‑10 | 0.2 | Updated A.1 complete; added A.2/A.3 in progress | Cursor GPT‑5 Reviewer |
 | 2025‑08‑10 | 0.3 | Added NEXT_SESSION_PROMPT content checklist | Cursor GPT‑5 Reviewer |
 | 2025‑08‑10 | 0.4 | Phase C docs enriched; created `analysis/api/docs.md` v0.1 | Cursor GPT‑5 Reviewer |
+| 2025‑08‑10 | 0.5 | Finalized C.1–C.3; updated docs to v0.2; tracker statuses updated | Cursor GPT‑5 Reviewer |

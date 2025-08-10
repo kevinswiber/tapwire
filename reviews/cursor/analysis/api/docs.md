@@ -87,14 +87,31 @@ async fn main() -> anyhow::Result<()> {
 - Reverse proxy
   - HTTP server shutdown should rely on server’s graceful shutdown primitive; ensure session cleanup via `SessionManager::shutdown()` when stopping the server.
 
-### Error mapping guidance
-- JSON-RPC and HTTP statuses should follow a stable taxonomy:
-  - -32600 ↔ 400 for invalid input/headers
-  - -32603 ↔ 502/504 for upstream/timeout
-  - -32001 ↔ 429 for rate limiting (include `retry-after`)
-  - -32002 ↔ 401/403 for auth
+Example (conceptual) of cooperative shutdown with a token and join-with-timeout:
+```rust
+use tokio_util::sync::CancellationToken;
 
-Cited reverse mapping:
+let token = CancellationToken::new();
+let proxy = ForwardProxy::new() /* .with_shutdown(token.clone()) */;
+// ... start ...
+// Later: request shutdown
+token.cancel();
+// then await joins with small timeout; only abort if needed
+```
+
+### Error mapping guidance
+- JSON-RPC and HTTP statuses should follow a stable taxonomy. Summary table:
+
+| Scenario | JSON-RPC code | HTTP status | Notes | Citations |
+|---|---:|---:|---|---|
+| Invalid input/headers (client) | -32600 | 400 | Malformed JSON-RPC, missing/invalid MCP headers, version mismatch/downgrade attempts | `analysis/api/errors.md` (client input); `1366:1392:shadowcat-cursor-review/src/proxy/reverse.rs`; `680:688:shadowcat-cursor-review/src/proxy/reverse.rs` |
+| Upstream failure (send/receive) | -32603 | 502 | Connection errors, upstream non-2xx, stdio child issues | `analysis/api/errors.md` (upstream); `1159:1176:shadowcat-cursor-review/src/proxy/reverse.rs` |
+| Timeout (transport/request) | -32603 | 504 | Explicit elapsed timers in transports | `analysis/api/errors.md` (timeouts); `351:357:shadowcat-cursor-review/src/transport/stdio.rs`; `393:399:shadowcat-cursor-review/src/transport/http.rs` |
+| Rate limiting | -32001 | 429 | Include `retry-after` header where available | `analysis/api/errors.md` (429 mapping); `shadowcat-cursor-review/src/rate_limiting/middleware.rs` |
+| Authentication/authorization | -32002 | 401/403 | 401 for missing/invalid; 403 for policy denials | `analysis/api/errors.md` (auth) |
+| Replay/recording domain | -32010 | 400/409 | Invalid tape, conflict, or domain-specific errors | `analysis/api/errors.md` (-32010) |
+
+Cited reverse mapping implementation:
 ```1366:1392:shadowcat-cursor-review/src/proxy/reverse.rs
 impl IntoResponse for ReverseProxyError { /* maps error to status + JSON */ }
 ```
@@ -102,6 +119,8 @@ impl IntoResponse for ReverseProxyError { /* maps error to status + JSON */ }
 ### Header casing guidance
 - When writing: use canonical casing (`MCP-Protocol-Version`, `Mcp-Session-Id`).
 - When reading: treat header names as case-insensitive.
+
+See `analysis/api/transport.md` for detailed write/read citations and canonicalization notes.
 
 Citations:
 ```818:827:shadowcat-cursor-review/src/proxy/forward.rs
@@ -131,5 +150,42 @@ Citation:
 TransportContext::stdio(), // Default context - could be improved
 ```
 
+### Constructing `MessageContext` accurately
+- Prefer constructing context with the actual transport edge:
+```158:206:shadowcat-cursor-review/src/transport/envelope.rs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageContext { /* session_id, direction, transport, protocol_version, timestamp */ }
+```
+Examples:
+- For HTTP:
+```455:463:shadowcat-cursor-review/src/transport/http.rs
+let context = MessageContext::new(
+    &self.session_id,
+    MessageDirection::ServerToClient,
+    TransportContext::http("GET".to_string(), self.target_url.path().to_string()),
+);
+```
+- For reverse proxy SSE endpoint:
+```734:742:shadowcat-cursor-review/src/proxy/reverse.rs
+let context = MessageContext::new(
+    &session.id,
+    MessageDirection::ClientToServer,
+    TransportContext::http("POST".to_string(), "/mcp/v1/sse".to_string()),
+);
+```
+
+### API behavior of interceptor effects
+- Continue: record original; forward unchanged.
+- Modify: record both original and modified with linkage metadata; forward modified.
+- Block: synthesize error for requests and emit on opposite channel; drop notifications.
+- Mock: emit provided response; do not forward original; record linkage.
+- Pause: enqueue and wait for resume with timeout; on timeout, synthesize error.
+- Delay: sleep before forwarding; bounded by configured maximum; cancelable.
+
 ---
-Document version: 0.1 (created as part of Phase C)
+References:
+- `reviews/cursor/analysis/api/errors.md` — taxonomy details and mapping rationale
+- `reviews/cursor/analysis/api/transport.md` — header casing, timeouts, and size limits
+- `reviews/cursor/analysis/api/proxy-session.md` — lifecycle, interceptor effects, and context accuracy
+
+Document version: 0.3 (Phase C updates)

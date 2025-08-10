@@ -25,6 +25,14 @@ pub trait Transport: Send + Sync {
 }
 ```
 
+```96:100:shadowcat-cursor-review/src/transport/mod.rs
+pub struct TransportConfig {
+    pub timeout_ms: u64,
+    pub buffer_size: usize,
+    pub max_message_size: usize,
+}
+```
+
 ```351:357:shadowcat-cursor-review/src/transport/stdio.rs
 let line = timeout(recv_timeout, stdout_rx.recv())
     .await
@@ -40,6 +48,11 @@ let response = timeout(
 .await
 .map_err(|_| TransportError::Timeout("HTTP request timed out".to_string()))?
 .map_err(|e| TransportError::SendFailed(format!("HTTP send failed: {e}")))?;
+```
+
+```119:126:shadowcat-cursor-review/src/transport/stdio.rs
+// inbound size check in stdout reader
+// (ensure frames do not exceed max_message_size)
 ```
 
 ```818:827:shadowcat-cursor-review/src/proxy/forward.rs
@@ -68,6 +81,17 @@ let protocol_version = headers
 - Size limits: enforce consistently
   - Stdio checks outbound serialized length and inbound line size; HTTP checks serialized JSON length. Ensure both sides enforce `max_message_size` and surface `TransportError::MessageTooLarge { size, limit }` for callers.
 
+  Citations:
+  - Outbound stdio check
+    ```312:321:shadowcat-cursor-review/src/transport/stdio.rs
+    if serialized.len() > self.config.max_message_size { return Err(TransportError::MessageTooLarge { .. }); }
+    ```
+  - HTTP serialized size check
+    ```85:99:shadowcat-cursor-review/src/transport/http.rs
+    .map_err(|e| TransportError::SendFailed(format!("Failed to serialize: {e}")))?;
+    return Err(TransportError::MessageTooLarge { .. });
+    ```
+
 - Cooperative shutdown and idempotency
   - Document `close()` as idempotent and responsible for terminating background tasks, draining channels, and releasing OS handles.
   - For transports that spawn tasks (e.g., stdio reader/writer), prefer using a shutdown signal and join-with-timeout before force-kill on drop. Avoid spawning work in `Drop` if a runtime may be unavailable.
@@ -91,6 +115,22 @@ let protocol_version = headers
     - Response: `mcp-protocol-version`, `mcp-server`
   - When reading headers, treat names as case-insensitive. Document this explicitly in transport/server APIs.
 
+  Citations:
+  - Writer uses canonical casing on HTTP/SSE builders
+    ```97:100:shadowcat-cursor-review/src/transport/http.rs
+    .header("MCP-Protocol-Version", MCP_PROTOCOL_VERSION)
+    .header("Mcp-Session-Id", self.session_id.to_string())
+    ```
+    ```285:301:shadowcat-cursor-review/src/transport/sse/session.rs
+    headers.insert("MCP-Protocol-Version", value);
+    headers.insert("Mcp-Session-Id", value);
+    headers.insert("Last-Event-Id", value);
+    ```
+  - Reader treats names in lower-case on extraction
+    ```73:98:shadowcat-cursor-review/src/transport/http_mcp.rs
+    headers.get("mcp-protocol-version").and_then(|v| v.to_str().ok())
+    ```
+
 - SSE integration
   - The SSE stack (`sse/*`) is not a `Transport` yet. If/when implemented, ensure it adopts the same config knobs (timeouts, max sizes) and shutdown semantics described here. Leverage `SessionAwareSseManager` for session binding and lifecycle hooks.
 
@@ -105,9 +145,18 @@ let outbound_rx = outbound_rx.as_mut().ok_or(TransportError::Closed)?;
 match outbound_rx.recv().await { /* ... */ }
 ```
 
+```455:463:shadowcat-cursor-review/src/transport/http.rs
+let context = MessageContext::new(
+    &self.session_id,
+    MessageDirection::ServerToClient,
+    TransportContext::http("GET".to_string(), self.target_url.path().to_string()),
+);
+```
+
 ### Action checklist (C.1)
 - Update docs to require explicit `transport_type()`/`is_connected()`.
 - Add doc section with timeout and size-limit expectations and error taxonomy hooks.
 - Recommend adapter or split-trait pattern for concurrency ergonomics in docs.
 - Document canonical header casing and case-insensitive reads.
 - Note replay receive await-outside-lock improvement for future edits.
+- Cite `TransportConfig` as single source of truth for timeouts/limits.

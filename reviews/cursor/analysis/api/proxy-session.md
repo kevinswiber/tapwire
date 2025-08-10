@@ -18,6 +18,11 @@ pub async fn shutdown(&mut self) { /* send shutdown */ for task in self.tasks.dr
 impl Drop for ForwardProxy { fn drop(&mut self) { for task in &self.tasks { task.abort(); } } }
 ```
 
+- Transport closure must be awaited exactly once during shutdown:
+```474:476:shadowcat-cursor-review/src/transport/http.rs
+handle.abort();
+```
+
 - Initialize request tracking and negotiation:
 ```269:349:shadowcat-cursor-review/src/proxy/forward.rs
 // Tracks initialize requests with TTL and MAX_TRACKED_REQUESTS, feeds VersionNegotiator on response
@@ -34,6 +39,15 @@ let context = MessageContext::new(
     session_id,
     direction,
     TransportContext::stdio(), // Default context - could be improved
+);
+```
+
+- Reverse proxy constructs HTTP contexts for SSE/HTTP paths:
+```734:742:shadowcat-cursor-review/src/proxy/reverse.rs
+let context = MessageContext::new(
+    &session.id,
+    MessageDirection::ClientToServer,
+    TransportContext::http("POST".to_string(), "/mcp/v1/sse".to_string()),
 );
 ```
 
@@ -62,6 +76,10 @@ async fn handle_metrics(...) -> impl IntoResponse { /* builds Prometheus text ou
 - Accurate `TransportContext` in recordings
   - Where proxy knows the transport type of the source (reader context has `transport_type`), build `TransportContext` accordingly when recording via `SessionManager` to avoid the default `stdio()` placeholder. This maintains correct edge metadata for analytics and replay.
 
+  Example sources:
+  - Forward proxy reader paths often know direction and transport (see construction sites using `TransportContext::stdio()` in `forward.rs` around 1010, 1176, 1188, 1451, 1473). Replace with the actual transport context from the reader side.
+  - Reverse proxy already uses HTTP contexts in several spots; ensure parity where it currently defaults to stdio (e.g., `1020`, `1091`).
+
 - Metrics ergonomics
   - Replace `Mutex<Duration>` accumulation with an atomic bucketed histogram or lock-free duration accumulator (e.g., `AtomicU64` nanoseconds) to avoid lock contention on `/metrics`.
 
@@ -73,3 +91,4 @@ async fn handle_metrics(...) -> impl IntoResponse { /* builds Prometheus text ou
 - Define an explicit mapping for interceptor actions; update docs with expected proxy behavior and recording rules.
 - Document how to construct accurate `TransportContext` for recordings from proxy readers.
 - Note metrics improvement and state counters for observability in docs.
+- Ensure single transport `close()` invocation and await during shutdown.
