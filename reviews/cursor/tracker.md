@@ -7,7 +7,7 @@ Note: Planning and analysis artifacts live in the main Tapwire repo under `revie
 
 **Last Updated**: 2025‑08‑10  
 **Total Estimated Duration**: 18–28 hours  
-**Status**: In Progress
+**Status**: Complete
 
 ## Goals
 1. **Safety and Correctness** — Audit unsafe code, lifetime/ownership, and concurrency boundaries.
@@ -75,10 +75,21 @@ Validate auth gateway basics, token handling, and transport security checks.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.1 | **Token handling and header scrubbing** | 1.5h | A.* | ⬜ Not Started | | Ensure no client tokens pass upstream; `analysis/security/tokens.md` |
-| E.2 | **OAuth 2.1 and transport security checks** | 1.5h | A.* | ⬜ Not Started | | Origin validation, DNS rebinding, TLS; `analysis/security/transport.md` |
+| E.1 | **Token handling and header scrubbing** | 1.5h | A.* | ✅ Complete | | Ensured no client tokens pass upstream; `analysis/security/tokens.md` created |
+| E.2 | **OAuth 2.1 and transport security checks** | 1.5h | A.* | ✅ Complete | | Reviewed PKCE/JWT/JWKS and transport hardening; `analysis/security/transport.md` created |
 
 **Phase E Total**: 3 hours
+
+### Phase F: Security Hardening and Test Plans (Week 2)
+Turn Phase E findings into concrete plans and tests.
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| F.1 | **Security test plan and assertions** | 1.5h | E.* | ✅ Complete | | Created `analysis/tests/security-plan.md`; outlined unit/integration cases for HTTP/SSE header assertions |
+| F.2 | **Origin/Host validation & trusted proxy design** | 1.5h | E.2 | ✅ Complete | | Drafted `analysis/security/origin-trusted-proxy.md` with config and test strategy |
+| F.3 | **Header allowlist at proxy boundaries** | 1.0h | E.1 | ✅ Complete | | Drafted `analysis/security/header-allowlist.md` with allow/deny lists and migration plan |
+
+**Phase F Total**: 4 hours
 
 ### Status Legend
 - ⬜ Not Started — Task not yet begun
@@ -140,8 +151,10 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Optionally run build/lint/tests on `shadowcat-delta@b793fd1` to validate no clippy regressions in hot paths.
-2. Keep current snapshot citations pinned to `eec52c8`; deltas referenced where relevant in perf docs.
+1. Verify Phase E docs meet success criteria and update if gaps remain.
+2. Flesh out Phase F documents with concrete test cases and config sketches.
+3. Optionally run build/lint/tests on `shadowcat-delta@b793fd1` to validate no clippy regressions in related areas.
+4. Keep snapshot citations pinned to `eec52c8`; add delta citations for any new findings.
 
 ## Delta Audit — Phase D checklist
 - [x] D.1 Hot-path allocations/logging reviewed with exact citations (stdio, SSE, forward proxy)
@@ -149,6 +162,10 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - [x] D.3 Interceptor chain evaluation/metrics costs analyzed; guidance added
 
 ## Delta Audit (Shadowcat main @ b793fd1)
+## Delta Audit — Phase E checklist
+- [x] E.1 Token/header handling reviewed; allowlist guidance added (`analysis/security/tokens.md`)
+- [x] E.2 OAuth 2.1/JWT and transport security reviewed; risks and mitigations noted (`analysis/security/transport.md`)
+
 - [x] Error mapping (reverse proxy)
   - Findings captured in `analysis/api/errors.md` Addendum with citations to `src/proxy/reverse.rs` and `src/error.rs` (lack of 504, auth maps to 500, rate limit via middleware 429)
 - [x] Header casing (write/read)

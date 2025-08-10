@@ -11,7 +11,8 @@ This directory stores research and analysis artifacts for the comprehensive Shad
   - `api/transport.md` — Transport defaults, timeouts, size limits, shutdown, header casing.
   - `api/proxy-session.md` — Forward/reverse lifecycle, interceptor effects, recording accuracy, metrics.
   - `api/errors.md` — Error taxonomy and HTTP/JSON‑RPC mappings with guidance for IO boundary context.
-  - `api/docs.md` — Public API overview, examples, and guidance (current version v0.2).
+  - `api/docs.md` — Public API overview, examples, and guidance (current version v0.3).
+ - `security/` — Security analyses and guidance.
 - `tests/` — Coverage notes, gaps, and proposed test plans.
 
 Create subfolders/files as needed. Keep artifacts incremental and reference concrete file paths.
@@ -23,7 +24,7 @@ Create subfolders/files as needed. Keep artifacts incremental and reference conc
 - Keep `NEW_SESSION_PROMPT_CURSOR.md` updated when major milestones are reached.
 
 ### Current Focus
-- Phase C wrap‑up: finalize `api/docs.md` to v0.3 with an error mapping table and cross‑links; then prepare Delta Audit worktree per the session prompt.
+- Wrap-up: See `../conclusion.md` for executive summary and next-step recommendations.
 
 ### Quickstart (Delta Audit Prep)
 - Create a fresh worktree for Shadowcat main without touching this snapshot:

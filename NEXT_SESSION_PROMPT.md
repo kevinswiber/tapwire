@@ -1,56 +1,30 @@
-# Next Session: Complete Phase 2 and Begin Phase 3
+# Next Session: Begin Phase 3 - Full MCP Parser and Correlation
 
 ## Project Status Update
 
 We are implementing SSE proxy integration with MCP message handling in Shadowcat, following the unified tracker at `plans/proxy-sse-message-tracker.md`.
 
-**Current Status**: Phase 2 nearly complete, ready to finish R.4 and begin Phase 3  
+**Current Status**: Phase 2 Complete ✅, Ready to begin Phase 3
 **Phase 0**: 100% Complete ✅ (F.1-F.5 all done)  
 **Phase 1**: 100% Complete ✅ (S.1-S.4 all done)  
-**Phase 2**: 75% Complete (R.1-R.3 done, R.4 remaining)
+**Phase 2**: 100% Complete ✅ (R.1-R.4 all done)
+**Phase 3**: 0% (Starting now)
 
-## Accomplishments This Session
+## Accomplishments Previous Session
 
-### Phase 2: Reverse Proxy Streamable HTTP ✨
+### Phase 2: Reverse Proxy Streamable HTTP ✅
 
-#### R.1: Create MCP-Aware Dual-Method Endpoint ✅
-- Enhanced `/mcp` endpoint to support both POST and GET methods
-- POST continues to handle JSON-RPC messages
-- GET with Accept: text/event-stream opens SSE connection
-- Added proper header validation and error responses
+#### R.4: Add Early Message Correlation ✅
+- Integrated UnifiedEventIdGenerator into reverse proxy
+- Enhanced SSE proxy to generate correlation IDs for all events
+- Parse MCP messages from SSE data to extract JSON-RPC IDs
+- Generate session-aware event IDs: `{session}-{node}-{json_rpc_id}-{counter}`
+- Preserve upstream event IDs while adding correlation info
+- All tests passing, no clippy warnings
 
-#### R.2: Implement SSE Response Handler ✅
-- Created `handle_mcp_sse_request` function for SSE GET requests
-- Implemented `proxy_sse_from_upstream` to proxy SSE from HTTP upstreams
-- Handles SSE event parsing and forwarding
-- Includes keepalive mechanism for connection health
+## Phase 3: Full MCP Parser and Correlation (Week 3)
 
-#### R.3: Session-Aware SSE Streaming ✅
-- Integrated session management with SSE streams
-- Sessions validated via Mcp-Session-Id header
-- Protocol version tracked and validated
-- Proper cleanup on disconnect
-
-### Tests Added
-- Created `tests/test_reverse_proxy_sse.rs` with integration tests
-- Tests verify dual-method endpoint behavior
-- Tests confirm SSE response headers
-- Tests validate Accept header requirements
-
-## Remaining Work
-
-### Phase 2: Complete R.4 (2 hours)
-
-**R.4: Add Early Message Correlation**
-- Integrate UnifiedEventIdGenerator with reverse proxy SSE
-- Add correlation info to SSE event IDs
-- Track request/response pairs through SSE streams
-- Files to modify:
-  - `src/proxy/reverse.rs` - Add event ID generation to SSE responses
-
-### Phase 3: Full MCP Parser and Correlation (Week 3)
-
-After completing R.4, begin Phase 3:
+The next phase will implement comprehensive MCP message parsing and correlation:
 
 | ID | Task | Duration | Status |
 |----|------|----------|--------|
@@ -60,75 +34,108 @@ After completing R.4, begin Phase 3:
 | P.4 | Add Request/Response Matching | 4h | ⬜ Not Started |
 | P.5 | **Integrate with Proxy** | 5h | ⬜ Not Started |
 
-## Commands for Testing
+## Primary Task: P.1 - Create Full MCP Parser
+
+### Objective
+Build a comprehensive MCP message parser that can:
+1. Parse all MCP message types (requests, responses, notifications)
+2. Handle both protocol versions (2025-03-26 with batching, 2025-06-18)
+3. Extract metadata for correlation and interception
+4. Provide structured error handling
+
+### Implementation Plan
+
+1. **Create `src/mcp/parser.rs`**
+   - Define comprehensive message structures
+   - Implement parsing logic for all message types
+   - Handle protocol version differences
+   - Extract method names, IDs, parameters
+
+2. **Message Type Definitions**
+   ```rust
+   pub enum McpMessage {
+       Request { id: Value, method: String, params: Option<Value> },
+       Response { id: Value, result: Option<Value>, error: Option<McpError> },
+       Notification { method: String, params: Option<Value> },
+   }
+   ```
+
+3. **Parser Interface**
+   ```rust
+   pub struct McpParser {
+       protocol_version: ProtocolVersion,
+   }
+   
+   impl McpParser {
+       pub fn parse(&self, data: &Value) -> Result<McpMessage>;
+       pub fn parse_batch(&self, data: &Value) -> Result<Vec<McpMessage>>;
+       pub fn extract_metadata(&self, msg: &McpMessage) -> MessageMetadata;
+   }
+   ```
+
+4. **Integration Points**
+   - Use existing `ProtocolVersion` from `src/mcp/protocol.rs`
+   - Build on `EarlyMcpParser` from `src/mcp/early_parser.rs`
+   - Support batch handling from `src/mcp/batch.rs`
+
+### Success Criteria
+
+1. ✅ Parser handles all MCP message types
+2. ✅ Supports both protocol versions
+3. ✅ Comprehensive error handling
+4. ✅ 20+ unit tests covering edge cases
+5. ✅ Documentation with examples
+6. ✅ Integration ready for proxies
+
+## Commands for Development
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Run SSE tests
-cargo test test_reverse_proxy_sse
-cargo test test_sse_get
+# Create the parser module
+touch src/mcp/parser.rs
 
-# Test the reverse proxy manually
-cargo run -- reverse --bind 127.0.0.1:8080
-
-# In another terminal, test SSE endpoint
-curl -H "Accept: text/event-stream" \
-     -H "Mcp-Session-Id: test-123" \
-     -H "MCP-Protocol-Version: 2025-06-18" \
-     http://localhost:8080/mcp
+# Run tests as you develop
+cargo test mcp::parser
 
 # Check for warnings
 cargo clippy --all-targets -- -D warnings
+
+# Run all tests
+cargo test
 ```
 
-## Key Implementation Details
+## Key Context
 
-### Dual-Method `/mcp` Endpoint
-- Located in `src/proxy/reverse.rs`
-- Router configuration: `.route("/mcp", post(handle_mcp_request).get(handle_mcp_sse_request))`
-- POST handler: `handle_mcp_request` - Returns JSON responses
-- GET handler: `handle_mcp_sse_request` - Returns SSE stream
+### Available Foundation
+From previous phases, we have:
+- `ProtocolVersion` enum with capability checks
+- `EarlyMcpParser` for basic parsing
+- `BatchHandler` for batch message support
+- `UnifiedEventIdGenerator` for correlation IDs
+- `MessageEnvelope` and `TransportContext` from refactor
 
-### SSE Proxy Implementation
-- Function: `proxy_sse_from_upstream` in `src/proxy/reverse.rs`
-- Uses `reqwest` streaming response parsing
-- Parses SSE format: event:, data:, id: fields
-- Forwards events through tokio channels
-- **Important**: Uses upstream URLs as-is (no path assumptions)
+### MCP Protocol Requirements
+- JSON-RPC 2.0 base protocol
+- Version 2025-03-26: Supports batching
+- Version 2025-06-18: No batching, requires version header
+- Methods: initialize, initialized, tools/*, prompts/*, resources/*
+- Error codes: -32700 (parse), -32600 (invalid), -32601 (method not found)
 
-### Session Integration
-- Sessions created/retrieved for both POST and GET
-- Protocol version validation enforced
-- Session ID required in headers
-- Proper cleanup on stream termination
-
-## Success Criteria for Next Session
-
-1. ✅ Complete R.4: Early Message Correlation
-2. ✅ All Phase 2 tests passing
-3. ✅ Begin Phase 3: Full MCP Parser (P.1)
-4. ✅ Document parser design decisions
-5. ✅ Update tracker with progress
-
-## Context from Tracker
-
-From `plans/proxy-sse-message-tracker.md`:
-- **Phase 0**: Foundation Components - 100% Complete ✅
-- **Phase 1**: SSE Transport with MCP Awareness - 100% Complete ✅
-- **Phase 2**: Reverse Proxy Streamable HTTP - 75% Complete (R.4 remaining)
-- **Phase 3**: Full MCP Parser and Correlation - 0% (Starting next)
+### Parser Design Decisions
+1. **Stateful vs Stateless**: Make parser stateless for simplicity
+2. **Validation Level**: Basic structural validation, leave semantic validation to higher layers
+3. **Error Recovery**: Return errors for invalid messages, don't try to fix them
+4. **Performance**: Optimize for common case (single messages), batch is rare
 
 ## Notes
 
-- The reverse proxy now fully supports the MCP Streamable HTTP transport
-- Both stdio and HTTP upstreams are supported
-- SSE streaming works with keepalive and proper connection management
-- **Important**: Upstream HTTP URLs must be complete (including path) - MCP doesn't mandate any specific path
-- Our reverse proxy exposes `/mcp`, but upstream URLs are used exactly as configured
-- Early message correlation (R.4) will enhance debugging and tracing
-- Phase 3 will add full MCP message parsing and validation
+- The parser is a critical component that will be used by interceptors, recorders, and correlation
+- Focus on correctness and comprehensive testing
+- Keep performance in mind but prioritize clarity
+- This parser will replace the early parser once complete
+- Consider streaming parsing for large messages in future iteration
 
 ---
 
-**Next Goal**: Complete R.4 to finish Phase 2, then begin Phase 3 with the full MCP parser implementation (P.1).
+**Next Goal**: Implement P.1 (Full MCP Parser) with comprehensive message type support and testing.

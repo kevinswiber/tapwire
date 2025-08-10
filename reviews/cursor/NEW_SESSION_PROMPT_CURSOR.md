@@ -1,10 +1,12 @@
-Session: Phase E kickoff — Security & Compliance
+Session: Phase F kickoff — Security hardening & test plans
 
 Repo/context
 - Working dir: tapwire/
 - Shadowcat snapshot (stable citations): shadowcat-cursor-review/ @ eec52c8 — analysis-only; DO NOT modify this snapshot
 - Shadowcat delta worktree (latest main): shadowcat-delta/ @ b793fd1 — read-only for analysis; DO NOT commit code here
 - Scope: Analysis-only. Update security analysis artifacts under `reviews/cursor/**`. Preserve existing `eec52c8` citations; add `shadowcat-delta/` citations where useful. No source edits.
+
+Timebox: 60–90 minutes focused analysis
 
 Pinned references
 - CURSOR_RUST_CODE_REVIEWER.md
@@ -21,19 +23,28 @@ Pinned references
 What changed last session
 - Completed Phase D perf analyses with delta citations: `perf/hot-paths.md`, `perf/recorder.md`, `perf/interceptors.md`
 - Updated `reviews/cursor/tracker.md` with Phase D marked complete and added a Phase D delta checklist
+- Created Phase E security analyses: `analysis/security/tokens.md` and `analysis/security/transport.md`
+- Updated `reviews/cursor/tracker.md` to reflect Phase E progress
 
-Tasks (Phase E)
-- E.1 Token handling and header scrubbing
-  - Verify client tokens are never forwarded upstream; ensure Authorization and related headers are scrubbed or regenerated at proxy boundaries.
-  - Inspect reverse/forward proxy HTTP paths and SSE HTTP client for header propagation. Confirm MCP headers are correct and no client secrets leak.
-  - Grep targets: `Authorization`, `Bearer`, `token`, `header`, `reqwest`, `request`, `proxy` in `shadowcat-delta/src/**`.
-  - Capture start:end:path citations and guidance in `reviews/cursor/analysis/security/tokens.md`.
+Verification (Phase E)
+- Confirm `reviews/cursor/analysis/security/tokens.md` includes allowlist guidance, SSE specifics, and exact citations.
+- Confirm `reviews/cursor/analysis/security/transport.md` captures PKCE/state, JWT/JWKS validation, bind/origin/DNS-rebinding guidance with citations.
+- Optional spot-check: re-run grep scans below to ensure no `Authorization` or `Cookie` headers are propagated to upstream in reverse HTTP/SSE paths.
 
-- E.2 OAuth 2.1 and transport security checks
-  - Review auth gateway components for OAuth 2.1 basics: PKCE, audience validation, token storage, JWT verification hygiene.
-  - Check transport security: origin validation, DNS rebinding protection, localhost defaults for dev, TLS expectations for prod.
-  - Grep targets: `oauth2`, `PKCE`, `jsonwebtoken`, `origin`, `Host`, `bind`, `Tls`, `https`, `axum`, `headers`.
-  - Document findings with exact citations in `reviews/cursor/analysis/security/transport.md`.
+Tasks (Phase F)
+- F.1 Security test plan and assertions
+  - Design tests to assert absence of `Authorization`/`Cookie` in upstream reverse HTTP and SSE requests; include positive/negative cases.
+  - Specify unit vs integration coverage and fixtures.
+  - Deliverable to create: `reviews/cursor/analysis/tests/security-plan.md`.
+
+- F.2 Origin/Host validation and trusted proxy design
+  - Propose validation rules for `Host`/`Origin` and trusted proxy handling for `X-Forwarded-*`.
+  - Define config toggles and defaults (dev vs prod).
+  - Deliverable to create: `reviews/cursor/analysis/security/origin-trusted-proxy.md`.
+
+- F.3 Header allowlist at proxy boundaries
+  - Draft allowlist/denylist for headers forwarded upstream; document rationale and migration plan.
+  - Deliverable to create: `reviews/cursor/analysis/security/header-allowlist.md`.
 
 - Tracker update
   - In `reviews/cursor/tracker.md`, add Phase E checklist/status and note any security deviations from prior guidance.
@@ -43,20 +54,30 @@ Suggested commands (analysis only)
   - cargo test -q --manifest-path shadowcat-delta/Cargo.toml
   - cargo clippy --manifest-path shadowcat-delta/Cargo.toml --all-targets -- -D warnings
 - Grep targets
-  - rg "Authorization|Bearer|token|reqwest|header|set_header|http::Header|MCP-Protocol-Version|Mcp-Session-Id" shadowcat-delta/src -n
-  - rg "oauth2|pkce|jsonwebtoken|origin|Host|bind|tls|https|Dns|rebind" shadowcat-delta/src -n -i
+  - rg -n -i "Authorization|Proxy-Authorization|Bearer|token|cookie|set-cookie|x-api-key|x-access-token|reqwest|header|HeaderMap|TypedHeader|http::Header|MCP-Protocol-Version|Mcp-Session-Id|sse|event-stream|last-event-id" shadowcat-delta/src
+  - rg -n -i "oauth2|pkce|jsonwebtoken|jwks|aud|iss|kid|origin|referer|Host|bind|tls|https|Dns|rebind|hsts|axum|headers" shadowcat-delta/src
 - Optional
   - Review reverse proxy request/response header flows and SSE client header usage
 
+Citations format reminder
+- Use exact start:end:path blocks for all findings. Example:
+```start:end:shadowcat-delta/src/proxy/http.rs
+// code excerpt showing header handling
+```
+
 Success criteria
-- `reviews/cursor/analysis/security/tokens.md` updated with token/header handling analysis and mitigation guidance
-- `reviews/cursor/analysis/security/transport.md` updated with OAuth 2.1 and transport security findings
-- `reviews/cursor/tracker.md` updated to reflect Phase E task statuses
+- Phase E verification complete (docs reviewed and grep spot-checks as needed)
+- Drafted plans for Phase F deliverables (docs created as listed above)
+
+Safety checklist
+- No edits to `shadowcat-cursor-review/` or `shadowcat-delta/` source code
+- Preserve `eec52c8` citations; add `b793fd1` delta citations where relevant
+- Do not include secrets, tokens, or real endpoints in examples
 
 Deliverables to update
-- reviews/cursor/analysis/security/tokens.md
-- reviews/cursor/analysis/security/transport.md
-- reviews/cursor/tracker.md (Phase E checklist/status)
+- reviews/cursor/analysis/tests/security-plan.md (new)
+- reviews/cursor/analysis/security/origin-trusted-proxy.md (new)
+- reviews/cursor/analysis/security/header-allowlist.md (new)
 
 Notes
 - Do not edit source code in either worktree during analysis

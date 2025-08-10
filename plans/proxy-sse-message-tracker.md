@@ -6,7 +6,7 @@ This is the primary tracker for implementing SSE proxy integration with MCP mess
 
 **Last Updated**: 2025-08-10  
 **Total Estimated Duration**: ~~120-140 hours~~ → 118-138 hours (F.5 exists from refactor)  
-**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅, Phase 2: 75% Complete (R.1-R.3 done)
+**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅, Phase 2: 100% Complete ✅
 
 ## Transport Naming Clarification
 
@@ -114,7 +114,7 @@ Implement the `/mcp` endpoint with MCP message understanding.
 | R.1 | **Create MCP-Aware Dual-Method Endpoint** | 3h | F.1-F.3 | ✅ Complete | 2025-08-10 | [Modified Task 2.1](sse-proxy-integration/tasks/task-2.1-dual-method-endpoint.md) |
 | R.2 | Implement SSE Response Handler | 4h | R.1, F.4 | ✅ Complete | 2025-08-10 | [Task 2.2](sse-proxy-integration/tasks/task-2.2-sse-response-handler.md) |
 | R.3 | Session-Aware SSE Streaming | 3h | R.2 | ✅ Complete | 2025-08-10 | Integrated with R.1/R.2 |
-| R.4 | **Add Early Message Correlation** | 2h | R.1, F.2 | ⬜ Not Started | | [Task Details](#r4-early-correlation) |
+| R.4 | **Add Early Message Correlation** | 2h | R.1, F.2 | ✅ Complete | 2025-08-10 | Integrated UnifiedEventIdGenerator |
 
 **Phase 2 Total**: 12 hours
 
@@ -185,6 +185,16 @@ Comprehensive testing of the integrated system.
 
 **Phase 7 Total**: 22 hours
 
+## Next Steps: Begin Phase 3
+
+With Phase 2 complete, we're ready to implement the full MCP parser and correlation engine:
+
+1. **P.1: Create Full MCP Parser** (6h) - Build comprehensive message parser with validation
+2. **P.2: Add Schema Validation** (4h) - Validate against MCP JSON-RPC schema
+3. **P.3: Implement Correlation Store** (5h) - Track request/response pairs
+4. **P.4: Add Request/Response Matching** (4h) - Match responses to requests
+5. **P.5: Integrate with Proxy** (5h) - Wire parser into forward/reverse proxies
+
 ## Glue Tasks Details
 
 These are the new tasks created specifically to connect the two initiatives:
@@ -224,6 +234,16 @@ These are the new tasks created specifically to connect the two initiatives:
 - Support for session ID and JSON-RPC ID correlation
 - SSE-compatible (newlines replaced with underscores)
 - 17 comprehensive tests including thread safety
+
+### R.4: Early Message Correlation ✅
+**Implementation**: Integrated into `src/proxy/reverse.rs` (Completed 2025-08-10)
+- Added UnifiedEventIdGenerator to reverse proxy AppState
+- Enhanced SSE proxy to generate correlation IDs for all events
+- Parse MCP messages from SSE data fields to extract JSON-RPC IDs
+- Generate session-aware event IDs with format: `{session}-{node}-{json_rpc_id}-{counter}`
+- Preserve upstream event IDs while adding correlation info
+- Handle both requests/responses and notifications
+- Tests updated and passing
 
 ### F.5: Message Context
 **File**: `src/mcp/context.rs`
