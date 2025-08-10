@@ -94,4 +94,46 @@ async fn handle_metrics(...) -> impl IntoResponse { /* builds Prometheus text ou
 - Ensure single transport `close()` invocation and await during shutdown.
 
 ### Addendum (Delta)
-Delta findings against `shadowcat-delta@b793fd1` will be appended here (shutdown sequencing, interceptor effects, recording context accuracy), preserving existing `eec52c8` citations.
+Delta findings against `shadowcat-delta@b793fd1` (preserving existing `eec52c8` citations):
+
+- Recording/context accuracy in reverse proxy: both inbound POST and outbound responses record with `TransportContext::http("POST", "/mcp/v1/sse")`:
+
+```749:756:shadowcat-delta/src/proxy/reverse.rs
+let context = MessageContext::new(
+    &session_id,
+    MessageDirection::ClientToServer,
+    TransportContext::http("POST".to_string(), "/mcp/v1/sse".to_string()),
+);
+```
+
+```814:821:shadowcat-delta/src/proxy/reverse.rs
+let context = MessageContext::new(
+    &session_id,
+    MessageDirection::ServerToClient,
+    TransportContext::http("POST".to_string(), "/mcp/v1/sse".to_string()),
+);
+```
+
+- Session recording sites that still default to stdio context when the edge is known:
+
+```834:841:shadowcat-delta/src/session/manager.rs
+let context = MessageContext::new(
+    session_id,
+    direction,
+    TransportContext::stdio(), // Default context - could be improved
+);
+```
+
+This matches the Phase C note to improve accuracy by using the actual transport edge in recording paths where available.
+
+- Interceptor behavior and shutdown sequencing (forward proxy): intercept actions are implemented with Continue/Modify/Block/Mock/Pause/Delay branches; shutdown relies on signaling then aborting tasks.
+
+```533:607:shadowcat-delta/src/proxy/forward.rs
+match interceptor_chain.intercept(&intercept_context).await { /* Continue/Modify/Block/Mock/Pause/Delay */ }
+```
+
+```651:669:shadowcat-delta/src/proxy/forward.rs
+pub async fn shutdown(&mut self) -> Result<()> { /* send signal; abort tasks; stop recording; complete session */ }
+```
+
+Observation: cooperative join-with-timeout isn’t implemented yet; tasks are aborted directly. Behavior aligns with earlier baseline and Phase C recommendations remain applicable.

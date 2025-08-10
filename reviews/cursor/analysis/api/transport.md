@@ -162,4 +162,76 @@ let context = MessageContext::new(
 - Cite `TransportConfig` as single source of truth for timeouts/limits.
 
 ### Addendum (Delta)
-Delta findings against `shadowcat-delta@b793fd1` will be appended here (header write/read behaviors, timeout/size-limit parity), preserving existing `eec52c8` citations.
+Delta findings against `shadowcat-delta@b793fd1` (preserving existing `eec52c8` citations):
+
+- Header casing — writers use canonical casing on outbound; readers use lower-case lookups.
+  - Writers (HTTP client transport and reverse proxy builders):
+
+```97:101:shadowcat-delta/src/transport/http.rs
+.header("MCP-Protocol-Version", MCP_PROTOCOL_VERSION)
+.header("Mcp-Session-Id", self.session_id.to_string())
+.header("Accept", "application/json, text/event-stream");
+```
+
+```1420:1435:shadowcat-delta/src/proxy/reverse.rs
+let mut request_builder = client
+    .post(url)
+    .header("Content-Type", "application/json")
+    .header("MCP-Protocol-Version", session.version_state.get_active_version().unwrap_or(&crate::protocol::DEFAULT_PROTOCOL_VERSION.to_string()))
+    .header("MCP-Session-Id", session.id.to_string());
+```
+
+  - SSE writers adhere to canonical casing, including "Mcp-Session-Id":
+
+```286:301:shadowcat-delta/src/transport/sse/session.rs
+headers.insert("MCP-Protocol-Version", value);
+headers.insert("Mcp-Session-Id", value);
+headers.insert("Last-Event-Id", value);
+```
+
+  - Readers use lower-case keys for extraction and validation:
+
+```56:76:shadowcat-delta/src/transport/http_mcp.rs
+let session_id = headers.get("mcp-session-id")...;
+let protocol_version = headers.get("mcp-protocol-version")...;
+```
+
+```1470:1492:shadowcat-delta/src/proxy/reverse.rs
+if let Some(protocol_version) = headers.get("mcp-protocol-version") { ... }
+if let Some(session_id) = headers.get("mcp-session-id") { ... }
+```
+
+- Timeouts and size limits parity
+  - Stdio: outbound and inbound size checks; send/recv wrapped in `tokio::time::timeout` using `TransportConfig.timeout_ms`.
+
+```315:334:shadowcat-delta/src/transport/stdio.rs
+if serialized.len() > self.config.max_message_size { return Err(TransportError::MessageTooLarge { size: serialized.len(), limit: self.config.max_message_size }); }
+timeout(send_timeout, stdin_tx.send(serialized))... TransportError::Timeout("Send timeout")
+```
+
+```351:354:shadowcat-delta/src/transport/stdio.rs
+let line = timeout(recv_timeout, stdout_rx.recv()).await.map_err(|_| TransportError::Timeout("Receive timeout".to_string()))?
+```
+
+  - HTTP: serialized body length enforced; request future wrapped in `timeout(Duration::from_millis(self.config.timeout_ms), ...)`.
+
+```86:109:shadowcat-delta/src/transport/http.rs
+if body_str.len() > self.config.max_message_size { return Err(TransportError::MessageTooLarge { size: body_str.len(), limit: self.config.max_message_size }); }
+let response = timeout(Duration::from_millis(self.config.timeout_ms), request.send()).await.map_err(|_| TransportError::Timeout("HTTP request timed out".to_string()))?
+```
+
+  - SSE client utilities use configured connection timeouts; reconnect and close paths bounded with `timeout`:
+
+```45:48:shadowcat-delta/src/transport/sse/client.rs
+Client::builder().timeout(config.connection_timeout).build()
+```
+
+```607:607:shadowcat-delta/src/transport/sse/client.rs
+let _ = timeout(Duration::from_secs(1), manager.close_connection(id)).await;
+```
+
+- TransportContext accuracy examples for HTTP and SSE remain aligned; ensure examples in `api/docs.md` reflect canonical headers and lower-case reads.
+
+Reconciliation notes:
+- Keep examples with `MCP-Protocol-Version`/`Mcp-Session-Id` on write, and `mcp-protocol-version`/`mcp-session-id` on read.
+- Timeout errors surface as `TransportError::Timeout` in transports; reverse proxy currently aggregates upstream errors as 502 (see errors addendum) without 504 distinction.

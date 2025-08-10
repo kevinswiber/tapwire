@@ -143,6 +143,18 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 1. Run delta audit against `shadowcat-delta@b793fd1`; append “Addendum (Delta)” sections with new citations to relevant `analysis/api/*.md` docs.
 2. Keep current snapshot citations pinned to `eec52c8` for stability.
 
+## Delta Audit (Shadowcat main @ b793fd1)
+- [x] Error mapping (reverse proxy)
+  - Findings captured in `analysis/api/errors.md` Addendum with citations to `src/proxy/reverse.rs` and `src/error.rs` (lack of 504, auth maps to 500, rate limit via middleware 429)
+- [x] Header casing (write/read)
+  - Writers canonical casing; readers lower-case lookups confirmed. Citations added in `analysis/api/transport.md` Addendum
+- [x] Timeouts and size limits parity
+  - `TransportConfig` honored in stdio/http; `MessageTooLarge` and `timeout()` usage cited in `analysis/api/transport.md` Addendum
+- [x] Recording and context accuracy
+  - Reverse proxy records with `TransportContext::http(...)`; some session/recorder defaults still `stdio()`. Captured in `analysis/api/proxy-session.md` Addendum
+- [x] Interceptor behavior and shutdown sequencing
+  - Forward proxy intercept branches and `shutdown()` behavior cited in `analysis/api/proxy-session.md`; note about lacking cooperative join-with-timeout
+
 ---
 
 **Document Version**: 0.6  

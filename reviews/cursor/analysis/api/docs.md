@@ -191,4 +191,11 @@ References:
 Document version: 0.3 (Phase C updates)
 
 ### Addendum (Delta)
-This document will be extended with delta findings against `shadowcat-delta@b793fd1` (latest main worktree). Preserve existing citations to `shadowcat-cursor-review@eec52c8` for stability; new citations will reference files under `shadowcat-delta/`.
+Delta findings against `shadowcat-delta@b793fd1`:
+
+- Error mapping behavior aligns with baseline for -32600 and -32603, but does not yet surface 504 or custom -3200x codes via reverse proxy error type. See mappings and discussion in `api/errors.md` Addendum, with citations to `shadowcat-delta/src/proxy/reverse.rs` and `shadowcat-delta/src/error.rs`.
+- Header casing guidance confirmed:
+  - Writers use `MCP-Protocol-Version` and `Mcp-Session-Id` (e.g., `shadowcat-delta/src/transport/http.rs` 97:101; `shadowcat-delta/src/transport/sse/session.rs` 286:301).
+  - Readers use lower-case lookups `mcp-protocol-version`, `mcp-session-id` (e.g., `shadowcat-delta/src/transport/http_mcp.rs` 56:76; `shadowcat-delta/src/proxy/reverse.rs` 1470:1492).
+- Timeouts and size limits enforced in stdio and http transports via `TransportConfig` with `tokio::time::timeout` and `MessageTooLarge` checks (see `shadowcat-delta/src/transport/stdio.rs` 315:334, 351:354; `shadowcat-delta/src/transport/http.rs` 86:109).
+- Recording/context: reverse proxy builds `TransportContext::http(...)` for HTTP and SSE endpoints during record (e.g., `shadowcat-delta/src/proxy/reverse.rs` 749:756, 814:821). Some recorder/session paths elsewhere still default to `TransportContext::stdio()`; see `api/proxy-session.md` Addendum for details.
