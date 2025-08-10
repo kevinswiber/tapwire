@@ -3,23 +3,27 @@
 Short template per CURSOR_RUST_CODE_REVIEWER.md.
 
 - Summary:
-  - After rebasing onto `origin/main` (branch `cursor-review`), all checks are green.
+  - On workspace `shadowcat-cursor-review/` at commit `eec52c8`, all checks are green.
   - fmt: clean
   - clippy: clean (no warnings with `-D warnings`)
   - tests: all green
+
+- Command results:
+  - `cargo fmt --all --check`: passed
+  - `cargo clippy --all-targets -- -D warnings`: passed
+  - `cargo test`: passed
+
+- Test totals:
+  - Unit tests: 613 passed
+  - Integration tests: 124 passed (25 + 26 + 24 + 22 + 4 + 4 + 4 + 5 + 10)
+  - Doc-tests: 1 passed, 4 ignored
+  - Overall: 738 passed; 0 failed
 
 - Critical Issues:
   - None.
 
 - Observations:
-  - Rebase details
-    - Checked out tracking branch: `cursor-review` -> `origin/main` (commit `dd808af`).
-  - Formatting
-    - `cargo fmt --all --check`: passed.
-  - Lints
-    - Previous clippy error (manual strip in `mcp/event_id.rs`) resolved upstream; file has been removed/renamed and no longer present.
-  - Tests
-    - `cargo test`: passed across units and integration.
+  - Event ID prefix slicing issue already fixed upstream; not re-flagged per notes.
 
 - Suggestions:
   - Keep `fmt` and `clippy -D warnings` in CI to preserve green baseline.

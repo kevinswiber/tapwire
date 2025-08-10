@@ -30,8 +30,8 @@ Establish baseline understanding, inventory critical modules, and define measure
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | A.1 | **Repo inventory and map critical modules** | 2h | None | ✅ Complete | | Deliverable: module map in `analysis/findings/modules.md` |
-| A.2 | **Review build, lint, and test status** | 2h | A.1 | 🔄 In Progress | | Run `cargo fmt --check`, `clippy -D warnings`, `cargo test`; capture results in `analysis/tests/status.md` |
-| A.3 | **Identify hot paths and workloads** | 1.5h | A.1 | 🔄 In Progress | | Define microbench/observability plan in `analysis/perf/workloads.md` |
+| A.2 | **Review build, lint, and test status** | 2h | A.1 | ✅ Complete | | All green on `shadowcat-cursor-review@eec52c8`; results in `analysis/tests/status.md` |
+| A.3 | **Identify hot paths and workloads** | 1.5h | A.1 | ✅ Complete | | Payload classes and scenarios documented in `analysis/perf/workloads.md` |
 | A.4 | **Define review scope and priorities** | 1h | A.1–A.3 | ⬜ Not Started | | Draft scope doc in `analysis/findings/scope.md` |
 
 **Phase A Total**: 6.5 hours
@@ -91,8 +91,8 @@ Validate auth gateway basics, token handling, and transport security checks.
 
 ### Week 1 (2025‑08‑11 → 2025‑08‑15)
 - [x] A.1: Repo inventory and map critical modules
-- [ ] A.2: Review build, lint, and test status
-- [ ] A.3: Identify hot paths and workloads
+- [x] A.2: Review build, lint, and test status
+- [x] A.3: Identify hot paths and workloads
 
 ### Completed Tasks
 - [x] A.1 — Modules mapped (`analysis/findings/modules.md`)
@@ -137,9 +137,7 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Run fmt/clippy/tests and fill `analysis/tests/status.md` with concrete results.
-2. Expand A.3 with concrete payloads and benchmark skeletons.
-3. Queue Phase B tasks (unsafe and cancellation) for next session.
+1. Queue Phase B tasks (unsafe and cancellation) for next session.
 
 ---
 
