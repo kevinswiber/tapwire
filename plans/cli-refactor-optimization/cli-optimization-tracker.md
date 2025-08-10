@@ -65,9 +65,9 @@ Remove immediate blockers to library usage
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| A.1 | **Make CLI Module Private** | 2h | None | ⬜ Not Started | | [Details](tasks/A.1-make-cli-private.md) |
-| A.2 | **Remove Exit() Calls** | 2h | A.1 | ⬜ Not Started | | [Details](tasks/A.2-remove-exit-calls.md) |
-| A.3 | **Fix Configuration Duplication** | 3h | A.1, A.2 | ⬜ Not Started | | [Details](tasks/A.3-fix-config-duplication.md) |
+| A.1 | **Make CLI Module Private** | 2h | None | ✅ Complete | | [Details](tasks/A.1-make-cli-private.md) |
+| A.2 | **Remove Exit() Calls** | 2h | A.1 | ✅ Complete | | [Details](tasks/A.2-remove-exit-calls.md) |
+| A.3 | **Fix Configuration Duplication** | 3h | A.1, A.2 | ✅ Complete | | [Details](tasks/A.3-fix-config-duplication.md) |
 
 **Phase A Total**: 7 hours
 
