@@ -1,63 +1,88 @@
-Session: Phase C wrap-up (Public API docs) → prepare Delta Audit
+Session: Delta Audit kickoff (Shadowcat main) — addenda to Phase C docs
 
 Repo/context
-- Working dir: shadowcat-cursor-review/
-- Branch: current HEAD (do not rebase this snapshot)
-- Commit: eec52c8 (perf(mcp): optimize event ID generator for high throughput)
-- Scope: analysis-only; DO NOT modify source files. Write artifacts under reviews/cursor/**
-- Important: This review operates on a static snapshot for citation stability. Do not rebase. A separate delta audit against latest main will be done after Phase C.
+- Working dir: tapwire/
+- Shadowcat snapshot (stable citations): shadowcat-cursor-review/ @ eec52c8 — analysis-only; DO NOT modify this snapshot
+- Shadowcat delta worktree (latest main): shadowcat-delta/ @ b793fd1 — read-only for analysis; DO NOT commit code here
+- Scope: Update analysis artifacts under reviews/cursor/** only. Preserve existing eec52c8 citations; append new “Addendum (Delta)” sections citing shadowcat-delta/ paths
 
 Pinned references
 - CURSOR_RUST_CODE_REVIEWER.md
 - reviews/cursor/tracker.md
 - reviews/cursor/analysis/README.md
-- reviews/cursor/analysis/findings/baseline.md
-- reviews/cursor/analysis/safety/unsafe-audit.md
-- reviews/cursor/analysis/async/cancellation.md
-- reviews/cursor/analysis/async/locking.md
-- reviews/cursor/analysis/async/proposals.md
+- reviews/cursor/analysis/api/docs.md (v0.3)
+- reviews/cursor/analysis/api/errors.md
 - reviews/cursor/analysis/api/transport.md
 - reviews/cursor/analysis/api/proxy-session.md
-- reviews/cursor/analysis/api/errors.md
-- reviews/cursor/analysis/api/docs.md
 
 What changed last session
-- C.1–C.3 finalized with precise citations and concrete recommendations (timeouts/size limits, header casing, cooperative shutdown, interceptor effects, metrics, error taxonomy).
-- C.4 upgraded: public API `docs.md` moved to v0.2 with context construction, shutdown token example, and interceptor behaviors.
-- Tracker updated to v0.5: C.1–C.3 complete; C.4 in progress; delta audit next.
+- Phase C C.4 finalized: public API docs updated to v0.3 (error mapping table, cross-links, casing guidance)
+- Delta worktree created at shadowcat-delta/ commit b793fd1; tests and clippy passed
+- “Addendum (Delta)” stubs appended to API analysis docs; tracker bumped to 0.6 and C.4 marked complete
 
 Tasks
-- C.4 Public API docs/examples (finalize):
-  - Update `reviews/cursor/analysis/api/docs.md` from v0.2 → v0.3 by:
-    - Adding a compact error mapping table (-32600/400, -32603/502-504, -32001/429 with retry-after, -32002/401-403, -32010 domain).
-    - Cross-linking to citations in `errors.md`, `transport.md`, `proxy-session.md` for each row.
-    - Ensuring header casing guidance has both write/read citations and matches examples.
-    - Keeping examples conceptual; no source edits.
+- Populate Addendum (Delta) sections with shadowcat-delta citations (keep existing eec52c8 content intact):
+  1) Error mapping (reverse proxy)
+     - Validate status and JSON-RPC code mapping in shadowcat-delta/src/proxy/reverse.rs:
+       - -32600 → 400 for client input/header errors
+       - -32603 → 502/504 for upstream failures vs explicit timeouts
+       - -32001 → 429 with Retry-After when available
+       - -32002 → 401/403 for authN/Z
+       - -32010 → 400/409 for replay/recording domain
+     - Capture exact IntoResponse mapping and any helper methods (to_http_status, error body construction) with start:end:path citations
+     - Update `reviews/cursor/analysis/api/errors.md` Addendum with findings and note any divergences
 
-- Prepare Delta Audit (do not modify this snapshot):
-  - Create a fresh worktree of the Shadowcat repo at latest `main` in a sibling directory (example commands below). Do NOT rebase or alter `shadowcat-cursor-review/`.
-  - Record the new worktree path and commit hash in `reviews/cursor/tracker.md` and add “Addendum” stubs to each relevant analysis doc noting that delta findings will be appended with separate citations.
-  - Example commands (run in the Shadowcat repo, not this snapshot):
-    - Ensure submodule is fetched: `git submodule update --init --recursive`
-    - From the Shadowcat repo: `git worktree add ../shadowcat-delta main`
-    - Verify: `git -C ../shadowcat-delta rev-parse --short HEAD`
-    - Baseline checks: `cargo -C ../shadowcat-delta test`, `cargo -C ../shadowcat-delta clippy --all-targets -- -D warnings`
-  - Do not commit code; only update analysis docs in this Tapwire repo.
+  2) Header casing (write/read)
+     - Writers: confirm canonical casing in shadowcat-delta/src/transport/http.rs and any SSE header builders
+       - Expect: "MCP-Protocol-Version", "Mcp-Session-Id", etc.
+     - Readers: confirm case-insensitive extraction in shadowcat-delta/src/transport/http_mcp.rs and reverse proxy request paths
+       - Expect: lower-case lookups like "mcp-protocol-version"
+     - Update `reviews/cursor/analysis/api/transport.md` Addendum with both write/read citations and reconcile examples in `api/docs.md`
 
-After Phase C (next session or following):
-- Run the delta audit against the new worktree and append “Addendum” sections to each C.* doc with new citations. Preserve existing citations to `eec52c8` for stability.
+  3) Timeouts and size limits parity
+     - Confirm `TransportConfig.timeout_ms` and `max_message_size` enforced in stdio and http transports
+       - Look for tokio::time::timeout usage and MessageTooLarge branches in shadowcat-delta/src/transport/stdio.rs and http.rs
+     - Add citations and note any changed behaviors or error variants in `api/transport.md` Addendum; reflect in `api/docs.md` if needed
+
+  4) Recording and context accuracy
+     - Verify construction of `MessageContext`/`TransportContext` in shadowcat-delta paths:
+       - reverse proxy: correct TransportContext::http for endpoints (SSE/HTTP)
+       - session recording sites: ensure no default TransportContext::stdio() leaks when HTTP edge is known
+     - Update `api/proxy-session.md` Addendum with precise before/after if behavior changed; cite exact lines
+
+  5) Interceptor behavior and shutdown sequencing
+     - Note any changes to interceptor effects or forward proxy shutdown (token/joins vs aborts)
+     - Add citations in `api/proxy-session.md` Addendum
+
+- Tracker update
+  - In `reviews/cursor/tracker.md`, add a short Delta Audit section with a checklist for the above, and record any notable deviations from the Phase C taxonomy or guidance
+
+Suggested commands (do not modify code; analysis only)
+- Verify delta worktree state
+  - git -C shadowcat-delta rev-parse --short HEAD
+  - cargo test -q --manifest-path shadowcat-delta/Cargo.toml
+  - cargo clippy --manifest-path shadowcat-delta/Cargo.toml --all-targets -- -D warnings
+
+- Find relevant code quickly (use ripgrep)
+  - rg "impl IntoResponse for ReverseProxyError" shadowcat-delta/src -n
+  - rg "MCP-Protocol-Version|Mcp-Session-Id" shadowcat-delta/src -n
+  - rg "mcp-protocol-version" shadowcat-delta/src -n
+  - rg "timeout\(|MessageTooLarge" shadowcat-delta/src -n
+  - rg "TransportContext::stdio\(|TransportContext::http\(" shadowcat-delta/src -n
 
 Success criteria
-- `analysis/api/docs.md` updated to v0.3 with an error mapping table, cross-links, and casing notes.
-- “Delta audit prep” instructions captured with verified worktree commands; tracker updated with delta worktree path and commit hash.
-- No code changes; only documentation and planning artifacts updated.
+- Addendum sections in `api/docs.md`, `api/errors.md`, `api/transport.md`, `api/proxy-session.md` updated with shadowcat-delta citations and concise findings
+- Existing eec52c8 content preserved; new examples stay conceptual and aligned with taxonomy
+- `reviews/cursor/tracker.md` updated with a Delta Audit checklist/status
 
 Deliverables to update
-- reviews/cursor/analysis/api/docs.md (v0.3)
-- reviews/cursor/tracker.md (record delta worktree path/hash; move C.4 to complete)
-- reviews/cursor/analysis/* (optional “Addendum (Delta)” stubs appended where relevant)
+- reviews/cursor/analysis/api/docs.md (Addendum section content)
+- reviews/cursor/analysis/api/errors.md (Addendum content)
+- reviews/cursor/analysis/api/transport.md (Addendum content)
+- reviews/cursor/analysis/api/proxy-session.md (Addendum content)
+- reviews/cursor/tracker.md (Delta section + checklist)
 
 Notes
-- Don’t change code; artifacts only.
-- Cite files/lines and propose fixes without implementing.
-- Maintain citation stability; do not rebase snapshot. A separate worktree will be created post-Phase C for delta analysis.
+- Do not edit source code in either worktree during analysis
+- Maintain citation stability: use shadowcat-cursor-review@eec52c8 for baseline and shadowcat-delta@b793fd1 for delta
+- Prefer exact start:end:path citations; keep examples conceptual without code edits

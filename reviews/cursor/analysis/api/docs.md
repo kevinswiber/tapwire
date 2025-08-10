@@ -189,3 +189,6 @@ References:
 - `reviews/cursor/analysis/api/proxy-session.md` — lifecycle, interceptor effects, and context accuracy
 
 Document version: 0.3 (Phase C updates)
+
+### Addendum (Delta)
+This document will be extended with delta findings against `shadowcat-delta@b793fd1` (latest main worktree). Preserve existing citations to `shadowcat-cursor-review@eec52c8` for stability; new citations will reference files under `shadowcat-delta/`.

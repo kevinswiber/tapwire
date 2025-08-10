@@ -92,3 +92,6 @@ async fn handle_metrics(...) -> impl IntoResponse { /* builds Prometheus text ou
 - Document how to construct accurate `TransportContext` for recordings from proxy readers.
 - Note metrics improvement and state counters for observability in docs.
 - Ensure single transport `close()` invocation and await during shutdown.
+
+### Addendum (Delta)
+Delta findings against `shadowcat-delta@b793fd1` will be appended here (shutdown sequencing, interceptor effects, recording context accuracy), preserving existing `eec52c8` citations.

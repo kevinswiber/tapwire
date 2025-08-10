@@ -160,3 +160,6 @@ let context = MessageContext::new(
 - Document canonical header casing and case-insensitive reads.
 - Note replay receive await-outside-lock improvement for future edits.
 - Cite `TransportConfig` as single source of truth for timeouts/limits.
+
+### Addendum (Delta)
+Delta findings against `shadowcat-delta@b793fd1` will be appended here (header write/read behaviors, timeout/size-limit parity), preserving existing `eec52c8` citations.

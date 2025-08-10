@@ -78,3 +78,6 @@ timeout(...).await.map_err(|_| TransportError::Timeout("Connection health check 
 - Add error taxonomy section to developer docs; align CLI exit codes with HTTP statuses.
 - Encourage `context("while sending HTTP request to {url}")` style around IO.
 - Document examples of `error.data` with `type`, `status`, and optional `retry_after`.
+
+### Addendum (Delta)
+Delta findings against `shadowcat-delta@b793fd1` will be appended here, preserving existing `eec52c8` citations.
