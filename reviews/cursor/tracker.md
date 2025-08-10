@@ -64,9 +64,9 @@ Focus on hot‑path performance, recording engine overhead, and interceptor chai
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| D.1 | **Hot‑path allocation and logging audit** | 2h | A.3 | ⬜ Not Started | | Use `tracing`; minimize clones; `analysis/perf/hot-paths.md` |
-| D.2 | **Recorder overhead and memory usage** | 1.5h | A.3 | ⬜ Not Started | | Tape storage, streaming, buffering; `analysis/perf/recorder.md` |
-| D.3 | **Interceptor chain performance** | 1.5h | A.3 | ⬜ Not Started | | Rule evaluation cost; `analysis/perf/interceptors.md` |
+| D.1 | **Hot‑path allocation and logging audit** | 2h | A.3 | ✅ Complete | | Findings/citations added with delta refs; see `analysis/perf/hot-paths.md` |
+| D.2 | **Recorder overhead and memory usage** | 1.5h | A.3 | ✅ Complete | | Overhead and proposals documented; see `analysis/perf/recorder.md` |
+| D.3 | **Interceptor chain performance** | 1.5h | A.3 | ✅ Complete | | Metrics/logging overhead, engine eval; `analysis/perf/interceptors.md` |
 
 **Phase D Total**: 5 hours
 
@@ -140,8 +140,13 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Run delta audit against `shadowcat-delta@b793fd1`; append “Addendum (Delta)” sections with new citations to relevant `analysis/api/*.md` docs.
-2. Keep current snapshot citations pinned to `eec52c8` for stability.
+1. Optionally run build/lint/tests on `shadowcat-delta@b793fd1` to validate no clippy regressions in hot paths.
+2. Keep current snapshot citations pinned to `eec52c8`; deltas referenced where relevant in perf docs.
+
+## Delta Audit — Phase D checklist
+- [x] D.1 Hot-path allocations/logging reviewed with exact citations (stdio, SSE, forward proxy)
+- [x] D.2 Recorder buffering/locking/IO analyzed; recommendations recorded
+- [x] D.3 Interceptor chain evaluation/metrics costs analyzed; guidance added
 
 ## Delta Audit (Shadowcat main @ b793fd1)
 - [x] Error mapping (reverse proxy)

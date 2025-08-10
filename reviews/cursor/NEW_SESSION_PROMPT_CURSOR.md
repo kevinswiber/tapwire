@@ -1,10 +1,10 @@
-Session: Phase D kickoff — Performance, Recording, Interceptors
+Session: Phase E kickoff — Security & Compliance
 
 Repo/context
 - Working dir: tapwire/
 - Shadowcat snapshot (stable citations): shadowcat-cursor-review/ @ eec52c8 — analysis-only; DO NOT modify this snapshot
 - Shadowcat delta worktree (latest main): shadowcat-delta/ @ b793fd1 — read-only for analysis; DO NOT commit code here
-- Scope: Analysis-only. Update performance analysis artifacts under `reviews/cursor/**`. Preserve existing `eec52c8` citations; add `shadowcat-delta/` citations where useful. No source edits.
+- Scope: Analysis-only. Update security analysis artifacts under `reviews/cursor/**`. Preserve existing `eec52c8` citations; add `shadowcat-delta/` citations where useful. No source edits.
 
 Pinned references
 - CURSOR_RUST_CODE_REVIEWER.md
@@ -19,50 +19,44 @@ Pinned references
 - reviews/cursor/analysis/perf/interceptors.md
 
 What changed last session
-- Completed Delta Audit addenda for Phase C docs; added exact citations to `shadowcat-delta@b793fd1`
-- Tracker updated with Delta Audit checklist marked complete
+- Completed Phase D perf analyses with delta citations: `perf/hot-paths.md`, `perf/recorder.md`, `perf/interceptors.md`
+- Updated `reviews/cursor/tracker.md` with Phase D marked complete and added a Phase D delta checklist
 
-Tasks (Phase D)
-- D.1 Hot-path allocation and logging audit
-  - Identify high-frequency paths (transports, reverse/forward proxy loops) with unnecessary allocations/clones and verbose logging in tight loops.
-  - Search patterns: `clone\(`, `to_string\(`, `format!\(`, `serde_json::to_string`, frequent `tracing::debug!`/`info!` inside loops.
-  - Capture start:end:path citations and recommendations in `reviews/cursor/analysis/perf/hot-paths.md`.
+Tasks (Phase E)
+- E.1 Token handling and header scrubbing
+  - Verify client tokens are never forwarded upstream; ensure Authorization and related headers are scrubbed or regenerated at proxy boundaries.
+  - Inspect reverse/forward proxy HTTP paths and SSE HTTP client for header propagation. Confirm MCP headers are correct and no client secrets leak.
+  - Grep targets: `Authorization`, `Bearer`, `token`, `header`, `reqwest`, `request`, `proxy` in `shadowcat-delta/src/**`.
+  - Capture start:end:path citations and guidance in `reviews/cursor/analysis/security/tokens.md`.
 
-- D.2 Recorder overhead and memory usage
-  - Inspect `recorder/` modules and `SessionManager::record_frame` call sites for synchronous IO, large in-memory buffers, locking granularity, and duplication.
-  - Note opportunities for streaming, batching, and reducing copies; add citations to `reviews/cursor/analysis/perf/recorder.md`.
-
-- D.3 Interceptor chain performance
-  - Analyze `interceptor/` (e.g., rules engine, file watcher) for per-message overhead, locking, and metrics emission cost.
-  - Document hotspots and suggestions (e.g., precompiled predicates, bounded async work) in `reviews/cursor/analysis/perf/interceptors.md` with citations.
+- E.2 OAuth 2.1 and transport security checks
+  - Review auth gateway components for OAuth 2.1 basics: PKCE, audience validation, token storage, JWT verification hygiene.
+  - Check transport security: origin validation, DNS rebinding protection, localhost defaults for dev, TLS expectations for prod.
+  - Grep targets: `oauth2`, `PKCE`, `jsonwebtoken`, `origin`, `Host`, `bind`, `Tls`, `https`, `axum`, `headers`.
+  - Document findings with exact citations in `reviews/cursor/analysis/security/transport.md`.
 
 - Tracker update
-  - In `reviews/cursor/tracker.md`, add a short Delta Audit section with a checklist for the above, and record any notable deviations from the Phase C taxonomy or guidance
+  - In `reviews/cursor/tracker.md`, add Phase E checklist/status and note any security deviations from prior guidance.
 
 Suggested commands (analysis only)
 - Build/lint/tests
   - cargo test -q --manifest-path shadowcat-delta/Cargo.toml
   - cargo clippy --manifest-path shadowcat-delta/Cargo.toml --all-targets -- -D warnings
 - Grep targets
-  - rg "clone\(|to_string\(|format!\(" shadowcat-delta/src -n
-  - rg "tracing::(debug|info)!\(" shadowcat-delta/src -n
-  - rg "record_frame\(|TapeRecorder" shadowcat-delta/src -n
-  - rg "Interceptor|RuleBasedInterceptor|engine" shadowcat-delta/src -n
-- Optional (local profiling)
-  - cargo bench --manifest-path shadowcat-delta/Cargo.toml
-  - cargo flamegraph (see `CLAUDE.md` for usage)
+  - rg "Authorization|Bearer|token|reqwest|header|set_header|http::Header|MCP-Protocol-Version|Mcp-Session-Id" shadowcat-delta/src -n
+  - rg "oauth2|pkce|jsonwebtoken|origin|Host|bind|tls|https|Dns|rebind" shadowcat-delta/src -n -i
+- Optional
+  - Review reverse proxy request/response header flows and SSE client header usage
 
 Success criteria
-- `reviews/cursor/analysis/perf/hot-paths.md` updated with top hotspots, citations, and recommendations
-- `reviews/cursor/analysis/perf/recorder.md` updated with recorder/storage overhead analysis and proposals
-- `reviews/cursor/analysis/perf/interceptors.md` updated with interceptor-chain performance findings
-- `reviews/cursor/tracker.md` updated to reflect Phase D task statuses
+- `reviews/cursor/analysis/security/tokens.md` updated with token/header handling analysis and mitigation guidance
+- `reviews/cursor/analysis/security/transport.md` updated with OAuth 2.1 and transport security findings
+- `reviews/cursor/tracker.md` updated to reflect Phase E task statuses
 
 Deliverables to update
-- reviews/cursor/analysis/perf/hot-paths.md
-- reviews/cursor/analysis/perf/recorder.md
-- reviews/cursor/analysis/perf/interceptors.md
-- reviews/cursor/tracker.md (Phase D checklist/status)
+- reviews/cursor/analysis/security/tokens.md
+- reviews/cursor/analysis/security/transport.md
+- reviews/cursor/tracker.md (Phase E checklist/status)
 
 Notes
 - Do not edit source code in either worktree during analysis
