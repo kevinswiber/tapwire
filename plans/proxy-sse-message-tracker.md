@@ -4,9 +4,26 @@
 
 This is the primary tracker for implementing SSE proxy integration with MCP message handling capabilities. It interleaves work from both initiatives to maximize code reuse and ensure components work together seamlessly.
 
-**Last Updated**: 2025-08-08  
+**Last Updated**: 2025-08-10  
 **Total Estimated Duration**: ~~120-140 hours~~ → 118-138 hours (F.5 exists from refactor)  
-**Status**: Planning Complete, Ready to Start Phase 0
+**Status**: Phase 0 Complete, Phase 1 In Progress (S.1 & S.2 Complete)
+
+## Transport Naming Clarification
+
+**Important**: The MCP specification terminology can be confusing:
+- **MCP 2024-11-05**: Called it "HTTP+SSE transport" (deprecated)
+- **MCP 2025-03-26**: Renamed to "Streamable HTTP" (with batching support)
+- **MCP 2025-06-18**: Still "Streamable HTTP" (batching removed, version header added)
+
+Both "HTTP+SSE" and "Streamable HTTP" refer to the **same transport mechanism**:
+- HTTP POST for client → server messages
+- Optional SSE (Server-Sent Events) for server → client streaming
+- Session management via headers
+
+**Current CLI Design Issue**: Our CLI has separate `--transport http` and `--transport sse` options, which is confusing since "Streamable HTTP" uses both HTTP and SSE. This should be addressed in a future refactor to have clearer naming like:
+- `--transport stdio` - Process stdio communication
+- `--transport streamable-http` - HTTP with optional SSE (the MCP remote transport)
+- `--transport http-only` - Plain HTTP without SSE (if needed)
 
 ## Goals
 
@@ -81,12 +98,13 @@ Implement SSE transport that understands MCP messages from the start.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| S.1 | Add SSE Transport CLI Option | 2h | None | ⬜ Not Started | | [Details](sse-proxy-integration/tasks/task-1.1-cli-sse-option.md) |
-| S.2 | **Create MCP-Aware SSE Transport Wrapper** | 4h | F.1-F.4, S.1 | ⬜ Not Started | | Uses MessageContext from refactor |
+| S.1 | Add SSE Transport CLI Option | 2h | None | ✅ Completed | 2025-08-10 | [Details](sse-proxy-integration/tasks/task-1.1-cli-sse-option.md) |
+| S.2 | **Create MCP-Aware SSE Transport Wrapper** | 4h | F.1-F.4, S.1 | ✅ Completed | 2025-08-10 | Uses MessageContext from refactor |
+| S.2.5 | **Fix CLI Transport Naming Confusion** | 1h | S.1, S.2 | 🔵 Next Priority | | [Details](sse-proxy-integration/tasks/task-1.2.5-fix-cli-naming.md) |
 | S.3 | Integrate with Forward Proxy | 3h | S.2 | ⬜ Not Started | | From SSE Task 1.3 |
 | S.4 | **Add MCP Parser Hooks to Transport** | 2h | S.2, F.2 | ⬜ Not Started | | [Task Details](#s4-parser-hooks) |
 
-**Phase 1 Total**: 11 hours
+**Phase 1 Total**: ~~11 hours~~ → 12 hours (added S.2.5)
 
 ### Phase 2: Reverse Proxy Streamable HTTP (Week 2)
 Implement the `/mcp` endpoint with MCP message understanding.
@@ -422,6 +440,31 @@ If context window becomes limited:
 4. **Build Minimal MCP Parser (F.2)**
 5. **Continue with Phase 1 once foundations ready**
 
+## Session History
+
+### 2025-08-10 Session
+**Duration**: ~4 hours  
+**Completed**:
+- ✅ S.1: Add SSE Transport CLI Option
+  - Added `ForwardTransport::Sse` variant with URL and retry configuration
+  - Implemented `run_sse_forward_proxy` handler function
+- ✅ S.2: Create MCP-Aware SSE Transport Wrapper
+  - Created `SseTransport` implementing the `Transport` trait
+  - Integrated `UnifiedEventIdGenerator` for correlation
+  - Connected with existing `SseHttpClient` and `SseConnectionManager`
+  - Added MCP protocol version tracking
+  - Implemented send/receive with proper SSE context wrapping
+
+**Key Decisions**:
+- Used existing SSE components rather than reimplementing
+- Event IDs embed correlation info for request-response matching
+- SSE transport initialization defers actual connection to first use
+
+**Issues Identified**:
+- CLI naming confusion between `http` and `sse` transports
+- Both actually implement "Streamable HTTP" from MCP spec
+- Should be refactored to clearer naming in future
+
 ## Notes
 
 - This tracker supersedes individual SSE and MCP trackers for execution
@@ -432,6 +475,7 @@ If context window becomes limited:
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Created**: 2025-08-08  
+**Last Modified**: 2025-08-10  
 **Author**: Development Team
