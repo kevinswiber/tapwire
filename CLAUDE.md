@@ -200,7 +200,16 @@ The agent follows specific quality gates:
 - Verify test coverage for critical paths
 - Monitor performance against 5% overhead target
 
-**Important** Make sure there are no clippy warnings with `cargo clippy --all-targets -- -Dwarnings` after significant code changes or before committing code. Remember that `cargo clippy --fix -- -Dwarnings` can help fix a lot of the problems. Also be sure to run `cargo fmt` after significant changes and/or before committing.
+**CRITICAL - Clippy Compliance**: 
+- **ALWAYS** run `cargo clippy --all-targets -- -D warnings` BEFORE considering any code complete
+- **NEVER** commit code with clippy warnings - they will fail in CI
+- Use `cargo clippy --fix -- -D warnings` to auto-fix many issues
+- Run `cargo fmt` after significant changes
+- **Track clippy errors**: When you encounter a clippy error, add it to shadowcat/CLAUDE.md's "Code Style and Clippy Compliance" section so we don't repeat the same mistakes
+- Common mistakes to avoid:
+  - Using `format!("{}", var)` instead of `format!("{var}")`
+  - Using `std::io::Error::new(std::io::ErrorKind::Other, e)` instead of `std::io::Error::other(e)`
+  - Unused imports or variables (prefix with `_` if intentionally unused)
 
 ## Current Implementation Status
 

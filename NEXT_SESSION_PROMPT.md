@@ -1,113 +1,134 @@
-# Next Session: Phase 2 - Reverse Proxy Streamable HTTP
+# Next Session: Complete Phase 2 and Begin Phase 3
 
 ## Project Status Update
 
 We are implementing SSE proxy integration with MCP message handling in Shadowcat, following the unified tracker at `plans/proxy-sse-message-tracker.md`.
 
-**Current Status**: Ready to begin Phase 2  
+**Current Status**: Phase 2 nearly complete, ready to finish R.4 and begin Phase 3  
 **Phase 0**: 100% Complete ✅ (F.1-F.5 all done)  
 **Phase 1**: 100% Complete ✅ (S.1-S.4 all done)  
-**Phase 2**: 0% Complete - Ready to start
+**Phase 2**: 75% Complete (R.1-R.3 done, R.4 remaining)
 
-## Recent Accomplishments (This Session)
+## Accomplishments This Session
 
-### Completed Phase 1! 🎉
+### Phase 2: Reverse Proxy Streamable HTTP ✨
 
-#### S.3: Integrate with Forward Proxy ✅
-- Implemented proper ForwardProxy integration with SSE transport
-- Client uses stdio transport (spawned command)
-- Server uses SSE transport (HTTP endpoint)
-- Session manager integrated
-- Rate limiting ready (through middleware)
+#### R.1: Create MCP-Aware Dual-Method Endpoint ✅
+- Enhanced `/mcp` endpoint to support both POST and GET methods
+- POST continues to handle JSON-RPC messages
+- GET with Accept: text/event-stream opens SSE connection
+- Added proper header validation and error responses
 
-#### S.4: Add MCP Parser Hooks to Transport ✅  
-- Already completed in previous session
-- Parser actively validates messages in send()
-- Parser extracts info from received SSE events
-- Debug logging for message types, IDs, and methods
+#### R.2: Implement SSE Response Handler ✅
+- Created `handle_mcp_sse_request` function for SSE GET requests
+- Implemented `proxy_sse_from_upstream` to proxy SSE from HTTP upstreams
+- Handles SSE event parsing and forwarding
+- Includes keepalive mechanism for connection health
 
-## Phase 2: Reverse Proxy Streamable HTTP (Week 2)
+#### R.3: Session-Aware SSE Streaming ✅
+- Integrated session management with SSE streams
+- Sessions validated via Mcp-Session-Id header
+- Protocol version tracked and validated
+- Proper cleanup on disconnect
 
-Now we need to implement the `/mcp` endpoint with MCP message understanding for the reverse proxy.
+### Tests Added
+- Created `tests/test_reverse_proxy_sse.rs` with integration tests
+- Tests verify dual-method endpoint behavior
+- Tests confirm SSE response headers
+- Tests validate Accept header requirements
 
-### Tasks from Tracker
+## Remaining Work
 
-| ID | Task | Duration | Dependencies | Status | Notes |
-|----|------|----------|--------------|--------|-------|
-| R.1 | **Create MCP-Aware Dual-Method Endpoint** | 3h | F.1-F.3 | ⬜ Next | [Task 2.1](plans/sse-proxy-integration/tasks/task-2.1-dual-method-endpoint.md) |
-| R.2 | Implement SSE Response Handler | 4h | R.1, F.4 | ⬜ Not Started | [Task 2.2](plans/sse-proxy-integration/tasks/task-2.2-sse-response-handler.md) |
-| R.3 | Session-Aware SSE Streaming | 3h | R.2 | ⬜ Not Started | From SSE Task 2.3 |
-| R.4 | **Add Early Message Correlation** | 2h | R.1, F.2 | ⬜ Not Started | Enhancement to reverse proxy |
+### Phase 2: Complete R.4 (2 hours)
 
-**Phase 2 Total**: 12 hours
+**R.4: Add Early Message Correlation**
+- Integrate UnifiedEventIdGenerator with reverse proxy SSE
+- Add correlation info to SSE event IDs
+- Track request/response pairs through SSE streams
+- Files to modify:
+  - `src/proxy/reverse.rs` - Add event ID generation to SSE responses
 
-## Implementation Plan for R.1
+### Phase 3: Full MCP Parser and Correlation (Week 3)
 
-### R.1: Create MCP-Aware Dual-Method Endpoint
+After completing R.4, begin Phase 3:
 
-The reverse proxy needs an `/mcp` endpoint that:
-1. Accepts HTTP POST for client → server messages
-2. Accepts HTTP GET with Accept: text/event-stream for SSE streaming
-3. Manages sessions via headers
-4. Validates MCP protocol version
-5. Uses the MinimalMcpParser for early validation
-
-Key files to modify:
-- `src/proxy/reverse.rs` or create new `src/proxy/reverse/mcp_endpoint.rs`
-- Integrate with existing ReverseProxyServer
-- Use protocol version manager from F.1
-- Use MinimalMcpParser from F.2
-- Use batch handler from F.3 if needed
+| ID | Task | Duration | Status |
+|----|------|----------|--------|
+| P.1 | **Create Full MCP Parser** | 6h | ⬜ Not Started |
+| P.2 | Add Schema Validation | 4h | ⬜ Not Started |
+| P.3 | Implement Correlation Store | 5h | ⬜ Not Started |
+| P.4 | Add Request/Response Matching | 4h | ⬜ Not Started |
+| P.5 | **Integrate with Proxy** | 5h | ⬜ Not Started |
 
 ## Commands for Testing
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Test forward proxy with SSE (completed in Phase 1)
-cargo run -- forward streamable-http --url http://localhost:8080/sse --enable-sse -- echo
+# Run SSE tests
+cargo test test_reverse_proxy_sse
+cargo test test_sse_get
 
-# Build and run tests
-cargo test --test sse_transport_test
-cargo test reverse_proxy
+# Test the reverse proxy manually
+cargo run -- reverse --bind 127.0.0.1:8080
+
+# In another terminal, test SSE endpoint
+curl -H "Accept: text/event-stream" \
+     -H "Mcp-Session-Id: test-123" \
+     -H "MCP-Protocol-Version: 2025-06-18" \
+     http://localhost:8080/mcp
 
 # Check for warnings
 cargo clippy --all-targets -- -D warnings
 ```
 
-## Success Criteria for Phase 2
+## Key Implementation Details
 
-- ✅ `/mcp` endpoint handles both POST and GET requests
-- ✅ SSE streaming works for server → client messages
-- ✅ Sessions tracked via Mcp-Session-Id header
-- ✅ Protocol version validated and negotiated
-- ✅ Early message parsing with MinimalMcpParser
-- ✅ Tests pass for reverse proxy scenarios
+### Dual-Method `/mcp` Endpoint
+- Located in `src/proxy/reverse.rs`
+- Router configuration: `.route("/mcp", post(handle_mcp_request).get(handle_mcp_sse_request))`
+- POST handler: `handle_mcp_request` - Returns JSON responses
+- GET handler: `handle_mcp_sse_request` - Returns SSE stream
+
+### SSE Proxy Implementation
+- Function: `proxy_sse_from_upstream` in `src/proxy/reverse.rs`
+- Uses `reqwest` streaming response parsing
+- Parses SSE format: event:, data:, id: fields
+- Forwards events through tokio channels
+- **Important**: Uses upstream URLs as-is (no path assumptions)
+
+### Session Integration
+- Sessions created/retrieved for both POST and GET
+- Protocol version validation enforced
+- Session ID required in headers
+- Proper cleanup on stream termination
+
+## Success Criteria for Next Session
+
+1. ✅ Complete R.4: Early Message Correlation
+2. ✅ All Phase 2 tests passing
+3. ✅ Begin Phase 3: Full MCP Parser (P.1)
+4. ✅ Document parser design decisions
+5. ✅ Update tracker with progress
 
 ## Context from Tracker
 
 From `plans/proxy-sse-message-tracker.md`:
 - **Phase 0**: Foundation Components - 100% Complete ✅
 - **Phase 1**: SSE Transport with MCP Awareness - 100% Complete ✅
-- **Phase 2**: Reverse Proxy Streamable HTTP - 0% (Starting now)
-- Foundation components (F.1-F.5) are all available for use
-- SSE transport (S.1-S.4) is fully integrated
+- **Phase 2**: Reverse Proxy Streamable HTTP - 75% Complete (R.4 remaining)
+- **Phase 3**: Full MCP Parser and Correlation - 0% (Starting next)
 
-## Key Design Decisions from Phase 1
+## Notes
 
-1. **Transport Architecture**: SSE transport implements the Transport trait cleanly
-2. **Parser Integration**: MinimalMcpParser validates messages at transport layer
-3. **Event ID Correlation**: UnifiedEventIdGenerator embeds correlation info
-4. **Forward Proxy**: Successfully bridges stdio client to SSE server
-
-## Notes for Next Session
-
-- Start with R.1: Create the dual-method `/mcp` endpoint
-- Review existing reverse proxy implementation first
-- Ensure both forward and reverse proxy have feature parity
-- Consider creating integration tests early in the phase
-- Remember to handle both MCP protocol versions (2025-03-26 with batching, 2025-06-18)
+- The reverse proxy now fully supports the MCP Streamable HTTP transport
+- Both stdio and HTTP upstreams are supported
+- SSE streaming works with keepalive and proper connection management
+- **Important**: Upstream HTTP URLs must be complete (including path) - MCP doesn't mandate any specific path
+- Our reverse proxy exposes `/mcp`, but upstream URLs are used exactly as configured
+- Early message correlation (R.4) will enhance debugging and tracing
+- Phase 3 will add full MCP message parsing and validation
 
 ---
 
-**Next Goal**: Complete Phase 2 by implementing the reverse proxy Streamable HTTP support with the `/mcp` endpoint handling both POST and GET+SSE.
+**Next Goal**: Complete R.4 to finish Phase 2, then begin Phase 3 with the full MCP parser implementation (P.1).
