@@ -1,4 +1,4 @@
-Session: Phase B (Safety/Async) — start B.1 and B.2
+Session: Phase B (Safety/Async) — deepen B.1–B.3; prep Phase C
 
 Repo/context
 - Working dir: shadowcat-cursor-review/
@@ -10,25 +10,34 @@ Pinned references
 - CURSOR_RUST_CODE_REVIEWER.md
 - reviews/cursor/tracker.md
 - reviews/cursor/analysis/README.md
- - reviews/cursor/analysis/findings/baseline.md
+- reviews/cursor/analysis/findings/baseline.md
+- reviews/cursor/analysis/safety/unsafe-audit.md
+- reviews/cursor/analysis/async/cancellation.md
+- reviews/cursor/analysis/async/locking.md
 
 Tasks
-- B.1 Unsafe/FFI audit:
-  - Search for any `unsafe` blocks or FFI usage; document with citations.
-  - Deliverable: reviews/cursor/analysis/safety/unsafe-audit.md
-- B.2 Cancellation safety review:
-  - Examine `tokio::select!`, stream handling, and shutdown paths for cancellation hazards (await-in-lock, leaked tasks).
-  - Deliverable: reviews/cursor/analysis/async/cancellation.md
-  - Tip: pay attention to `session::manager`, `transport::sse::reconnect`, and proxy loops.
+- B.1 Unsafe/FFI audit (continue):
+  - Confirm no `unsafe`/FFI; expand notes on `Drop` behavior and metrics accumulation.
+  - Update: reviews/cursor/analysis/safety/unsafe-audit.md
+- B.2 Cancellation safety (continue):
+  - Draft concrete shutdown/token patterns for forward proxy, health checker, stdio transport.
+  - Update: reviews/cursor/analysis/async/cancellation.md
+- B.3 Locking analysis (continue):
+  - Propose lock-free/lock-minimizing alternatives for replay receive and metrics.
+  - Update: reviews/cursor/analysis/async/locking.md
+- Prep Phase C scope notes:
+  - Create stubs for `analysis/api/transport.md`, `analysis/api/proxy-session.md`, `analysis/api/errors.md`.
 
 Success criteria
-- Unsafe/FFI audit doc created with cited code locations
-- Cancellation safety review doc created with concrete findings and proposals
-- Tracker updated to reflect Phase B progress
+- Unsafe/FFI, cancellation, and locking docs updated with actionable proposals
+- API review stubs created for Phase C
+- Tracker updated to reflect Phase B progress and Phase C prep
 
 Deliverables to update
 - reviews/cursor/analysis/safety/unsafe-audit.md
 - reviews/cursor/analysis/async/cancellation.md
+- reviews/cursor/analysis/async/locking.md
+- reviews/cursor/analysis/api/{transport,proxy-session,errors}.md
 - reviews/cursor/tracker.md (Phase B statuses)
 
 Notes

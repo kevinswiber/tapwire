@@ -93,9 +93,12 @@ Validate auth gateway basics, token handling, and transport security checks.
 - [x] A.1: Repo inventory and map critical modules
 - [x] A.2: Review build, lint, and test status
 - [x] A.3: Identify hot paths and workloads
+- [x] Phase B kickoff: created `analysis/safety/unsafe-audit.md`, `analysis/async/cancellation.md`, `analysis/async/locking.md`
 
 ### Completed Tasks
 - [x] A.1 — Modules mapped (`analysis/findings/modules.md`)
+- [x] A.2 — Build/lint/tests baseline recorded (`analysis/tests/status.md`)
+- [x] A.3 — Hot paths & workloads defined (`analysis/perf/workloads.md`)
 
 ## Success Criteria
 
