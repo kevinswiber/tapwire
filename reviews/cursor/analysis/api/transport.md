@@ -1,73 +1,113 @@
-# C.1 — Transport Trait and Implementations Review (Prep)
+## C.1 — Transport trait and implementations review (Phase C)
 
-Scope: `shadowcat-cursor-review/` at `eec52c8`
+Scope: `shadowcat-cursor-review@eec52c8`
 
-- Trait summary
-  - `Transport` defines async `connect/send/receive/close` with `session_id`, `transport_type`, and `is_connected` defaults.
-  - Cite:
-    ```112:131:shadowcat-cursor-review/src/transport/mod.rs
-    pub trait Transport: Send + Sync { async fn connect(&mut self) -> _; async fn send(&mut self, _); async fn receive(&mut self) -> _; async fn close(&mut self) -> _; fn session_id(&self) -> &SessionId; fn transport_type(&self) -> TransportType { ... } fn is_connected(&self) -> bool { ... } }
+### Summary
+- Default methods on `Transport` for `transport_type()`/`is_connected()` are footguns; require explicit impls.
+- Timeout and size-limit behaviors differ across transports; document and align.
+- Cooperative shutdown is implicit; add guidance and optional shutdown plumbing.
+- Concurrency ergonomics can be improved without leaking locks to callers.
+- Header casing must be canonicalized on write and case-insensitive on read.
+
+### Key citations
+```112:131:shadowcat-cursor-review/src/transport/mod.rs
+#[async_trait]
+pub trait Transport: Send + Sync {
+    async fn connect(&mut self) -> TransportResult<()>;
+    async fn send(&mut self, envelope: MessageEnvelope) -> TransportResult<()>;
+    async fn receive(&mut self) -> TransportResult<MessageEnvelope>;
+    async fn close(&mut self) -> TransportResult<()>;
+
+    fn session_id(&self) -> &SessionId;
+
+    fn transport_type(&self) -> TransportType { TransportType::Stdio }
+    fn is_connected(&self) -> bool { true }
+}
+```
+
+```351:357:shadowcat-cursor-review/src/transport/stdio.rs
+let line = timeout(recv_timeout, stdout_rx.recv())
+    .await
+    .map_err(|_| TransportError::Timeout("Receive timeout".to_string()))?
+    .ok_or_else(|| TransportError::ReceiveFailed("Channel closed".to_string()))?;
+```
+
+```255:263:shadowcat-cursor-review/src/transport/http.rs
+let response = timeout(
+    Duration::from_millis(self.config.timeout_ms),
+    request.send(),
+)
+.await
+.map_err(|_| TransportError::Timeout("HTTP request timed out".to_string()))?
+.map_err(|e| TransportError::SendFailed(format!("HTTP send failed: {e}")))?;
+```
+
+```818:827:shadowcat-cursor-review/src/proxy/forward.rs
+// HTTP forwarder sets header using canonical casing
+proxy_req = proxy_req.header("MCP-Protocol-Version", "2025-06-18");
+```
+
+```73:98:shadowcat-cursor-review/src/transport/http_mcp.rs
+// Server-side extraction uses lower-case header names
+let protocol_version = headers
+    .get("mcp-protocol-version")
+    .and_then(|v| v.to_str().ok())
+    .unwrap_or(HTTP_DEFAULT_VERSION);
+```
+
+### Findings and proposals
+- Require explicit connection state methods
+  - Make `transport_type()` and `is_connected()` required methods (remove defaults) to prevent accidental stdio/true defaults from leaking into metrics or logs when new transports are added.
+  - Document that `is_connected()` should be cheap and accurate.
+
+- Timeouts: align semantics and error mapping
+  - For `send()` and `receive()` across transports, use `TransportError::Timeout` for elapsed timers, and ensure callers can distinguish retryable timeouts from terminal failures.
+  - Apply identical timeout windows to request send and response read when applicable; reference `TransportConfig.timeout_ms` as the single source of truth.
+  - Add doc guidance that timeouts should be implemented via `tokio::time::timeout()` with informative error messages including operation and duration.
+
+- Size limits: enforce consistently
+  - Stdio checks outbound serialized length and inbound line size; HTTP checks serialized JSON length. Ensure both sides enforce `max_message_size` and surface `TransportError::MessageTooLarge { size, limit }` for callers.
+
+- Cooperative shutdown and idempotency
+  - Document `close()` as idempotent and responsible for terminating background tasks, draining channels, and releasing OS handles.
+  - For transports that spawn tasks (e.g., stdio reader/writer), prefer using a shutdown signal and join-with-timeout before force-kill on drop. Avoid spawning work in `Drop` if a runtime may be unavailable.
+
+- Concurrency ergonomics
+  - Current proxies wrap transports with `Arc<RwLock<T>>` and take write locks for each call. Provide an optional adapter type for library users:
+
+    ```rust
+    pub struct ConcurrentTransport<T: Transport>(Arc<tokio::sync::RwLock<T>>);
+    impl<T: Transport> ConcurrentTransport<T> {
+        pub async fn send(&self, env: MessageEnvelope) -> TransportResult<()> { self.0.write().await.send(env).await }
+        pub async fn receive(&self) -> TransportResult<MessageEnvelope> { self.0.write().await.receive().await }
+        pub async fn close(&self) -> TransportResult<()> { self.0.write().await.close().await }
+    }
     ```
+  - Alternately, consider splitting the trait into send/receive halves for future transports that can be owned by separate tasks.
 
-- Initial observations
-  - Default `transport_type` and `is_connected` return stdio/true; consider making them required methods to avoid incorrect defaults. Implementations already override these, but defaults are footguns.
-  - `&mut self` async methods require external synchronization. Current code wraps transports in `Arc<RwLock<T>>` in forward proxy writers/readers, which is fine but verbose. Consider an API that splits send/recv halves or provides an internal concurrency guard to reduce external lock noise.
-  - Lifecycle: some transports spawn background tasks (stdio, http SSE in the future, replay). Trait has no explicit shutdown token; consider optional `with_shutdown` on implementations and document cooperative shutdown expectations.
+- Header casing guidance
+  - When writing headers, standardize on canonical casing:
+    - Request: `MCP-Protocol-Version`, `Mcp-Session-Id`
+    - Response: `mcp-protocol-version`, `mcp-server`
+  - When reading headers, treat names as case-insensitive. Document this explicitly in transport/server APIs.
 
-- Implementation highlights to review next
-  - `stdio`, `http`, `http_mcp`, `replay`, `sse` modules.
-  - Pay special attention to background tasks lifecycle and size limits enforcement consistency.
+- SSE integration
+  - The SSE stack (`sse/*`) is not a `Transport` yet. If/when implemented, ensure it adopts the same config knobs (timeouts, max sizes) and shutdown semantics described here. Leverage `SessionAwareSseManager` for session binding and lifecycle hooks.
 
-- Early proposals
-  - Make `transport_type()` and `is_connected()` required (no defaults) to prevent accidental misuse in new implementations.
-  - Add optional `shutdown(&mut self)` or standardized `with_shutdown(token)` in implementations that spawn tasks; document expectation that `close()` is idempotent and drains/terminates background work.
-  - Provide guidance to avoid await-in-lock in `receive()` for wrapper transports (see replay), and prefer lock-free accumulation for metrics on hot paths.
+### Additional citations
+```451:459:shadowcat-cursor-review/src/transport/stdio.rs
+impl Drop for StdioTransport { /* spawns kill on child */ }
+```
 
-- Notable impl notes and citations
-  - Stdio transport: background IO tasks; Drop spawns kill; propose cooperative shutdown plumbing.
-    ```451:459:shadowcat-cursor-review/src/transport/stdio.rs
-    impl Drop for StdioTransport { /* spawns kill on child */ }
-    ```
-  - HTTP transport: has SSE placeholder; standard request/response with size checks and MCP headers; uses channel for receive in client mode.
-    ```370:492:shadowcat-cursor-review/src/transport/http.rs
-    impl Transport for HttpTransport { /* connect/send/receive/close */ }
-    ```
-  - Replay transport: await-in-lock on receiver; propose swap-out before await.
-    ```368:381:shadowcat-cursor-review/src/transport/replay.rs
-    let mut outbound_rx = self.outbound_rx.lock().await; let outbound_rx = outbound_rx.as_mut().ok_or(...)?; match outbound_rx.recv().await { ... }
-    ```
-  - HTTP MCP server transport: wraps channels for incoming/outgoing; envelope contexts use HTTP variants.
-    ```203:264:shadowcat-cursor-review/src/transport/http_mcp.rs
-    impl Transport for HttpMcpTransport { /* connect/send/receive/close */ }
-    ```
-  - SSE: session-aware manager, connection manager/client; ensure any future `Transport` impl for SSE respects cooperative shutdown.
-    ```41:89:shadowcat-cursor-review/src/transport/sse/session.rs
-    pub async fn start_monitoring(mut self) -> Self { tokio::spawn(... interval ...); }
-    ```
+```368:381:shadowcat-cursor-review/src/transport/replay.rs
+let mut outbound_rx = self.outbound_rx.lock().await; // await-in-lock pattern
+let outbound_rx = outbound_rx.as_mut().ok_or(TransportError::Closed)?;
+match outbound_rx.recv().await { /* ... */ }
+```
 
-## API refinements
-
-- Header naming consistency
-  - Ensure consistent casing for MCP headers across transports (currently mix of `MCP-Protocol-Version` and lower-case in reverse path). Standardize on canonical casing when constructing, accept case-insensitive for parsing.
-  - Citations:
-    ```818:827:shadowcat-cursor-review/src/proxy/forward.rs
-    request = request.header("MCP-Protocol-Version", "2025-06-18");
-    ```
-    ```1188:1213:shadowcat-cursor-review/src/proxy/reverse.rs
-    if let Some(protocol_version) = headers.get("mcp-protocol-version") { /* ... */ }
-    ```
-
-- Timeout semantics
-  - HTTP and stdio use `TransportConfig.timeout_ms`; ensure consistent timeout usage for send/receive paths and document expected behavior on timeout (error type, retry guidance).
-    ```351:357:shadowcat-cursor-review/src/transport/stdio.rs
-    let line = timeout(recv_timeout, stdout_rx.recv()).await
-    ```
-    ```255:263:shadowcat-cursor-review/src/transport/http.rs
-    let response = timeout(Duration::from_millis(self.config.timeout_ms), request.send())
-    ```
-
-- Trait ergonomics
-  - Consider a thin adapter type `ConcurrentTransport<T: Transport>` that encapsulates `Arc<RwLock<T>>` and exposes `send/receive` without leaking lock details to callers (used by forward proxy), or split `Transport` into read/write halves to enable separate task ownership.
-
-- Cooperative shutdown in trait docs
-  - Document that `close()` should be idempotent and terminate background work; if implementations spawn tasks, provide `with_shutdown(token)` or similar in their API.
+### Action checklist (C.1)
+- Update docs to require explicit `transport_type()`/`is_connected()`.
+- Add doc section with timeout and size-limit expectations and error taxonomy hooks.
+- Recommend adapter or split-trait pattern for concurrency ergonomics in docs.
+- Document canonical header casing and case-insensitive reads.
+- Note replay receive await-outside-lock improvement for future edits.

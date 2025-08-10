@@ -19,7 +19,7 @@ Note: Planning and analysis artifacts live in the main Tapwire repo under `revie
 ## Architecture Vision
 ```
 Client ↔ Transports (stdio/http/sse) ↔ Proxy Engine (forward/reverse) ↔ Interceptors ↔ Upstream MCP Servers
-                              ↘ Session Manager ↘ Recorder ↘ Auth Gateway ↘ Metrics
+                             ↘ Session Manager ↘ Recorder ↘ Auth Gateway ↘ Metrics
 ```
 
 ## Work Phases
@@ -52,10 +52,10 @@ Assess public APIs, trait design, error types, and module visibility.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Transport trait and implementations review** | 2h | A.* | 🔄 In Progress | | Updated prep with proposals on defaults, shutdown, and impl notes; `analysis/api/transport.md`. |
-| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | 🔄 In Progress | | Added API notes and lifecycle proposals; `analysis/api/proxy-session.md`. |
-| C.3 | **Error handling and Result flows** | 1.5h | A.* | 🔄 In Progress | | Added reverse proxy mapping notes and taxonomy proposal; `analysis/api/errors.md`. |
-| C.4 | **Public API docs and examples** | 1h | C.1–C.3 | ⬜ Not Started | | Gaps and proposals `analysis/api/docs.md` |
+| C.1 | **Transport trait and implementations review** | 2h | A.* | 🔄 In Progress | | Enriched doc with defaults/timeout/headers/shutdown proposals; `analysis/api/transport.md`. |
+| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | 🔄 In Progress | | Added lifecycle, interceptor mapping, metrics, context accuracy; `analysis/api/proxy-session.md`. |
+| C.3 | **Error handling and Result flows** | 1.5h | A.* | 🔄 In Progress | | Added taxonomy and mapping proposals; `analysis/api/errors.md`. |
+| C.4 | **Public API docs and examples** | 1h | C.1–C.3 | 🔄 In Progress | | Created `analysis/api/docs.md` v0.1 with forward/reverse examples, shutdown and error guidance. |
 
 **Phase C Total**: 6.5 hours
 
@@ -140,12 +140,12 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Continue Phase C: refine interceptor effects and lifecycle docs; start C.4 public API docs/examples.
-2. At the end of Phase C, create a fresh worktree snapshot of Shadowcat at the latest `main` (do not rebase the current snapshot) and run a delta audit. Add an addendum section to each relevant analysis doc noting changes since commit `eec52c8`, preserving existing citations.
+1. Continue Phase C: finalize C.1–C.3 docs with any remaining gaps; iterate on `analysis/api/docs.md` with small runnable snippets if desired.
+2. After Phase C, create a fresh worktree snapshot of Shadowcat at latest `main` (do not rebase current snapshot) and run a delta audit. Add addendum sections to each relevant analysis doc noting changes since commit `eec52c8`, preserving existing citations.
 
 ---
 
-**Document Version**: 0.3  
+**Document Version**: 0.4  
 **Created**: 2025‑08‑10  
 **Last Modified**: 2025‑08‑10  
 **Author**: Cursor GPT‑5 Reviewer
@@ -156,3 +156,4 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 | 2025‑08‑10 | 0.1 | Initial tracker creation | Cursor GPT‑5 Reviewer |
 | 2025‑08‑10 | 0.2 | Updated A.1 complete; added A.2/A.3 in progress | Cursor GPT‑5 Reviewer |
 | 2025‑08‑10 | 0.3 | Added NEXT_SESSION_PROMPT content checklist | Cursor GPT‑5 Reviewer |
+| 2025‑08‑10 | 0.4 | Phase C docs enriched; created `analysis/api/docs.md` v0.1 | Cursor GPT‑5 Reviewer |
