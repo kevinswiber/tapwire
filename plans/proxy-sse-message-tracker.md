@@ -71,7 +71,7 @@ Build shared components that both SSE and MCP initiatives need.
 | F.1 | **Create Protocol Version Manager** | 2h | None | ✅ Completed | 2025-08-08 | [Task Details](#f1-protocol-version-manager) |
 | F.2 | **Build Minimal MCP Parser** | 4h | None | ✅ Completed | 2025-08-08 | [Task Details](#f2-minimal-mcp-parser) |
 | F.3 | **Implement Batch Handler** | 3h | F.1, F.2 | ✅ Completed | 2025-08-08 | [Task Details](#f3-batch-handler) |
-| F.4 | **Create Unified Event ID Generator** | 2h | None | ⬜ Not Started | | [Task Details](#f4-event-id-generator) |
+| F.4 | **Create Unified Event ID Generator** | 2h | None | ✅ Completed | 2025-08-10 | [Task Details](#f4-event-id-generator) |
 | F.5 | **~~Build Message Context~~** ⚠️ | ~~2h~~ | ~~F.1~~ | ✅ Exists | Refactor | MessageContext in envelope.rs |
 
 **Phase 0 Total**: ~~13 hours~~ → 11 hours (F.5 already exists)
@@ -171,17 +171,22 @@ Comprehensive testing of the integrated system.
 
 These are the new tasks created specifically to connect the two initiatives:
 
-### F.1: Protocol Version Manager
-**File**: `src/mcp/protocol.rs`
+### F.1: Protocol Version Manager ✅
+**File**: `src/mcp/protocol.rs` (Completed 2025-08-08)
 - Single source of truth for protocol version handling
 - Used by both SSE transport and MCP parser
 - Handles version negotiation and capability detection
+- Enum-based version management with capability checks
+- 22 comprehensive tests
 
-### F.2: Minimal MCP Parser
-**File**: `src/mcp/early_parser.rs`
+### F.2: Minimal MCP Parser ✅
+**File**: `src/mcp/early_parser.rs` (Completed 2025-08-08)
 - Lightweight parser for immediate use by SSE
 - Extract method, ID, and batch detection
 - Foundation for full parser in Phase 3
+- Handles all message types (request, response, notification)
+- SSE data formatting support
+- 37 comprehensive tests
 
 ### F.3: Batch Handler ✅
 **File**: `src/mcp/batch.rs` (Completed 2025-08-08)
@@ -192,11 +197,15 @@ These are the new tasks created specifically to connect the two initiatives:
 - Validate batch structure according to protocol rules
 - 18 comprehensive tests covering all functionality
 
-### F.4: Event ID Generator
-**File**: `src/mcp/event_id.rs`
+### F.4: Event ID Generator ✅
+**File**: `src/mcp/event_id.rs` (Completed 2025-08-10)
 - Generate IDs that work for both SSE events and MCP correlation
-- Extract correlation info from event IDs
+- Extract correlation info from event IDs  
 - Maintain uniqueness across sessions
+- Thread-safe ID generation using AtomicU64
+- Support for session ID and JSON-RPC ID correlation
+- SSE-compatible (newlines replaced with underscores)
+- 17 comprehensive tests including thread safety
 
 ### F.5: Message Context
 **File**: `src/mcp/context.rs`

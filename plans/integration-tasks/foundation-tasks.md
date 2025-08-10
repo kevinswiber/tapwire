@@ -275,13 +275,30 @@ impl GroupedMessages {
 }
 ```
 
-## F.4: Unified Event ID Generator
+## F.4: Unified Event ID Generator ✅
 
 **Duration**: 2 hours  
 **Dependencies**: None  
-**File**: `src/mcp/event_id.rs`
+**File**: `src/mcp/event_id.rs`  
+**Status**: ✅ Completed (2025-08-10)
 
-### Implementation
+### Implementation Notes
+
+**Completed Features**:
+- Thread-safe ID generation using AtomicU64
+- UUID-based node ID (8 char prefix) for uniqueness
+- Session ID and JSON-RPC ID correlation support
+- SSE compatibility (newlines replaced with underscores)
+- Robust correlation extraction handling dashes in IDs
+- 17 comprehensive tests including thread safety
+
+**Key Improvements from Design**:
+- More robust correlation extraction using pattern matching for node ID
+- Proper handling of session IDs and JSON-RPC IDs containing dashes
+- SSE newline compatibility built-in
+- Better edge case handling
+
+### Original Design (for reference)
 
 ```rust
 use std::sync::atomic::{AtomicU64, Ordering};
