@@ -41,9 +41,9 @@ Deep audit of unsafe/FFI, cancellation safety, and concurrency controls.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.1 | **Unsafe/FFI audit** | 3h | A.* | 🔄 In Progress | | Findings in `analysis/safety/unsafe-audit.md`; initial pass shows no `unsafe`, flagged Drop + async spawn and sync mutex in async. |
-| B.2 | **Cancellation safety review** | 2.5h | A.* | 🔄 In Progress | | `tokio::select!`, resource cleanup, shutdown; flagged health checker shutdown gap, forward proxy abort usage, replay lock-await. Findings in `analysis/async/cancellation.md`. |
-| B.3 | **Send/Sync and locking analysis** | 2h | A.* | 🔄 In Progress | | Initial notes in `analysis/async/locking.md`; replay await-in-lock and metrics mutex flagged. |
+| B.1 | **Unsafe/FFI audit** | 3h | A.* | ✅ Complete | | Expanded Drop behavior review (forward proxy, SSE types) and metrics accumulation proposal; still no `unsafe`/FFI. See `analysis/safety/unsafe-audit.md`. |
+| B.2 | **Cancellation safety review** | 2.5h | A.* | ✅ Complete | | Concrete shutdown/token patterns added for forward proxy, health checker, stdio; linked API sketches in `analysis/async/proposals.md`. |
+| B.3 | **Send/Sync and locking analysis** | 2h | A.* | ✅ Complete | | Proposed lock-free metrics and await-outside-lock for replay receive; minor doc notes. See `analysis/async/locking.md`. |
 
 **Phase B Total**: 7.5 hours
 
@@ -52,9 +52,9 @@ Assess public APIs, trait design, error types, and module visibility.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Transport trait and implementations review** | 2h | A.* | ⬜ Not Started | | `src/transport/*`; findings in `analysis/api/transport.md` |
-| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | ⬜ Not Started | | `src/proxy/*`, `src/session/*`; `analysis/api/proxy-session.md` |
-| C.3 | **Error handling and Result flows** | 1.5h | A.* | ⬜ Not Started | | Check `thiserror` vs `anyhow`, contexts; `analysis/api/errors.md` |
+| C.1 | **Transport trait and implementations review** | 2h | A.* | 🔄 In Progress | | Updated prep with proposals on defaults, shutdown, and impl notes; `analysis/api/transport.md`. |
+| C.2 | **Proxy engine and session lifecycle review** | 2h | A.* | 🔄 In Progress | | Added API notes and lifecycle proposals; `analysis/api/proxy-session.md`. |
+| C.3 | **Error handling and Result flows** | 1.5h | A.* | 🔄 In Progress | | Added reverse proxy mapping notes and taxonomy proposal; `analysis/api/errors.md`. |
 | C.4 | **Public API docs and examples** | 1h | C.1–C.3 | ⬜ Not Started | | Gaps and proposals `analysis/api/docs.md` |
 
 **Phase C Total**: 6.5 hours
@@ -140,7 +140,7 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Queue Phase B tasks (unsafe and cancellation) for next session.
+1. Kick off Phase C: API, error handling, and module boundaries per C.1–C.3 stubs.
 
 ---
 

@@ -19,6 +19,7 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
    - Suggestions:
      - Prefer cooperative shutdown: tasks should `select!` on a `shutdown_rx` and exit cleanly, joining handles (`JoinHandle::await`) where feasible.
      - Keep `abort()` only as last-resort on timeout.
+     - Consider switching to `CancellationToken` for clearer cancellation semantics and fan-out to all spawned tasks.
 
 2) File watcher event loop
    - Observed: `tokio::spawn` with `loop { select! { event_rx.recv(), shutdown_rx.recv() } }` — good pattern, but no join on shutdown.
@@ -37,6 +38,28 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
      ```
    - Suggestions:
      - Add shutdown signal or cancellation token, and a `stop_health_checks` method. Ensure tasks `select!` on shutdown.
+     - Pattern sketch:
+       ```rust
+       pub struct HealthCheckerRuntime {
+           cancel: CancellationToken,
+           handles: Vec<JoinHandle<()>>,
+       }
+       impl HealthChecker {
+           pub async fn start_health_checks(&self, upstreams: Vec<UpstreamConfig>, rt: &mut HealthCheckerRuntime) {
+               for upstream in upstreams { let c = rt.cancel.child_token();
+                   let hs = self.health_status.clone(); let cfg = self.config.clone(); let client = self.client.clone();
+                   rt.handles.push(tokio::spawn(async move {
+                       loop { tokio::select! { _ = c.cancelled() => break,
+                           _ = Self::health_check_loop(upstream.clone(), hs.clone(), cfg.clone(), client.clone()) => {}
+                       }}
+                   }));
+               }
+           }
+           pub async fn stop(rt: &mut HealthCheckerRuntime) { rt.cancel.cancel();
+               for h in rt.handles.drain(..) { let _ = tokio::time::timeout(Duration::from_secs(1), h).await; }
+           }
+       }
+       ```
 
 4) Replay transport receive path holds lock across `.await`
    - Observed: acquires `outbound_rx` lock and then awaits on `recv()`, holding the mutex.
@@ -55,7 +78,7 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
      tokio::spawn stdin writer/reader loops; log and break on errors/EOF; no explicit shutdown signal.
      ```
    - Suggestions:
-     - Plumb a shutdown broadcast to break both loops; on `close()`, send shutdown and drain channels. Ensure child is terminated and awaited.
+     - Plumb a shutdown broadcast or `CancellationToken` to break both loops; on `close()`, signal shutdown and drain channels. Ensure child is terminated and awaited. Keep `Drop` best-effort only.
 
 6) Metrics mutex in reverse proxy
    - Observed: `std::sync::Mutex<Duration>` used in async context.
@@ -73,3 +96,11 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
   - [ ] Introduce structured shutdown (broadcast channel) for forward proxy, health checker, and stdio transport background tasks.
   - [ ] Refactor locking in replay transport receive path to avoid holding locks across await.
   - [ ] Replace sync mutex in async metrics or make accumulation lock-free.
+  - [ ] Add bounded joins on background task handles during shutdown; retain `abort()` as fallback on timeout.
+
+## Linked proposals
+
+See `analysis/async/proposals.md` for concrete API sketches for:
+- forward proxy cancellation token adoption
+- health checker runtime management
+- stdio transport cooperative shutdown

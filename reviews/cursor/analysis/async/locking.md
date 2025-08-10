@@ -15,6 +15,19 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
      ```
    - Risk: lock held for potentially long `recv()`; competes with close/stop which also locks the same fields.
    - Suggestion: take ownership of the receiver out of the mutex (swap) before awaiting; or re-architect with a channel that doesn’t require holding the lock while awaiting.
+   - Concrete alternative:
+     ```rust
+     async fn receive(&mut self) -> TransportResult<MessageEnvelope> {
+         // Take receiver out before await
+         let mut rx = { self.outbound_rx.lock().await.take() }
+             .ok_or(TransportError::Closed)?;
+         let message = rx.recv().await.ok_or(TransportError::Closed)?;
+         // Put it back
+         *self.outbound_rx.lock().await = Some(rx);
+         Ok(message)
+     }
+     ```
+     - Optionally wrap with `tokio::select!` to allow cooperative cancellation.
 
 2) Recorder playback uses multiple locks in command handlers
    - Cite:
@@ -31,12 +44,14 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
      ```
    - Risk: blocking executor threads under contention.
    - Suggestion: replace with lock-free atomic accumulation or `parking_lot::Mutex` if a mutex is kept.
+   - Lock-free pattern provided in `analysis/safety/unsafe-audit.md`.
 
 4) SessionManager pending request maps and rate limiting
    - Observation: uses `RwLock` with small critical sections; rate limiting updates occur inside a single write guard then released before further awaits.
-   - Suggestion: OK; consider sharding if contention observed in profiling.
+   - Suggestion: OK; consider sharding if contention observed in profiling. Add docstring clarifying lock ordering if additional locks are introduced.
 
 - Action checklist
   - [ ] Refactor replay receive to avoid await-in-lock.
   - [ ] Replace sync mutex for metrics accumulation.
   - [ ] Add doc comments on lock ordering in recorder playback if complexity grows.
+  - [ ] Consider `parking_lot` for short critical sections where async mutex is unnecessary.
