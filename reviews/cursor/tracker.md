@@ -141,6 +141,7 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 
 ## Next Actions
 1. Continue Phase C: refine interceptor effects and lifecycle docs; start C.4 public API docs/examples.
+2. At the end of Phase C, create a fresh worktree snapshot of Shadowcat at the latest `main` (do not rebase the current snapshot) and run a delta audit. Add an addendum section to each relevant analysis doc noting changes since commit `eec52c8`, preserving existing citations.
 
 ---
 
