@@ -78,12 +78,13 @@ Create ergonomic library APIs and core functionality
 |----|------|----------|--------------|--------|-------|-------|
 | B.1 | **Implement Builder Patterns** | 6h | Phase A | ✅ Complete | | [Details](tasks/B.1-builder-patterns.md) - All tests passing! |
 | B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 679 tests passing, full shutdown system |
-| B.3 | **Create Library Facade** | 3h | B.1, B.2 | ⬜ Not Started | | [Details](tasks/B.3-library-facade.md) |
+| B.2.1 | **Fix Shutdown Integration** | 4h | B.2 | 🔴 Critical | | [Details](tasks/B.2.1-proper-shutdown-integration.md) - Fix shortcuts, proper proxy implementation |
+| B.3 | **Create Library Facade** | 3h | B.1, B.2.1 | ⬜ Not Started | | [Details](tasks/B.3-library-facade.md) |
 | B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
 | B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | ⬜ Not Started | | [Details](tasks/B.6-integration-tests.md) |
 
-**Phase B Total**: 20 hours
+**Phase B Total**: 24 hours (added B.2.1)
 
 ### Phase C: Quality & Testing (Days 7-12)
 Polish, optimize, and prepare for production
@@ -251,22 +252,31 @@ If context window becomes limited:
 
 ## Next Actions
 
-1. **B.3: Create Library Facade** - Design high-level API for common use cases (3 hours)
-2. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
-3. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
-4. **B.6: Add Basic Integration Tests** - Test builders in real scenarios (2 hours)
+1. **🔴 B.2.1: Fix Shutdown Integration** - CRITICAL: Fix placeholder implementations (4 hours)
+2. **B.3: Create Library Facade** - Design high-level API for common use cases (3 hours)
+3. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
+4. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
+5. **B.6: Add Basic Integration Tests** - Test builders in real scenarios (2 hours)
 
 ## Progress Summary
 
 - **Phase A**: 100% Complete (7 hours) ✅
-- **Phase B**: 50% Complete (10 of 20 hours)
+- **Phase B**: 42% Complete (10 of 24 hours)
   - B.1: ✅ Builder Patterns (6h)
-  - B.2: ✅ Graceful Shutdown (4h) 
+  - B.2: ✅ Graceful Shutdown (4h)
+  - B.2.1: 🔴 CRITICAL - Fix Integration (4h) 
   - B.3-B.6: ⬜ Not Started (10h remaining)
 - **Phase C**: 0% Complete (27 hours)
-- **Overall**: ~25% Complete (17 of 60-70 hours)
+- **Overall**: ~23% Complete (17 of 74 hours)
 
 ## Notes
+
+### B.2.1 Added (2025-08-10) - CRITICAL TECHNICAL DEBT
+- Identified critical shortcuts taken in B.2 implementation
+- CLI commands use placeholder code instead of real proxy loops
+- Missing stdin/stdout client transport
+- Bypassed builder patterns from B.1
+- Must be fixed before B.3 to maintain design integrity
 
 ### B.2 Completion Summary (2025-08-10)
 - Implemented comprehensive shutdown system with ShutdownController and ShutdownToken
@@ -275,6 +285,7 @@ If context window becomes limited:
 - Created 7 comprehensive tests for shutdown scenarios
 - Updated CLAUDE.md with 5 new clippy warning patterns discovered during implementation
 - All 679 tests passing, no clippy warnings
+- **WARNING**: Integration uses placeholder implementations - see B.2.1
 
 - The refactor branch is in a git worktree at `/Users/kevin/src/tapwire/shadowcat-cli-refactor`
 - Main branch already has the CLI refactor merged
