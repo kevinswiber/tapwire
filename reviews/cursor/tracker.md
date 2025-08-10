@@ -41,8 +41,8 @@ Deep audit of unsafe/FFI, cancellation safety, and concurrency controls.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.1 | **Unsafe/FFI audit** | 3h | A.* | ⬜ Not Started | | Findings in `analysis/safety/unsafe-audit.md`; cite code. |
-| B.2 | **Cancellation safety review** | 2.5h | A.* | ⬜ Not Started | | `tokio::select!`, resource cleanup, shutdown; `analysis/async/cancellation.md` |
+| B.1 | **Unsafe/FFI audit** | 3h | A.* | 🔄 In Progress | | Findings in `analysis/safety/unsafe-audit.md`; initial pass shows no `unsafe`, flagged Drop + async spawn and sync mutex in async. |
+| B.2 | **Cancellation safety review** | 2.5h | A.* | 🔄 In Progress | | `tokio::select!`, resource cleanup, shutdown; flagged health checker shutdown gap, forward proxy abort usage, replay lock-await. Findings in `analysis/async/cancellation.md`. |
 | B.3 | **Send/Sync and locking analysis** | 2h | A.* | ⬜ Not Started | | Mutex/RwLock scope, await-in-lock checks; `analysis/async/locking.md` |
 
 **Phase B Total**: 7.5 hours

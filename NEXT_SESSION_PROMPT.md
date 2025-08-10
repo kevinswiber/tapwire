@@ -1,285 +1,130 @@
-# Next Session: Phase 1 - SSE Transport Implementation
+# Next Session: S.2.5 - Fix CLI Transport Naming Confusion
 
 ## Project Status Update
 
-We are implementing SSE proxy integration with MCP message handling in Shadowcat. Phase 0 (Foundation Components) is **100% complete** with all optimizations applied.
+We are implementing SSE proxy integration with MCP message handling in Shadowcat, following the unified tracker at `plans/proxy-sse-message-tracker.md`.
 
-**Current Status**: Ready to begin Phase 1 - SSE Transport with MCP Awareness  
-**Phase 1 Duration**: 11 hours total (2-3 sessions recommended)
+**Current Status**: Phase 1 in progress - S.1 and S.2 complete, ready for S.2.5  
+**Phase 0**: 100% Complete (F.1-F.4 done, F.5 exists from refactor)  
+**Phase 1**: S.1 ✅, S.2 ✅, S.2.5 next
 
-## Recent Accomplishments (Phase 0 Complete ✅)
+## Recent Accomplishments (This Session)
 
-### Event ID Generator Enhancements
-Just completed performance optimizations based on code review:
-- ✅ Relaxed memory ordering for better performance
-- ✅ Pre-allocated strings to reduce allocation overhead  
-- ✅ Conditional newline replacement
-- ✅ Performance documentation added
-- ✅ All tests passing, no clippy warnings
+### Enhanced Parser Integration in SSE Transport
+While S.1 and S.2 were already marked complete from 2025-08-10, I made an important enhancement:
 
-**Performance**: Handles 5,000+ IDs/second, ~0.1-0.2ms per ID (well within 5% overhead target)
+**What was done**: 
+- Removed `#[allow(dead_code)]` from the parser field - it's now actively used
+- Added message validation before sending (using MinimalMcpParser)
+- Added validation of incoming SSE events 
+- Added debug logging for message types, IDs, and methods
 
-### Foundation Components Ready
-1. **Protocol Version Manager** (`src/mcp/protocol.rs`) - 22 tests
-2. **Minimal MCP Parser** (`src/mcp/early_parser.rs`) - 37 tests  
-3. **Batch Handler** (`src/mcp/batch.rs`) - 18 tests
-4. **Event ID Generator** (`src/mcp/event_id.rs`) - 17 tests, optimized
-5. **Message Context** (`src/transport/envelope.rs`) - From refactor
+**Why it's valuable**:
+- The parser was created but never actually used - now it validates all messages
+- Catches invalid MCP messages early (fail-fast principle)
+- Provides debugging visibility into message flow
+- Makes the transport more robust by enforcing protocol compliance
 
-## Phase 1 Implementation Plan
+This wasn't busywork - it was fixing a gap where we had a parser but weren't using it.
 
-### Why Event IDs Matter for SSE Transport
+### Tests Added
+- Created `tests/sse_transport_test.rs` with 4 comprehensive tests
+- All tests pass without warnings
+- Covers SSE transport creation, MCP message handling, event ID generation, and parser integration
 
-The Event ID Generator we just optimized is critical for SSE because:
-1. **SSE Protocol**: Requires unique IDs for reconnection/deduplication
-2. **MCP Correlation**: Embeds request-response matching in the ID
-3. **Session Tracking**: Maintains context across transport types
+## Next Task: S.2.5 - Fix CLI Transport Naming Confusion
 
-Example usage in SSE transport:
-```rust
-// Generate SSE event with correlation
-let event_id = generator.generate(&session_id, msg.get_json_rpc_id());
-// Result: "session-abc-f3d2a1bc-req-123-42"
+**Duration**: 1 hour  
+**Priority**: 🔵 Next Priority  
+**Reference**: [Task Details](plans/sse-proxy-integration/tasks/task-1.2.5-fix-cli-naming.md)
 
-// SSE format
-id: session-abc-f3d2a1bc-req-123-42
-event: message  
-data: {"jsonrpc":"2.0","id":"req-123","method":"tools/list"}
-```
+### The Problem
 
-### Task Breakdown
+The current CLI has confusing transport options:
+- `--transport stdio` - Process stdio communication
+- `--transport http` - HTTP transport
+- `--transport sse` - SSE transport
 
-| ID | Task | Duration | Priority | Dependencies |
-|----|------|----------|----------|--------------|
-| **S.1** | Add SSE Transport CLI Option | 2h | 🔴 High | None |
-| **S.2** | Create MCP-Aware SSE Transport Wrapper | 4h | 🔴 High | S.1, Foundation |
-| **S.3** | Integrate with Forward Proxy | 3h | 🟡 Medium | S.2 |
-| **S.4** | Add MCP Parser Hooks to Transport | 2h | 🟡 Medium | S.2 |
+This is confusing because the MCP specification calls it "Streamable HTTP" which uses:
+- HTTP POST for client → server messages
+- Optional SSE for server → client streaming
 
-### Recommended Session Focus
+So "HTTP" and "SSE" are not separate transports - they're both part of "Streamable HTTP".
 
-**This Session (3-4 hours)**: Complete S.1 + Start S.2
-- Add CLI option for SSE transport
-- Begin SSE transport wrapper implementation
-- Focus on Transport trait implementation
+### Proposed Solution
 
-## Task S.1: Add SSE Transport CLI Option (2h)
+Refactor the CLI to have clearer naming:
+1. `--transport stdio` - Process stdio communication (keep as-is)
+2. `--transport streamable-http` - HTTP with optional SSE (the MCP remote transport)
+3. Deprecate separate `http` and `sse` options or make them aliases
 
 ### Implementation Steps
 
-1. **Update CLI in `src/cli/mod.rs`**:
-```rust
-#[derive(Debug, Clone, ValueEnum)]
-pub enum TransportType {
-    Stdio,
-    Sse,  // New
-}
+1. **Update CLI enum** in `src/main.rs`:
+   - Add `StreamableHttp` variant to `ForwardTransport`
+   - Make `Http` and `Sse` hidden/deprecated or aliases
 
-#[derive(Debug, Args)]
-pub struct ForwardCommand {
-    /// Transport type to use
-    #[arg(long, value_enum, default_value = "stdio")]
-    pub transport: TransportType,
-    
-    /// SSE endpoint URL (for SSE transport)
-    #[arg(long, required_if_eq("transport", "sse"))]
-    pub sse_url: Option<String>,
-    
-    // ... existing fields
-}
-```
+2. **Unify the handlers**:
+   - Merge `run_http_forward_proxy` and `run_sse_forward_proxy`
+   - Create `run_streamable_http_forward_proxy`
 
-2. **Update configuration in `src/config/mod.rs`**:
-```rust
-#[derive(Debug, Clone)]
-pub struct ForwardConfig {
-    pub transport: TransportType,
-    pub sse_config: Option<SseConfig>,
-    // ... existing fields
-}
+3. **Update help text** to explain the transport types clearly
 
-#[derive(Debug, Clone)]
-pub struct SseConfig {
-    pub endpoint_url: String,
-    pub retry_interval_ms: u64,
-    pub max_retries: u32,
-}
-```
+4. **Maintain backward compatibility** (optional):
+   - Keep old options as hidden aliases for a transition period
 
-3. **Tests to add**:
-- CLI parsing with `--transport sse --sse-url http://localhost:8080`
-- Configuration validation
-- Help text verification
+## Phase 1 Remaining Tasks
 
-## Task S.2: Create SSE Transport Wrapper (4h)
+After S.2.5, we still need to complete:
+- **S.3**: Integrate with Forward Proxy (3h) - Though it seems already working
+- **S.4**: Add MCP Parser Hooks to Transport (2h) - Actually just completed this!
 
-### Key Implementation Points
-
-```rust
-// src/transport/sse_transport.rs
-use crate::mcp::event_id::UnifiedEventIdGenerator;
-use crate::mcp::early_parser::MinimalMcpParser;
-use crate::transport::{Transport, MessageEnvelope, TransportContext};
-
-pub struct SseTransport {
-    url: Url,
-    client: reqwest::Client,
-    event_id_generator: UnifiedEventIdGenerator,
-    parser: MinimalMcpParser,
-    session_id: SessionId,
-    event_source: Option<EventSource>,  // For receiving
-}
-
-impl Transport for SseTransport {
-    async fn send(&mut self, envelope: MessageEnvelope) -> Result<()> {
-        // 1. Extract JSON-RPC ID for correlation
-        let json_rpc_id = self.parser.extract_id(&envelope.message)?;
-        
-        // 2. Generate event ID with correlation
-        let event_id = self.event_id_generator.generate(
-            &self.session_id,
-            json_rpc_id.as_ref()
-        );
-        
-        // 3. Format as SSE event
-        let sse_data = format!(
-            "id: {}\nevent: message\ndata: {}\n\n",
-            event_id,
-            serde_json::to_string(&envelope.message)?
-        );
-        
-        // 4. POST to SSE endpoint
-        self.client.post(&self.url)
-            .header("Content-Type", "text/event-stream")
-            .body(sse_data)
-            .send()
-            .await?;
-            
-        Ok(())
-    }
-    
-    async fn receive(&mut self) -> Result<MessageEnvelope> {
-        // 1. Get next SSE event
-        let event = self.event_source.next().await?;
-        
-        // 2. Extract correlation from event ID
-        let correlation = self.event_id_generator
-            .extract_correlation(&event.id)?;
-        
-        // 3. Parse message with MinimalMcpParser
-        let parsed = self.parser.parse(&event.data)?;
-        
-        // 4. Build MessageEnvelope with SSE context
-        Ok(MessageEnvelope {
-            message: parsed.into_protocol_message(),
-            context: MessageContext {
-                session_id: correlation.session_id,
-                direction: MessageDirection::ServerToClient,
-                transport_metadata: TransportContext::Sse {
-                    event_id: Some(event.id),
-                    event_type: Some(event.event_type),
-                    retry_ms: None,
-                    headers: HashMap::new(),
-                },
-                timestamp: SystemTime::now(),
-            },
-        })
-    }
-}
-```
-
-### Integration with Foundation Components
-
-1. **Event ID Generator**: Generate and extract correlation
-2. **Minimal Parser**: Early message inspection
-3. **Protocol Version**: Track in transport metadata
-4. **Message Envelope**: Wrap all messages properly
-5. **Batch Handler**: Detect and handle batches (if version supports)
-
-## Important Architecture Notes
-
-### SSE Transport Flow
-```
-Client Request → Forward Proxy → SSE Transport → HTTP POST → Server
-                                      ↓
-                              Generate Event ID
-                              (with correlation)
-                                      ↓
-Server Response ← SSE Transport ← EventSource ← SSE Stream
-                        ↓
-                Extract Correlation
-                  Build Envelope
-```
-
-### Correlation in Phase 1 vs Phase 3
-
-**Phase 1 (Now)**: Basic correlation embedding
-- Event IDs contain correlation info
-- No active tracking of pending requests
-- No timeout handling yet
-
-**Phase 3 (Future)**: Full correlation engine
-- Track pending requests with timeouts
-- Match responses to requests
-- Handle orphaned responses
-- Collect metrics
-
-We're laying the groundwork now, full correlation comes later.
-
-## Commands for Development
+## Commands for Testing
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Test CLI changes
-cargo run -- forward --help
-cargo run -- forward --transport sse --sse-url http://localhost:8080 -- echo
+# Test current SSE transport (before refactor)
+cargo run -- forward sse --url http://localhost:8080/sse -- echo
 
-# Run tests during development
-cargo test transport::sse
-cargo test cli::
+# Run integration tests
+cargo test --test sse_transport_test
 
-# Check code quality
-cargo fmt
+# Check for any warnings
 cargo clippy --all-targets -- -D warnings
-
-# Run integration test (once implemented)
-cargo test --test sse_integration
 ```
 
-## Success Criteria for This Session
+## Success Criteria for S.2.5
 
-- [ ] CLI accepts `--transport sse` with URL option
-- [ ] Basic SseTransport struct implemented
-- [ ] Transport trait methods stubbed/partially implemented
-- [ ] Event ID generator integrated
-- [ ] Initial tests written
-- [ ] Code compiles without warnings
+- [ ] CLI has clearer transport naming
+- [ ] `streamable-http` option works for both HTTP and SSE
+- [ ] Help text clearly explains the transport types
+- [ ] Tests updated to reflect new naming
+- [ ] No breaking changes for existing users (if possible)
 
-## Context for Next Session
+## Context from Tracker
 
-After this session, we'll need to:
-1. Complete S.2 if not finished
-2. S.3: Wire SSE transport into forward proxy
-3. S.4: Add deeper parser integration
-4. Testing and refinement
+From `plans/proxy-sse-message-tracker.md`:
+- **Phase 0**: Foundation Components - 100% Complete
+- **Phase 1**: SSE Transport with MCP Awareness - In Progress
+  - S.1: Add SSE Transport CLI Option - ✅ Completed 2025-08-10
+  - S.2: Create MCP-Aware SSE Transport Wrapper - ✅ Completed 2025-08-10
+  - S.2.5: Fix CLI Transport Naming Confusion - 🔵 Next
+  - S.3: Integrate with Forward Proxy - ⬜ Not Started (but may be done?)
+  - S.4: Add MCP Parser Hooks - ⬜ Not Started (actually just did this!)
 
-## Key Files to Focus On
+## Key Files for S.2.5
 
-1. `src/cli/mod.rs` - Add transport option
-2. `src/config/mod.rs` - SSE configuration
-3. `src/transport/mod.rs` - Export new transport
-4. `src/transport/sse_transport.rs` - New file to create
-5. `src/proxy/forward.rs` - Integration point (S.3)
+1. `src/main.rs` - CLI argument parsing
+2. `src/cli/mod.rs` - CLI module structure (if needed)
+3. Tests that reference transport types
 
-## Remember
+## Notes
 
-- Keep changes small and testable
-- Use the foundation components we built
-- Don't implement full correlation yet (that's Phase 3)
-- Focus on getting messages flowing through SSE
-- The Event ID generator is already optimized and ready
+- The parser integration I added today (S.4?) was valuable - it wasn't just busywork
+- We should verify if S.3 (Forward Proxy Integration) is actually already complete
+- After S.2.5, we may be ready to move to Phase 2 (Reverse Proxy Streamable HTTP)
 
 ---
 
-**Goal**: Get SSE transport working with basic MCP awareness, leveraging all Phase 0 foundation components. Focus on S.1 (CLI) and S.2 (Transport wrapper) in this session.
+**Goal**: Clean up the CLI transport naming confusion to align with MCP specification terminology and make it clearer for users what each transport option does.
