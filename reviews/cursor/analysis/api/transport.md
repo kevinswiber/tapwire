@@ -36,3 +36,38 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
     ```368:381:shadowcat-cursor-review/src/transport/replay.rs
     let mut outbound_rx = self.outbound_rx.lock().await; let outbound_rx = outbound_rx.as_mut().ok_or(...)?; match outbound_rx.recv().await { ... }
     ```
+  - HTTP MCP server transport: wraps channels for incoming/outgoing; envelope contexts use HTTP variants.
+    ```203:264:shadowcat-cursor-review/src/transport/http_mcp.rs
+    impl Transport for HttpMcpTransport { /* connect/send/receive/close */ }
+    ```
+  - SSE: session-aware manager, connection manager/client; ensure any future `Transport` impl for SSE respects cooperative shutdown.
+    ```41:89:shadowcat-cursor-review/src/transport/sse/session.rs
+    pub async fn start_monitoring(mut self) -> Self { tokio::spawn(... interval ...); }
+    ```
+
+## API refinements
+
+- Header naming consistency
+  - Ensure consistent casing for MCP headers across transports (currently mix of `MCP-Protocol-Version` and lower-case in reverse path). Standardize on canonical casing when constructing, accept case-insensitive for parsing.
+  - Citations:
+    ```818:827:shadowcat-cursor-review/src/proxy/forward.rs
+    request = request.header("MCP-Protocol-Version", "2025-06-18");
+    ```
+    ```1188:1213:shadowcat-cursor-review/src/proxy/reverse.rs
+    if let Some(protocol_version) = headers.get("mcp-protocol-version") { /* ... */ }
+    ```
+
+- Timeout semantics
+  - HTTP and stdio use `TransportConfig.timeout_ms`; ensure consistent timeout usage for send/receive paths and document expected behavior on timeout (error type, retry guidance).
+    ```351:357:shadowcat-cursor-review/src/transport/stdio.rs
+    let line = timeout(recv_timeout, stdout_rx.recv()).await
+    ```
+    ```255:263:shadowcat-cursor-review/src/transport/http.rs
+    let response = timeout(Duration::from_millis(self.config.timeout_ms), request.send())
+    ```
+
+- Trait ergonomics
+  - Consider a thin adapter type `ConcurrentTransport<T: Transport>` that encapsulates `Arc<RwLock<T>>` and exposes `send/receive` without leaking lock details to callers (used by forward proxy), or split `Transport` into read/write halves to enable separate task ownership.
+
+- Cooperative shutdown in trait docs
+  - Document that `close()` should be idempotent and terminate background work; if implementations spawn tasks, provide `with_shutdown(token)` or similar in their API.
