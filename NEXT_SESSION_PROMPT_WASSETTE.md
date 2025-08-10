@@ -1,196 +1,228 @@
-# Next Session: Wassette-Shadowcat Integration Phase C Completion
+# Next Session: Wassette-Shadowcat Integration Phase D
 
 ## Context
-We've successfully implemented the core Wassette transport and CLI integration for Shadowcat. The basic proxy functionality is working, allowing Shadowcat to spawn and communicate with Wassette processes for WebAssembly-based MCP tool execution.
+We've successfully completed Phase C of the Wassette-Shadowcat integration. The core functionality is now implemented and tested:
 
-## Current Status
-
-### ✅ Completed (Phase C partial)
-- **C.0 Environment Setup**: Development environment ready
-- **C.1 Basic Stdio Proxy**: WassetteTransport fully implemented with:
-  - Process spawning and lifecycle management
-  - Bidirectional stdio communication
-  - CLI integration (`shadowcat forward wassette`)
-  - Basic integration tests
-
-### 🔄 In Progress (Phase C remaining)
-- **C.2 Recording Integration**: Capture component operations to SQLite storage
-- **C.3 Interceptor Implementation**: Enable message modification and debugging
-
-### 📋 Pending (Phase D)
-- **D.0 Integration Guide**: Production deployment documentation
-- **D.1 Performance Analysis**: Benchmark and optimization
-- **D.2 Security Assessment**: Final security review
+### ✅ Completed (Phases A, B, C)
+- **Phase A**: Complete technical analysis and feasibility study
+- **Phase B**: Architecture design and security model
+- **Phase C**: Full implementation with:
+  - Basic stdio proxy for Wassette processes
+  - Recording integration with metadata capture
+  - Security interceptors (token stripping, access control)
+  - Debug interceptor for development
+  - CLI integration with all features
+  - Comprehensive test coverage
 
 ## Session Objectives
-Complete Phase C by implementing recording and interception capabilities for Wassette traffic, then move to Phase D for documentation and analysis.
+Complete Phase D by creating documentation, performance analysis, and final security assessment for production deployment.
 
 ## Tasks for This Session
 
-### Task C.2: Recording Integration (3 hours)
-Integrate Wassette transport with Shadowcat's existing recording infrastructure to capture all WebAssembly component interactions.
+### Task D.0: Integration Guide (2 hours)
+Create comprehensive documentation for deploying and using the Wassette-Shadowcat integration in production.
 
-**Implementation Steps:**
-1. Hook WassetteTransport into the recorder module
-2. Capture component initialization and tool calls
-3. Store Wassette-specific metadata (component names, capabilities)
-4. Enable replay of recorded Wassette sessions
-5. Test recording with sample WebAssembly components
+**Deliverables:**
+1. User guide with examples
+2. Configuration reference
+3. Deployment patterns
+4. Troubleshooting guide
+5. Best practices document
 
-**Key Files to Modify:**
-- `src/transport/wassette.rs` - Add recording hooks
-- `src/recorder/mod.rs` - Wassette-specific recording logic
-- `src/recorder/storage.rs` - Schema for Wassette metadata
-- `tests/wassette_integration_test.rs` - Recording tests
+**Key Topics to Cover:**
+- Installation and setup
+- CLI usage examples
+- Recording and replay workflows
+- Security configuration
+- Component management
+- Performance tuning
 
-### Task C.3: Interceptor Implementation (4 hours)
-Enable interception of Wassette messages for debugging, modification, and security enforcement.
+### Task D.1: Performance Analysis (1 hour)
+Analyze and document the performance characteristics of the integrated system.
 
-**Implementation Steps:**
-1. Integrate with existing interceptor chain
-2. Add Wassette-specific interceptor actions
-3. Implement token stripping for security boundary
-4. Add debug breakpoints for component calls
-5. Create rules for component access control
+**Analysis Points:**
+1. Latency overhead measurement
+2. Memory usage profiling
+3. Throughput benchmarks
+4. Scalability assessment
+5. Optimization recommendations
 
-**Key Files to Modify:**
-- `src/transport/wassette.rs` - Interceptor integration points
-- `src/interceptor/mod.rs` - Wassette interceptor support
-- `src/interceptor/rules.rs` - Component-specific rules
-- `src/cli/forward.rs` - CLI options for interception
+**Success Criteria:**
+- Overhead < 5% for typical operations
+- Memory usage < 100MB per session
+- Clear performance guidelines
 
-## Implementation Details
+### Task D.2: Security Assessment (1 hour)
+Final security review and hardening recommendations.
 
-### Recording Architecture
-```rust
-// In WassetteTransport
-impl WassetteTransport {
-    async fn send_with_recording(&mut self, envelope: MessageEnvelope) -> TransportResult<()> {
-        // Record outbound message
-        if let Some(recorder) = &self.recorder {
-            recorder.record_frame(Frame {
-                session_id: self.session_id.clone(),
-                direction: Direction::Outbound,
-                message: envelope.message.clone(),
-                timestamp: SystemTime::now(),
-                metadata: json!({
-                    "transport": "wassette",
-                    "plugin_dir": self.config.plugin_dir,
-                }),
-            }).await?;
-        }
-        
-        self.send(envelope).await
-    }
-}
+**Security Review:**
+1. Token isolation verification
+2. Component sandboxing validation
+3. Access control effectiveness
+4. Attack surface analysis
+5. Security best practices
+
+**Deliverables:**
+- Security architecture document
+- Threat model
+- Hardening checklist
+- Incident response guidelines
+
+## Implementation Plan
+
+### 1. Documentation Structure
+```
+docs/wassette-integration/
+├── README.md                    # Overview and quick start
+├── user-guide.md               # Detailed usage guide
+├── configuration.md            # Configuration reference
+├── deployment/
+│   ├── docker.md              # Docker deployment
+│   ├── kubernetes.md          # K8s deployment
+│   └── systemd.md            # Systemd service
+├── security/
+│   ├── architecture.md       # Security architecture
+│   ├── threat-model.md       # Threat analysis
+│   └── hardening.md          # Hardening guide
+└── performance/
+    ├── benchmarks.md          # Performance results
+    └── tuning.md             # Optimization guide
 ```
 
-### Interceptor Integration
-```rust
-// Token stripping interceptor
-pub struct WassetteTokenStripper;
+### 2. Example Configurations
 
-impl Interceptor for WassetteTokenStripper {
-    async fn intercept(&self, envelope: &mut MessageEnvelope) -> InterceptAction {
-        // Remove authentication tokens before sending to Wassette
-        if let Some(headers) = envelope.context.metadata.as_mut() {
-            headers.remove("authorization");
-            headers.remove("x-api-key");
-        }
-        InterceptAction::Continue
-    }
-}
+#### Basic Usage
+```bash
+# Simple forward proxy with Wassette
+shadowcat forward wassette \
+  --plugin-dir ./plugins
+
+# With recording
+shadowcat forward wassette \
+  --plugin-dir ./plugins \
+  --record session.tape
+
+# With security features
+shadowcat forward wassette \
+  --plugin-dir ./plugins \
+  --strip-tokens \
+  --allowed-tools safe_tool,analytics_tool
 ```
+
+#### Production Configuration
+```yaml
+# wassette-config.yaml
+transport:
+  type: wassette
+  config:
+    plugin_dir: /opt/wassette/plugins
+    wassette_path: /usr/local/bin/wassette
+    debug: false
+
+security:
+  strip_tokens: true
+  allowed_tools:
+    - data_processor
+    - report_generator
+  blocked_methods:
+    - system/*
+    - admin/*
+
+recording:
+  enabled: true
+  storage_dir: /var/lib/shadowcat/tapes
+  compression: gzip
+  retention_days: 30
+
+interceptors:
+  - type: wassette_token_stripper
+    priority: 100
+  - type: wassette_access_control
+    priority: 90
+  - type: rate_limiter
+    priority: 80
+    config:
+      requests_per_minute: 100
+```
+
+### 3. Performance Benchmarks to Run
+
+```bash
+# Baseline Wassette performance
+time wassette serve --plugin-dir ./plugins < test-requests.jsonl
+
+# With Shadowcat proxy
+time shadowcat forward wassette --plugin-dir ./plugins < test-requests.jsonl
+
+# With full features
+time shadowcat forward wassette \
+  --plugin-dir ./plugins \
+  --record test.tape \
+  --strip-tokens \
+  --allowed-tools tool1,tool2 < test-requests.jsonl
+```
+
+### 4. Security Validation Tests
+
+1. **Token Isolation Test**: Verify tokens are stripped
+2. **Access Control Test**: Verify tool restrictions work
+3. **Sandbox Escape Test**: Verify component isolation
+4. **Resource Exhaustion Test**: Verify rate limiting
+5. **Replay Attack Test**: Verify replay protection
 
 ## Success Criteria
 
-### For C.2 (Recording)
-- [ ] All Wassette messages are recorded to SQLite
-- [ ] Component metadata is captured (name, version, capabilities)
-- [ ] Recorded sessions can be replayed
-- [ ] Integration test demonstrates recording
+Phase D is complete when:
+- [ ] Comprehensive user documentation exists
+- [ ] All configuration options are documented
+- [ ] Performance benchmarks show < 5% overhead
+- [ ] Security assessment is complete
+- [ ] Deployment guides cover major platforms
+- [ ] Best practices are documented
+- [ ] Examples cover common use cases
 
-### For C.3 (Interception)
-- [ ] Messages can be intercepted and modified
-- [ ] Token stripping works at security boundary
-- [ ] Debug breakpoints can pause execution
-- [ ] Component access rules are enforced
+## Files to Create/Update
 
-## Testing Strategy
+### New Documentation
+- `docs/wassette-integration/README.md`
+- `docs/wassette-integration/user-guide.md`
+- `docs/wassette-integration/configuration.md`
+- `docs/wassette-integration/deployment/*.md`
+- `docs/wassette-integration/security/*.md`
+- `docs/wassette-integration/performance/*.md`
 
-### Integration Tests
-```bash
-# Test recording
-cargo test test_wassette_recording -- --nocapture
-
-# Test interception
-cargo test test_wassette_interception -- --nocapture
-
-# End-to-end test with real Wassette
-cargo test test_wassette_e2e -- --ignored --nocapture
-```
-
-### Manual Testing
-```bash
-# Start proxy with recording
-shadowcat forward wassette \
-  --plugin-dir ./test-plugins \
-  --record ./wassette-session.tape
-
-# Start proxy with interception
-shadowcat forward wassette \
-  --plugin-dir ./test-plugins \
-  --intercept-rules ./wassette-rules.yaml
-```
-
-## Key Challenges to Address
-
-1. **State Management**: WebAssembly components are stateless - how to handle in replay?
-2. **Component Discovery**: How to detect available components dynamically?
-3. **Error Propagation**: Component errors need proper propagation through proxy
-4. **Performance**: Minimize overhead of recording/interception
-
-## Files to Reference
-
-### Core Implementation
-- `shadowcat-wassette/src/transport/wassette.rs` - Current Wassette transport
-- `shadowcat-wassette/src/recorder/` - Recording infrastructure
-- `shadowcat-wassette/src/interceptor/` - Interception framework
-
-### Planning Documents
-- `plans/wassette-integration/wassette-tracker.md` - Overall progress tracking
-- `plans/wassette-integration/analysis/phase-c-implementation.md` - Current implementation status
-- `plans/wassette-integration/analysis/proxy-architecture.md` - Architecture design
-
-### Test Code
-- `shadowcat-wassette/tests/wassette_integration_test.rs` - Existing tests
-- `shadowcat-wassette/tests/integration/` - Integration test framework
+### Update Existing
+- `shadowcat-wassette/README.md` - Add integration overview
+- `shadowcat-wassette/CLAUDE.md` - Add Wassette-specific guidelines
+- `plans/wassette-integration/wassette-tracker.md` - Mark Phase D complete
 
 ## Commands to Start
 
 ```bash
-# Navigate to the shadowcat-wassette worktree
+# Navigate to the project
 cd shadowcat-wassette
 
-# Ensure on the feat/wassette-integration branch
-git status
+# Create documentation structure
+mkdir -p docs/wassette-integration/{deployment,security,performance}
 
-# Run existing tests to verify baseline
-cargo test wassette
+# Run performance benchmarks
+cargo bench --features wassette
 
-# Start implementing recording integration
-$EDITOR src/transport/wassette.rs
+# Generate security report
+cargo audit
+
+# Build release version for final testing
+cargo build --release
 ```
 
 ## Definition of Done
 
-Phase C is complete when:
-- [ ] Recording captures all Wassette traffic with metadata
-- [ ] Recorded sessions can be successfully replayed
-- [ ] Interceptors can modify/block Wassette messages
-- [ ] Token stripping prevents credential leakage
-- [ ] All tests pass including integration tests
-- [ ] Code passes clippy and rustfmt checks
-- [ ] Documentation updated with examples
+The Wassette-Shadowcat integration is production-ready when:
+- All documentation is complete and reviewed
+- Performance meets targets (< 5% overhead)
+- Security assessment shows no critical issues
+- Examples work as documented
+- Integration tests pass in CI/CD
+- Release notes are prepared
 
-After Phase C completion, we'll move to Phase D for final documentation, performance analysis, and security assessment before considering the Wassette integration production-ready.
+After Phase D completion, the integration will be ready for production deployment with full confidence in its security, performance, and reliability.
