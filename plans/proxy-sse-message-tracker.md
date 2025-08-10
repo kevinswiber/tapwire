@@ -100,7 +100,7 @@ Implement SSE transport that understands MCP messages from the start.
 |----|------|----------|--------------|--------|-------|-------|
 | S.1 | Add SSE Transport CLI Option | 2h | None | ✅ Completed | 2025-08-10 | [Details](sse-proxy-integration/tasks/task-1.1-cli-sse-option.md) |
 | S.2 | **Create MCP-Aware SSE Transport Wrapper** | 4h | F.1-F.4, S.1 | ✅ Completed | 2025-08-10 | Uses MessageContext from refactor |
-| S.2.5 | **Fix CLI Transport Naming Confusion** | 1h | S.1, S.2 | 🔵 Next Priority | | [Details](sse-proxy-integration/tasks/task-1.2.5-fix-cli-naming.md) |
+| S.2.5 | **Fix CLI Transport Naming Confusion** | 1h | S.1, S.2 | ✅ Completed | 2025-08-10 | [Details](sse-proxy-integration/tasks/task-1.2.5-fix-cli-naming.md) |
 | S.3 | Integrate with Forward Proxy | 3h | S.2 | ⬜ Not Started | | From SSE Task 1.3 |
 | S.4 | **Add MCP Parser Hooks to Transport** | 2h | S.2, F.2 | ⬜ Not Started | | [Task Details](#s4-parser-hooks) |
 
