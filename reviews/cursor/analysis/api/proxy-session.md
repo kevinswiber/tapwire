@@ -42,3 +42,14 @@ Scope: `shadowcat-cursor-review/` at `eec52c8`
 - Proposals:
   - Add explicit lifecycle states and counters (running/draining) surfaced via `get_session_stats`.
   - Accept a `TransportContext` when recording from proxies to preserve accurate edge metadata.
+
+## Interceptor chain API surface
+- Current chain API supports actions: Continue, Modify, Block, Mock, Pause, Delay, ordered by priority.
+  ```308:425:shadowcat-cursor-review/src/interceptor/engine.rs
+  pub async fn intercept(&self, ctx: &InterceptContext) -> InterceptResult<InterceptAction> { /* ... */ }
+  ```
+- Recommendations:
+  - Make Pause/Delay behavior explicit in proxy: define how a paused message resumes (e.g., via `wait_for_resume` with timeout) and where the resumed action is applied (before/after version negotiation, session recording).
+  - Provide a typed “effects” mapping for actions in the forward proxy (e.g., Mock writes to response channel; Block emits structured error response for requests).
+  - Metrics: expose stable counters/gauges externally or map into reverse proxy `/metrics` endpoint under a separate namespace.
+  - Document interceptor initialization/shutdown sequencing relative to proxy start/stop.

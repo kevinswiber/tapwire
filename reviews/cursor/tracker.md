@@ -140,7 +140,7 @@ Follow `CURSOR_RUST_CODE_REVIEWER.md` for review methodology, command hints, and
 - Plans template: `./../../plans/tracker-template.md`
 
 ## Next Actions
-1. Kick off Phase C: API, error handling, and module boundaries per C.1–C.3 stubs.
+1. Continue Phase C: refine interceptor effects and lifecycle docs; start C.4 public API docs/examples.
 
 ---
 
