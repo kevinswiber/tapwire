@@ -80,7 +80,7 @@ Create ergonomic library APIs and core functionality
 | B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 681 tests passing, full shutdown system |
 | B.2.1 | **Fix Shutdown Integration** | 4h | B.2 | ✅ Complete | | [Details](tasks/B.2.1-proper-shutdown-integration.md) - Fixed with real proxy implementations |
 | B.3 | **Create High-Level API** | 3h | B.1, B.2.1 | ✅ Complete | | [Details](tasks/B.3-library-api.md) - High-level API with handles, 4 examples |
-| B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
+| B.4 | **Extract Transport Factory** | 3h | B.1 | ✅ Complete | | [Details](tasks/B.4-transport-factory.md) - Type-safe factory with TransportSpec |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
 | B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | ✅ Complete | | [Details](tasks/B.6-integration-tests.md) - 781 tests total, all passing |
 
@@ -252,26 +252,35 @@ If context window becomes limited:
 
 ## Next Actions
 
-1. **🔄 B.6: Complete Integration Tests** - Add mock servers and finish test suite (1 hour)
-2. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
-3. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
-4. **C.1: Comprehensive Documentation** - Document the new high-level API (4 hours)
-5. **C.2: Configuration File Support** - Add TOML/YAML config loading (3 hours)
+1. **B.5: Standardize Error Handling** - Last task in Phase B! (2 hours)
+2. **C.1: Comprehensive Documentation** - Start Phase C with documentation (4 hours)
+3. **C.2: Configuration File Support** - Add TOML/YAML config loading (3 hours)
+4. **C.3: Improve Error Messages** - Make errors more actionable (2 hours)
+5. **C.4: Add Telemetry/Metrics** - Performance monitoring (4 hours)
 
 ## Progress Summary
 
 - **Phase A**: 100% Complete (7 hours) ✅
-- **Phase B**: 75% Complete (18 of 24 hours)
+- **Phase B**: 92% Complete (22 of 24 hours)
   - B.1: ✅ Builder Patterns (6h)
   - B.2: ✅ Graceful Shutdown (4h)
   - B.2.1: ✅ Shutdown Integration Fixed (4h)
   - B.3: ✅ High-Level API (3h)
-  - B.4-B.5: ⬜ Not Started (5h remaining)
-  - B.6: 🔄 In Progress (1h of 2h)
+  - B.4: ✅ Transport Factory (3h)
+  - B.5: ⬜ Not Started (2h remaining)
+  - B.6: ✅ Integration Tests (2h)
 - **Phase C**: 0% Complete (37 hours)
-- **Overall**: ~33% Complete (25 of 74 hours)
+- **Overall**: ~35% Complete (29 of 68 hours)
 
 ## Notes
+
+### B.4 Completion Summary (2025-08-11)
+- Created comprehensive TransportFactory in `src/transport/factory.rs`
+- Replaced invalid URL schemes (stdio://, sse://) with type-safe TransportSpec enum
+- Consolidated duplicate factories into single implementation
+- Updated high-level API to use centralized factory
+- Added multiple creation methods: spec-based, direct methods, auto-detection, and builders
+- All 859 tests passing, no clippy warnings
 
 ### B.3 Completion Summary (2025-08-11)
 - Implemented complete high-level API with Shadowcat struct and builder

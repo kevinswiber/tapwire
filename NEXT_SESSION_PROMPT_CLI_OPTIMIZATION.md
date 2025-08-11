@@ -1,4 +1,4 @@
-# Next Session: Complete Phase B of Shadowcat CLI Optimization
+# Next Session: Complete Phase B with Error Handling
 
 ## Context
 
@@ -6,18 +6,18 @@ We are optimizing Shadowcat's CLI refactor to transform it from a functional CLI
 
 ## Current Status
 
-**Phase B: 75% Complete** (as of 2025-08-11)
+**Phase B: 92% Complete** (as of 2025-08-11)
 
 ### Completed in Phase B:
 - ✅ B.1: Implement Builder Patterns (6h) - All builders working with tests
-- ✅ B.2: Add Graceful Shutdown (4h) - Full shutdown system with 681 passing tests
+- ✅ B.2: Add Graceful Shutdown (4h) - Full shutdown system
 - ✅ B.2.1: Fix Shutdown Integration (4h) - Fixed with real proxy implementations
-- ✅ B.3: Create High-Level API (3h) - Clean high-level API with handles, 4 examples
-- ✅ B.6: Add Basic Integration Tests (2h) - 781 total tests, all passing
+- ✅ B.3: Create High-Level API (3h) - Clean API with handles, 4 examples
+- ✅ B.4: Extract Transport Factory (3h) - Type-safe factory with TransportSpec enum
+- ✅ B.6: Add Basic Integration Tests (2h) - 859 total tests, all passing
 
 ### Remaining in Phase B:
-- ⬜ B.4: Extract Transport Factory (3h)
-- ⬜ B.5: Standardize Error Handling (2h)
+- ⬜ B.5: Standardize Error Handling (2h) - **LAST TASK IN PHASE B!**
 
 ## Working Directory
 
@@ -30,62 +30,67 @@ This is a separate worktree of the shadowcat submodule on branch `shadowcat-cli-
 
 ## Test Status
 
-All 781 tests are passing:
-- 684 unit tests
-- 97 E2E tests  
-- 20 active integration tests (14 simple, 6 mock-based)
-- 10 ignored integration tests (require stdin/stdout, documented why)
+All 859 tests are passing with the new transport factory implementation.
 
-## Next Tasks
-
-### B.4: Extract Transport Factory (3h)
-
-**Goal**: Create a centralized factory for transport creation to reduce code duplication.
-
-**Current Issues**:
-- Transport creation logic is scattered across CLI modules
-- Each command duplicates stdio/HTTP transport setup
-- No consistent error handling for transport creation
-
-**Implementation Plan**:
-1. Create `src/transport/factory.rs` with `TransportFactory` struct
-2. Implement methods for each transport type:
-   - `create_stdio_client()` -> `StdioClientTransport`
-   - `create_stdio_server(cmd)` -> `StdioTransport`
-   - `create_http_client(url)` -> `HttpTransport`
-   - `create_sse_client(url)` -> `SseTransport`
-3. Add configuration options (timeouts, buffer sizes, etc.)
-4. Update all CLI commands to use factory
-5. Add tests for factory methods
-
-**Success Criteria**:
-- All transport creation goes through factory
-- Consistent error handling
-- Reduced code duplication
-- Tests for all factory methods
-
-### B.5: Standardize Error Handling (2h)
+## Next Task: B.5 - Standardize Error Handling (2 hours)
 
 **Goal**: Ensure consistent error handling throughout the library.
 
 **Current Issues**:
-- Mix of `Result<T, ShadowcatError>` and `anyhow::Result<T>`
-- Some errors printed to stderr, others returned
-- Inconsistent error context and messages
+1. Mix of `Result<T, ShadowcatError>` and `anyhow::Result<T>`
+2. Some errors printed to stderr, others returned
+3. Inconsistent error context and messages
+4. Some library code still uses `println!` or `eprintln!`
 
 **Implementation Plan**:
-1. Audit all public APIs for error types
-2. Ensure all use `Result<T, ShadowcatError>`
-3. Add proper error context with `.context()`
-4. Remove any remaining `println!` or `eprintln!` from library code
-5. Ensure errors bubble up properly to CLI layer
-6. Add error conversion traits where needed
 
-**Success Criteria**:
+### Step 1: Audit (30 min)
+```bash
+# Find anyhow::Result in library code
+rg "anyhow::Result" src/ --glob '!main.rs' --glob '!cli/'
+
+# Find direct output in library
+rg "println!|eprintln!" src/ --glob '!main.rs' --glob '!cli/'
+
+# Check error types
+rg "Result<.*>" src/ --glob '*.rs' | grep -v ShadowcatError | grep -v "Result<()"
+```
+
+### Step 2: Standardize (45 min)
+- Ensure all public APIs return `Result<T, ShadowcatError>`
+- Add error conversion traits where needed
+- Update function signatures
+
+### Step 3: Add Context (30 min)
+- Add `.context()` calls for fallible operations
+- Make error messages descriptive
+- Include relevant data (paths, URLs)
+
+### Step 4: Remove Direct Output (15 min)
+- Remove `println!`/`eprintln!` from library
+- Use tracing instead
+
+### Step 5: Update Examples (30 min)
+- Show proper error handling patterns
+- Add error recovery examples
+
+## Success Criteria for B.5
+
 - All public APIs return `Result<T, ShadowcatError>`
-- No direct printing to stderr in library code
+- No direct printing in library code
 - Consistent error messages with context
-- Clean error handling in examples
+- All 859+ tests still passing
+- No clippy warnings
+
+## After B.5: Start Phase C!
+
+Once B.5 is complete, Phase B will be 100% done and we can start Phase C (Quality & Testing):
+
+1. **C.1: Comprehensive Documentation** (4h) - Document the new APIs
+2. **C.2: Configuration File Support** (3h) - TOML/YAML config
+3. **C.3: Improve Error Messages** (2h) - Make errors actionable
+4. **C.4: Add Telemetry/Metrics** (4h) - Performance monitoring
+5. **C.5: Performance Optimization** (6h) - Profile and optimize
 
 ## Commands to Run
 
@@ -95,41 +100,39 @@ cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
 # Check current status
 git status
-cargo test --quiet  # Should show all 781 tests passing
+cargo test --quiet  # Should show 859+ tests passing
 
-# For B.4 Transport Factory:
-# Create src/transport/factory.rs
-# Update imports and exports
-# Run tests after each change
+# Start B.5 implementation
+# Follow the audit steps above
 
-# For B.5 Error Handling:
-# Audit with: rg "anyhow::Result" src/
-# Check for: rg "println!|eprintln!" src/ --glob '!main.rs'
-# Ensure consistent error types
+# After each change
+cargo test --quiet
+cargo clippy --all-targets -- -D warnings
 ```
+
+## Key Achievements from Last Session
+
+- **Consolidated Transport Factory**: Removed duplicate factory, created single comprehensive implementation
+- **Type-Safe API**: Replaced invalid URL schemes (stdio://, sse://) with TransportSpec enum
+- **Multiple Creation Methods**: Spec-based, direct methods, auto-detection, and builders
+- **Clean Design**: Using Rust's type system instead of string parsing
+- **All Tests Passing**: 859 tests, no clippy warnings
 
 ## Important Notes
 
-1. **Worktree**: We're working in `/Users/kevin/src/tapwire/shadowcat-cli-refactor`, not the main shadowcat directory
-2. **Tests**: Keep all 781 tests passing as you make changes
-3. **Commit Often**: Make small, focused commits for each logical change
-4. **Documentation**: Update task files in `plans/cli-refactor-optimization/tasks/` as you complete work
+1. **Worktree**: We're in `/Users/kevin/src/tapwire/shadowcat-cli-refactor`
+2. **Focus**: B.5 is the LAST task in Phase B - completing it means Phase B is done!
+3. **Library vs CLI**: Focus on library code; CLI can keep using anyhow
+4. **Backwards Compatibility**: Preserve where possible
 
-## Phase C Preview
+## Phase B Completion
 
-Once B.4 and B.5 are complete, Phase B will be done and we'll move to Phase C (Quality & Testing):
-- C.1: Comprehensive Documentation (4h)
-- C.2: Configuration File Support (3h)
-- C.3: Improve Error Messages (2h)
-- C.4: Add Telemetry/Metrics (4h)
-- C.5: Performance Optimization (6h)
-- C.6: Extensive Test Coverage (6h)
-- C.7: CLI Shell Completions (2h)
+When B.5 is done, Phase B will be 100% complete:
+- Library will be fully usable without CLI
+- Clean, ergonomic APIs with builders
+- Proper error handling throughout
+- Graceful shutdown support
+- Comprehensive transport factory
+- Integration tests in place
 
-## Success Metrics
-
-Phase B will be complete when:
-- ✅ Transport factory eliminates duplication
-- ✅ All public APIs have consistent error handling
-- ✅ All 781+ tests still pass
-- ✅ Library is usable without any CLI dependencies
+Ready to finish Phase B and move to Phase C!
