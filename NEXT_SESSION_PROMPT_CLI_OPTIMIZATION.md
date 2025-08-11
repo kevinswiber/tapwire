@@ -1,189 +1,135 @@
-# Next Session: Complete Integration Tests (B.6)
+# Next Session: Complete Phase B of Shadowcat CLI Optimization
 
-## Session Context
+## Context
 
-We've made excellent progress on the CLI refactor optimization! In the previous session, we:
+We are optimizing Shadowcat's CLI refactor to transform it from a functional CLI tool into a production-ready library. The work is tracked in `plans/cli-refactor-optimization/cli-optimization-tracker.md`.
 
-1. ✅ **Completed B.2.1**: Fixed all critical technical debt with real proxy implementations
-2. ✅ **Completed B.3**: Created a comprehensive library facade with handle types
-3. 🔄 **Started B.6**: Created integration test structure that needs mock servers
+## Current Status
 
-## Current State
-- **Branch**: `shadowcat-cli-refactor` (git worktree at `/Users/kevin/src/tapwire/shadowcat-cli-refactor`)
-- **Tests**: 681 passing, clippy clean
-- **Tracker**: `plans/cli-refactor-optimization/cli-refactor-tracker.md`
-- **Progress**: Phase B is 75% complete (18 of 24 hours)
+**Phase B: 75% Complete** (as of 2025-08-11)
 
-## Next Task: Complete B.6 Integration Tests (1 hour)
+### Completed in Phase B:
+- ✅ B.1: Implement Builder Patterns (6h) - All builders working with tests
+- ✅ B.2: Add Graceful Shutdown (4h) - Full shutdown system with 681 passing tests
+- ✅ B.2.1: Fix Shutdown Integration (4h) - Fixed with real proxy implementations
+- ✅ B.3: Create Library Facade (3h) - Clean facade with handles, 4 examples
+- ✅ B.6: Add Basic Integration Tests (2h) - 781 total tests, all passing
 
-### What's Already Done
+### Remaining in Phase B:
+- ⬜ B.4: Extract Transport Factory (3h)
+- ⬜ B.5: Standardize Error Handling (2h)
 
-Created `tests/integration_facade.rs` with 8 test cases:
-- Simple forward proxy
-- Shutdown handling  
-- Builder configuration
-- Development vs Production configs
-- Recording functionality
-- Handle management
-- Reverse proxy
+## Working Directory
 
-### What Needs to Be Done
-
-The tests are currently failing because they try to create real proxies with real commands. We need to:
-
-1. **Create mock MCP servers** for testing
-2. **Fix the test implementations** to use mocks
-3. **Add more comprehensive test coverage**
-
-### Suggested Mock Server Implementation
-
-Here's a starting point for mock servers you can use:
-
-```rust
-// tests/common/mod.rs - Shared test utilities
-use tokio::process::Command;
-use std::io::Write;
-
-/// Create a mock MCP server that responds with predefined messages
-pub async fn create_mock_mcp_server() -> Result<Command, Box<dyn std::error::Error>> {
-    // Use a simple script that acts as an MCP server
-    let mut cmd = Command::new("sh");
-    cmd.arg("-c")
-       .arg(r#"
-           # Simple mock MCP server
-           read -r line
-           echo '{"jsonrpc":"2.0","result":{"protocolVersion":"2025-11-05"},"id":"1"}'
-           read -r line
-           echo '{"jsonrpc":"2.0","result":{"status":"ok"},"id":"2"}'
-       "#);
-    cmd.stdin(std::process::Stdio::piped())
-       .stdout(std::process::Stdio::piped())
-       .stderr(std::process::Stdio::null());
-    Ok(cmd)
-}
-
-/// Create a test HTTP server for reverse proxy tests
-pub async fn start_test_http_server(port: u16) -> tokio::task::JoinHandle<()> {
-    use axum::{Router, routing::post, Json};
-    use serde_json::{json, Value};
-    
-    let app = Router::new()
-        .route("/mcp", post(|Json(payload): Json<Value>| async move {
-            // Echo back with a result
-            Json(json!({
-                "jsonrpc": "2.0",
-                "result": {"echo": payload},
-                "id": payload.get("id").cloned().unwrap_or(json!(1))
-            }))
-        }));
-    
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
-        .await
-        .unwrap();
-    
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    })
-}
+The work is happening in a git worktree:
+```bash
+cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 ```
 
-### Test Implementation Fixes
+This is a separate worktree of the shadowcat submodule on branch `shadowcat-cli-refactor`.
 
-Update the tests to use mock servers:
+## Test Status
 
-```rust
-#[tokio::test]
-async fn test_facade_simple_forward_proxy() {
-    // Use the mock MCP server command
-    let mock_cmd = create_mock_mcp_server().await.unwrap();
-    
-    let shadowcat = Shadowcat::new();
-    
-    // Create a proper shutdown mechanism
-    let (controller, token) = ShutdownController::new();
-    
-    // Start proxy with mock
-    let handle = tokio::spawn(async move {
-        // Instead of using echo, use our mock server
-        shadowcat.forward_stdio(vec!["mock_mcp".to_string()], Some(token)).await
-    });
-    
-    // Give it time to initialize
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    
-    // Trigger shutdown
-    controller.shutdown(Duration::from_secs(1)).await.unwrap();
-    
-    // Wait for completion
-    let result = timeout(Duration::from_secs(2), handle).await;
-    assert!(result.is_ok());
-}
-```
+All 781 tests are passing:
+- 684 unit tests
+- 97 E2E tests  
+- 20 active integration tests (14 simple, 6 mock-based)
+- 10 ignored integration tests (require stdin/stdout, documented why)
 
-## Additional Test Cases to Add
+## Next Tasks
 
-1. **Error Handling Tests**
-   - Test proxy behavior when server fails
-   - Test timeout handling
-   - Test invalid configuration
+### B.4: Extract Transport Factory (3h)
 
-2. **Concurrent Proxy Tests**
-   - Multiple proxies running simultaneously
-   - Resource cleanup verification
+**Goal**: Create a centralized factory for transport creation to reduce code duplication.
 
-3. **Transport-Specific Tests**
-   - HTTP transport with real HTTP mock server
-   - SSE transport testing
-   - Mixed transport scenarios
+**Current Issues**:
+- Transport creation logic is scattered across CLI modules
+- Each command duplicates stdio/HTTP transport setup
+- No consistent error handling for transport creation
 
-## Success Criteria
+**Implementation Plan**:
+1. Create `src/transport/factory.rs` with `TransportFactory` struct
+2. Implement methods for each transport type:
+   - `create_stdio_client()` -> `StdioClientTransport`
+   - `create_stdio_server(cmd)` -> `StdioTransport`
+   - `create_http_client(url)` -> `HttpTransport`
+   - `create_sse_client(url)` -> `SseTransport`
+3. Add configuration options (timeouts, buffer sizes, etc.)
+4. Update all CLI commands to use factory
+5. Add tests for factory methods
 
-After completing B.6:
-- [ ] All integration tests pass reliably
-- [ ] Mock servers properly simulate MCP protocol
-- [ ] Tests cover happy path and error cases
-- [ ] Tests run in < 10 seconds total
-- [ ] No test pollution between test cases
+**Success Criteria**:
+- All transport creation goes through factory
+- Consistent error handling
+- Reduced code duplication
+- Tests for all factory methods
 
-## Commands to Start With
+### B.5: Standardize Error Handling (2h)
+
+**Goal**: Ensure consistent error handling throughout the library.
+
+**Current Issues**:
+- Mix of `Result<T, ShadowcatError>` and `anyhow::Result<T>`
+- Some errors printed to stderr, others returned
+- Inconsistent error context and messages
+
+**Implementation Plan**:
+1. Audit all public APIs for error types
+2. Ensure all use `Result<T, ShadowcatError>`
+3. Add proper error context with `.context()`
+4. Remove any remaining `println!` or `eprintln!` from library code
+5. Ensure errors bubble up properly to CLI layer
+6. Add error conversion traits where needed
+
+**Success Criteria**:
+- All public APIs return `Result<T, ShadowcatError>`
+- No direct printing to stderr in library code
+- Consistent error messages with context
+- Clean error handling in examples
+
+## Commands to Run
 
 ```bash
-# Navigate to the worktree
+# Navigate to worktree
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
-# Review existing test file
-cat tests/integration_facade.rs
+# Check current status
+git status
+cargo test --quiet  # Should show all 781 tests passing
 
-# Create common test utilities module
-mkdir -p tests/common
-echo "pub mod mock_servers;" > tests/common/mod.rs
+# For B.4 Transport Factory:
+# Create src/transport/factory.rs
+# Update imports and exports
+# Run tests after each change
 
-# Run specific test with output
-cargo test --test integration_facade test_facade_simple_forward_proxy -- --nocapture
-
-# Run all integration tests
-cargo test --test integration_facade
+# For B.5 Error Handling:
+# Audit with: rg "anyhow::Result" src/
+# Check for: rg "println!|eprintln!" src/ --glob '!main.rs'
+# Ensure consistent error types
 ```
 
-## After B.6: Next Tasks
+## Important Notes
 
-- **B.4**: Extract Transport Factory (3 hours) - Refine TransportFactory
-- **B.5**: Standardize Error Handling (2 hours) - Improve error context
-- **C.1**: Documentation (4 hours) - Document the facade API
-- **C.2**: Config Files (3 hours) - Add TOML/YAML support
+1. **Worktree**: We're working in `/Users/kevin/src/tapwire/shadowcat-cli-refactor`, not the main shadowcat directory
+2. **Tests**: Keep all 781 tests passing as you make changes
+3. **Commit Often**: Make small, focused commits for each logical change
+4. **Documentation**: Update task files in `plans/cli-refactor-optimization/tasks/` as you complete work
 
-## Files Changed in This Session
+## Phase C Preview
 
-Key files modified:
-- `src/facade.rs` - Enhanced with HTTP forward, reverse proxy, handle types
-- `src/lib.rs` - Exported handle types
-- `src/cli/forward.rs` - Updated to use ForwardProxyHandle
-- `examples/*.rs` - 4 new example programs
-- `tests/integration_facade.rs` - New integration test suite
-- `plans/cli-refactor-optimization/cli-optimization-tracker.md` - Updated progress
+Once B.4 and B.5 are complete, Phase B will be done and we'll move to Phase C (Quality & Testing):
+- C.1: Comprehensive Documentation (4h)
+- C.2: Configuration File Support (3h)
+- C.3: Improve Error Messages (2h)
+- C.4: Add Telemetry/Metrics (4h)
+- C.5: Performance Optimization (6h)
+- C.6: Extensive Test Coverage (6h)
+- C.7: CLI Shell Completions (2h)
 
-## Duration Estimate: 1-2 hours
+## Success Metrics
 
-Focus on getting the mock servers working first, then fix each test case. The goal is to have a reliable integration test suite that validates the facade API works correctly.
-
-Good luck!
+Phase B will be complete when:
+- ✅ Transport factory eliminates duplication
+- ✅ All public APIs have consistent error handling
+- ✅ All 781+ tests still pass
+- ✅ Library is usable without any CLI dependencies

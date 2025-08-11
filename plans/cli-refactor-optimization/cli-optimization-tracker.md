@@ -4,9 +4,9 @@
 
 This tracker coordinates the optimization of Shadowcat's CLI refactor to transform it from a functional CLI tool into a production-ready library and CLI. Based on the comprehensive review conducted in `reviews/cli-refactor/`, we need to address critical architectural issues that prevent library usage and improve overall code quality.
 
-**Last Updated**: 2025-08-10  
+**Last Updated**: 2025-08-11  
 **Total Estimated Duration**: 60-70 hours  
-**Status**: Phase B In Progress (50% Complete)
+**Status**: Phase B In Progress (75% Complete)
 
 ## Goals
 
@@ -82,7 +82,7 @@ Create ergonomic library APIs and core functionality
 | B.3 | **Create Library Facade** | 3h | B.1, B.2.1 | ✅ Complete | | [Details](tasks/B.3-library-facade.md) - Facade with handles, 4 examples |
 | B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
-| B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | 🔄 In Progress | | Started - needs mock servers for proper testing |
+| B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | ✅ Complete | | [Details](tasks/B.6-integration-tests.md) - 781 tests total, all passing |
 
 **Phase B Total**: 24 hours (added B.2.1)
 
