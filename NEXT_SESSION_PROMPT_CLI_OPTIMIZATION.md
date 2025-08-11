@@ -12,7 +12,7 @@ We are optimizing Shadowcat's CLI refactor to transform it from a functional CLI
 - ✅ B.1: Implement Builder Patterns (6h) - All builders working with tests
 - ✅ B.2: Add Graceful Shutdown (4h) - Full shutdown system with 681 passing tests
 - ✅ B.2.1: Fix Shutdown Integration (4h) - Fixed with real proxy implementations
-- ✅ B.3: Create Library Facade (3h) - Clean facade with handles, 4 examples
+- ✅ B.3: Create High-Level API (3h) - Clean high-level API with handles, 4 examples
 - ✅ B.6: Add Basic Integration Tests (2h) - 781 total tests, all passing
 
 ### Remaining in Phase B:

@@ -11,7 +11,7 @@ During B.2, we took several shortcuts that compromise the design:
 - Bypassed the builder patterns we created in B.1
 - Mixed abstraction levels (high-level shutdown, low-level transport manipulation)
 
-This technical debt will block B.3 (Library Facade) and make B.6 (Integration Tests) fail immediately.
+This technical debt will block B.3 (High-Level API) and make B.6 (Integration Tests) fail immediately.
 
 ## Key Problems to Fix
 
@@ -225,6 +225,6 @@ cargo test integration::shutdown_proxy
 
 ## Notes
 - This is critical technical debt that must be addressed
-- Without this, B.3 (Library Facade) will be building on sand
+- Without this, B.3 (High-Level API) will be building on sand
 - B.6 (Integration Tests) will immediately expose these issues
 - This maintains our design principles and aesthetic

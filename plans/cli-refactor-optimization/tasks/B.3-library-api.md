@@ -1,7 +1,7 @@
-# Task B.3: Create Library Facade
+# Task B.3: Create High-Level API
 
 ## Objective
-Design and implement a high-level `Shadowcat` facade that provides a simple, intuitive entry point for library users, hiding complexity while exposing the full power of the proxy system through a clean API.
+Design and implement a high-level `Shadowcat` API that provides a simple, intuitive entry point for library users, hiding complexity while exposing the full power of the proxy system through a clean interface.
 
 ## Background
 Currently, library users must:
@@ -10,21 +10,21 @@ Currently, library users must:
 - Manage dependencies between components
 - Configure multiple objects separately
 
-The facade pattern will provide:
+The high-level API will provide:
 - Single entry point (`Shadowcat` struct)
 - Intuitive method names
 - Sensible defaults
 - Progressive disclosure of complexity
 
 ## Key Questions to Answer
-1. What should be the primary use cases for the facade?
-2. How much should the facade hide vs expose?
-3. Should the facade be stateful or stateless?
+1. What should be the primary use cases for the API?
+2. How much should the API hide vs expose?
+3. Should the API be stateful or stateless?
 4. How do we handle different proxy modes?
 
 ## Step-by-Step Process
 
-### 1. Design the Facade API
+### 1. Design the High-Level API
 ```rust
 // src/shadowcat.rs (new file)
 //! High-level API for Shadowcat proxy operations
@@ -389,9 +389,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### 8. Add Facade Tests
+### 8. Add API Tests
 ```rust
-// tests/facade.rs
+// tests/api.rs
 use shadowcat::Shadowcat;
 
 #[tokio::test]
@@ -429,14 +429,14 @@ async fn test_recording() {
 ## Expected Deliverables
 
 ### New Files
-- `shadowcat/src/shadowcat.rs` - Main facade implementation
+- `shadowcat/src/shadowcat.rs` - Main API implementation
 - `shadowcat/src/prelude.rs` - Common imports
 - `shadowcat/examples/simple_forward.rs` - Simple example
 - `shadowcat/examples/advanced.rs` - Advanced example
-- `shadowcat/tests/facade.rs` - Facade tests
+- `shadowcat/tests/api.rs` - API tests
 
 ### Modified Files
-- `shadowcat/src/lib.rs` - Export facade and prelude
+- `shadowcat/src/lib.rs` - Export API and prelude
 
 ### Documentation
 - Full rustdoc comments on all public methods
@@ -445,32 +445,32 @@ async fn test_recording() {
 
 ## Success Criteria Checklist
 - [ ] Simple use cases require < 5 lines of code
-- [ ] All proxy modes accessible via facade
+- [ ] All proxy modes accessible via API
 - [ ] Progressive disclosure (simple → advanced)
 - [ ] Examples demonstrate common patterns
-- [ ] Facade methods well documented
+- [ ] API methods well documented
 - [ ] Prelude provides essential imports
 - [ ] Tests cover main use cases
 
 ## Risk Assessment
-- **Risk**: Facade becomes too complex
+- **Risk**: API becomes too complex
   - **Mitigation**: Keep simple things simple
   - **Mitigation**: Delegate to builders for complexity
 
-- **Risk**: Facade limits flexibility
+- **Risk**: API limits flexibility
   - **Mitigation**: Expose builders for advanced use
   - **Mitigation**: Keep modules public for power users
 
 ## Duration Estimate
 **3 hours**
-- 1 hour: Design and implement facade
+- 1 hour: Design and implement API
 - 45 min: Add convenience methods
 - 30 min: Create handle types
 - 30 min: Write examples
 - 15 min: Documentation
 
 ## Dependencies
-- B.1: Builder patterns (facade uses builders)
+- B.1: Builder patterns (API uses builders)
 - B.2: Graceful shutdown (for handle methods)
 
 ## Notes
@@ -483,7 +483,7 @@ async fn test_recording() {
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
-# Create facade module
+# Create API module
 touch src/shadowcat.rs
 touch src/prelude.rs
 
@@ -494,6 +494,6 @@ cargo run --example advanced
 # Check documentation
 cargo doc --no-deps --open
 
-# Test facade
-cargo test facade
+# Test API
+cargo test api
 ```

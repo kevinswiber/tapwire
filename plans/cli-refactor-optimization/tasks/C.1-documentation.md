@@ -202,7 +202,7 @@ Shadowcat is built as a modular, async-first MCP proxy with clear separation of 
 ┌─────────────────────────────────────────┐
 │            Shadowcat Library            │
 ├─────────────────────────────────────────┤
-│             Facade Layer                │
+│          High-Level API Layer           │
 │         (shadowcat::Shadowcat)          │
 ├─────────────────────────────────────────┤
 │           Core Components               │

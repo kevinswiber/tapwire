@@ -35,7 +35,7 @@ After (Target State):
 │         Library (shadowcat)         │
 │  ┌─────────────────────────────┐    │
 │  │   Public API (lib.rs)       │    │
-│  │   - Shadowcat facade        │    │
+│  │   - Shadowcat high-level API │    │
 │  │   - Builder patterns        │    │
 │  │   - Clean abstractions      │    │
 │  └─────────────────────────────┘    │
@@ -79,7 +79,7 @@ Create ergonomic library APIs and core functionality
 | B.1 | **Implement Builder Patterns** | 6h | Phase A | ✅ Complete | | [Details](tasks/B.1-builder-patterns.md) - All tests passing! |
 | B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 681 tests passing, full shutdown system |
 | B.2.1 | **Fix Shutdown Integration** | 4h | B.2 | ✅ Complete | | [Details](tasks/B.2.1-proper-shutdown-integration.md) - Fixed with real proxy implementations |
-| B.3 | **Create Library Facade** | 3h | B.1, B.2.1 | ✅ Complete | | [Details](tasks/B.3-library-facade.md) - Facade with handles, 4 examples |
+| B.3 | **Create High-Level API** | 3h | B.1, B.2.1 | ✅ Complete | | [Details](tasks/B.3-library-api.md) - High-level API with handles, 4 examples |
 | B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
 | B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | ✅ Complete | | [Details](tasks/B.6-integration-tests.md) - 781 tests total, all passing |
@@ -123,7 +123,7 @@ Polish, optimize, and prepare for production
 
 ### Week 2 (2025-08-17 to 2025-08-23)
 - [ ] B.1: Implement Builder Patterns (complete)
-- [ ] B.3: Create Library Facade
+- [ ] B.3: Create High-Level API
 - [ ] B.4: Extract Transport Factory
 - [ ] B.5: Standardize Error Handling
 - [ ] B.6: Add Basic Integration Tests
@@ -255,7 +255,7 @@ If context window becomes limited:
 1. **🔄 B.6: Complete Integration Tests** - Add mock servers and finish test suite (1 hour)
 2. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
 3. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
-4. **C.1: Comprehensive Documentation** - Document the new facade API (4 hours)
+4. **C.1: Comprehensive Documentation** - Document the new high-level API (4 hours)
 5. **C.2: Configuration File Support** - Add TOML/YAML config loading (3 hours)
 
 ## Progress Summary
@@ -265,7 +265,7 @@ If context window becomes limited:
   - B.1: ✅ Builder Patterns (6h)
   - B.2: ✅ Graceful Shutdown (4h)
   - B.2.1: ✅ Shutdown Integration Fixed (4h)
-  - B.3: ✅ Library Facade (3h)
+  - B.3: ✅ High-Level API (3h)
   - B.4-B.5: ⬜ Not Started (5h remaining)
   - B.6: 🔄 In Progress (1h of 2h)
 - **Phase C**: 0% Complete (37 hours)
@@ -274,12 +274,12 @@ If context window becomes limited:
 ## Notes
 
 ### B.3 Completion Summary (2025-08-11)
-- Implemented complete library facade with Shadowcat struct and builder
+- Implemented complete high-level API with Shadowcat struct and builder
 - Added handle types for proxy lifecycle management (ForwardProxyHandle, ReverseProxyHandle, etc.)
-- Created 4 example programs demonstrating facade usage
-- Enhanced facade with HTTP forward and reverse proxy support
+- Created 4 example programs demonstrating API usage
+- Enhanced API with HTTP forward and reverse proxy support
 - All 681 tests passing, clippy clean
-- CLI already using facade via ShadowcatBuilder
+- CLI already using high-level API via ShadowcatBuilder
 
 ### B.2.1 Completed (2025-08-11)
 - Fixed all placeholder implementations with real proxy code

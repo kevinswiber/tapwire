@@ -6,7 +6,7 @@
 
 ## Objective
 
-Add comprehensive integration tests for the Shadowcat facade API to ensure the library works correctly as a whole.
+Add comprehensive integration tests for the Shadowcat high-level API to ensure the library works correctly as a whole.
 
 ## Implementation Summary
 
@@ -14,20 +14,20 @@ Add comprehensive integration tests for the Shadowcat facade API to ensure the l
 
 Created three test files with different approaches:
 
-1. **`tests/integration_facade_simple.rs`** (14 tests)
+1. **`tests/integration_api_simple.rs`** (14 tests)
    - Non-async tests for builder patterns
    - Configuration validation
    - Error handling checks
    - All passing
 
-2. **`tests/integration_facade_mock.rs`** (6 tests)
+2. **`tests/integration_api_mock.rs`** (6 tests)
    - Mock transport implementation
    - Tests proxy lifecycle with controlled message flow
    - Tests shutdown controller integration
    - Session management and cleanup
    - All passing
 
-3. **`tests/integration_facade.rs`** (10 tests, marked as ignored)
+3. **`tests/integration_api.rs`** (10 tests, marked as ignored)
    - Tests that require actual stdio connections
    - Cannot run in automated test environment
    - Documented why they're ignored
@@ -58,16 +58,16 @@ Total Tests: 781
 - Unit tests: 684 (all passing)
 - E2E tests: 97 (all passing)
 - Integration tests: 20 active + 10 ignored
-  - integration_facade_simple: 14 passing
-  - integration_facade_mock: 6 passing
-  - integration_facade: 10 ignored (require stdin/stdout)
+  - integration_api_simple: 14 passing
+  - integration_api_mock: 6 passing
+  - integration_api: 10 ignored (require stdin/stdout)
 ```
 
 ## Files Modified
 
-- `tests/integration_facade_simple.rs` - Created with 14 builder/config tests
-- `tests/integration_facade_mock.rs` - Created with mock transport and 6 async tests
-- `tests/integration_facade.rs` - Updated with ignore attributes and documentation
+- `tests/integration_api_simple.rs` - Created with 14 builder/config tests
+- `tests/integration_api_mock.rs` - Created with mock transport and 6 async tests
+- `tests/integration_api.rs` - Updated with ignore attributes and documentation
 - `tests/common/mock_servers.rs` - Added mock command helpers
 
 ## Key Insights

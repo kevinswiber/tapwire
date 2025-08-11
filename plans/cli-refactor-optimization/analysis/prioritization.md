@@ -50,7 +50,7 @@ The most critical blocker for library usage is the **public CLI module exposure*
 - **Dependencies**: B.1
 - **Risk**: Medium - Async complexity
 
-### B.3: Create Library Facade
+### B.3: Create High-Level API
 - **Impact**: Simple entry point for users
 - **Effort**: 3 hours
 - **Dependencies**: B.1, B.2
@@ -140,7 +140,7 @@ The most critical blocker for library usage is the **public CLI module exposure*
 ## Risk Assessment
 
 ### High Risk Items
-1. **API Design Lock-in**: Builder patterns and facade will be hard to change
+1. **API Design Lock-in**: Builder patterns and high-level API will be hard to change
 2. **Breaking Changes**: Moving CLI module may break existing users
 3. **Async Complexity**: Shutdown handling could introduce race conditions
 
