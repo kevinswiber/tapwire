@@ -77,12 +77,12 @@ Create ergonomic library APIs and core functionality
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | B.1 | **Implement Builder Patterns** | 6h | Phase A | ✅ Complete | | [Details](tasks/B.1-builder-patterns.md) - All tests passing! |
-| B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 679 tests passing, full shutdown system |
-| B.2.1 | **Fix Shutdown Integration** | 4h | B.2 | 🔴 Critical | | [Details](tasks/B.2.1-proper-shutdown-integration.md) - Fix shortcuts, proper proxy implementation |
-| B.3 | **Create Library Facade** | 3h | B.1, B.2.1 | ⬜ Not Started | | [Details](tasks/B.3-library-facade.md) |
+| B.2 | **Add Graceful Shutdown** | 4h | B.1 | ✅ Complete | | [Details](tasks/B.2-graceful-shutdown.md) - 681 tests passing, full shutdown system |
+| B.2.1 | **Fix Shutdown Integration** | 4h | B.2 | ✅ Complete | | [Details](tasks/B.2.1-proper-shutdown-integration.md) - Fixed with real proxy implementations |
+| B.3 | **Create Library Facade** | 3h | B.1, B.2.1 | ✅ Complete | | [Details](tasks/B.3-library-facade.md) - Facade with handles, 4 examples |
 | B.4 | **Extract Transport Factory** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.4-transport-factory.md) |
 | B.5 | **Standardize Error Handling** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/B.5-error-handling.md) |
-| B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | ⬜ Not Started | | [Details](tasks/B.6-integration-tests.md) |
+| B.6 | **Add Basic Integration Tests** | 2h | B.1-B.5 | 🔄 In Progress | | Started - needs mock servers for proper testing |
 
 **Phase B Total**: 24 hours (added B.2.1)
 
@@ -252,31 +252,40 @@ If context window becomes limited:
 
 ## Next Actions
 
-1. **🔴 B.2.1: Fix Shutdown Integration** - CRITICAL: Fix placeholder implementations (4 hours)
-2. **B.3: Create Library Facade** - Design high-level API for common use cases (3 hours)
-3. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
-4. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
-5. **B.6: Add Basic Integration Tests** - Test builders in real scenarios (2 hours)
+1. **🔄 B.6: Complete Integration Tests** - Add mock servers and finish test suite (1 hour)
+2. **B.4: Extract Transport Factory** - May just need refinement of existing TransportFactory (3 hours)
+3. **B.5: Standardize Error Handling** - Improve error context and chaining (2 hours)
+4. **C.1: Comprehensive Documentation** - Document the new facade API (4 hours)
+5. **C.2: Configuration File Support** - Add TOML/YAML config loading (3 hours)
 
 ## Progress Summary
 
 - **Phase A**: 100% Complete (7 hours) ✅
-- **Phase B**: 42% Complete (10 of 24 hours)
+- **Phase B**: 75% Complete (18 of 24 hours)
   - B.1: ✅ Builder Patterns (6h)
   - B.2: ✅ Graceful Shutdown (4h)
-  - B.2.1: 🔴 CRITICAL - Fix Integration (4h) 
-  - B.3-B.6: ⬜ Not Started (10h remaining)
-- **Phase C**: 0% Complete (27 hours)
-- **Overall**: ~23% Complete (17 of 74 hours)
+  - B.2.1: ✅ Shutdown Integration Fixed (4h)
+  - B.3: ✅ Library Facade (3h)
+  - B.4-B.5: ⬜ Not Started (5h remaining)
+  - B.6: 🔄 In Progress (1h of 2h)
+- **Phase C**: 0% Complete (37 hours)
+- **Overall**: ~33% Complete (25 of 74 hours)
 
 ## Notes
 
-### B.2.1 Added (2025-08-10) - CRITICAL TECHNICAL DEBT
-- Identified critical shortcuts taken in B.2 implementation
-- CLI commands use placeholder code instead of real proxy loops
-- Missing stdin/stdout client transport
-- Bypassed builder patterns from B.1
-- Must be fixed before B.3 to maintain design integrity
+### B.3 Completion Summary (2025-08-11)
+- Implemented complete library facade with Shadowcat struct and builder
+- Added handle types for proxy lifecycle management (ForwardProxyHandle, ReverseProxyHandle, etc.)
+- Created 4 example programs demonstrating facade usage
+- Enhanced facade with HTTP forward and reverse proxy support
+- All 681 tests passing, clippy clean
+- CLI already using facade via ShadowcatBuilder
+
+### B.2.1 Completed (2025-08-11)
+- Fixed all placeholder implementations with real proxy code
+- Created StdioClientTransport for proper stdin/stdout handling
+- Integrated shutdown system properly with all proxy types
+- Fixed forward and record commands to use builders
 
 ### B.2 Completion Summary (2025-08-10)
 - Implemented comprehensive shutdown system with ShutdownController and ShutdownToken

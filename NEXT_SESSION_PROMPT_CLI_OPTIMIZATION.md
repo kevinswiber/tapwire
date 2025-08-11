@@ -1,81 +1,149 @@
-# Next Session: Library Facade & Integration Tests (B.3 & B.6)
+# Next Session: Complete Integration Tests (B.6)
 
-## ✅ B.2.1 Completed Successfully!
+## Session Context
 
-In the previous session, we fixed all the critical technical debt:
-- Created StdioClientTransport for proper stdin/stdout handling
-- Fixed forward/record commands to use real proxies with builders
-- Implemented proper bidirectional message forwarding
-- Added HTTP transport shutdown support
-- All 681 tests passing, clippy clean
+We've made excellent progress on the CLI refactor optimization! In the previous session, we:
+
+1. ✅ **Completed B.2.1**: Fixed all critical technical debt with real proxy implementations
+2. ✅ **Completed B.3**: Created a comprehensive library facade with handle types
+3. 🔄 **Started B.6**: Created integration test structure that needs mock servers
 
 ## Current State
 - **Branch**: `shadowcat-cli-refactor` (git worktree at `/Users/kevin/src/tapwire/shadowcat-cli-refactor`)
-- **Last Commit**: `3e50e31` - "fix(cli): properly integrate shutdown system with real proxy implementations"
-- **Tests**: 681 passing with real proxy behavior
+- **Tests**: 681 passing, clippy clean
 - **Tracker**: `plans/cli-refactor-optimization/cli-refactor-tracker.md`
+- **Progress**: Phase B is 75% complete (18 of 24 hours)
 
-## Next Phase: B.3 Library Facade (2-3 hours)
+## Next Task: Complete B.6 Integration Tests (1 hour)
+
+### What's Already Done
+
+Created `tests/integration_facade.rs` with 8 test cases:
+- Simple forward proxy
+- Shutdown handling  
+- Builder configuration
+- Development vs Production configs
+- Recording functionality
+- Handle management
+- Reverse proxy
 
 ### What Needs to Be Done
 
-Create a high-level library API that the CLI can use as a thin wrapper. This establishes the library-first architecture properly.
+The tests are currently failing because they try to create real proxies with real commands. We need to:
 
-**Task File**: `plans/cli-refactor-optimization/tasks/B.3-library-facade.md`
+1. **Create mock MCP servers** for testing
+2. **Fix the test implementations** to use mocks
+3. **Add more comprehensive test coverage**
 
-### Key Components to Create
+### Suggested Mock Server Implementation
 
-1. **Shadowcat struct** - Main entry point for library users
-2. **ShadowcatBuilder** - Fluent configuration API
-3. **High-level operations**:
-   - `forward_stdio()` - Forward proxy via stdio
-   - `forward_http()` - Forward proxy via HTTP
-   - `record_session()` - Record MCP session
-   - `reverse_proxy()` - Run reverse proxy server
+Here's a starting point for mock servers you can use:
 
-### Example API Design
 ```rust
-// Library usage (what CLI will call)
-let shadowcat = Shadowcat::builder()
-    .with_rate_limiting(100, 20)
-    .with_session_timeout(Duration::from_secs(300))
-    .build()?;
+// tests/common/mod.rs - Shared test utilities
+use tokio::process::Command;
+use std::io::Write;
 
-// Forward proxy with shutdown
-shadowcat.forward_stdio(command, shutdown_token).await?;
+/// Create a mock MCP server that responds with predefined messages
+pub async fn create_mock_mcp_server() -> Result<Command, Box<dyn std::error::Error>> {
+    // Use a simple script that acts as an MCP server
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c")
+       .arg(r#"
+           # Simple mock MCP server
+           read -r line
+           echo '{"jsonrpc":"2.0","result":{"protocolVersion":"2025-11-05"},"id":"1"}'
+           read -r line
+           echo '{"jsonrpc":"2.0","result":{"status":"ok"},"id":"2"}'
+       "#);
+    cmd.stdin(std::process::Stdio::piped())
+       .stdout(std::process::Stdio::piped())
+       .stderr(std::process::Stdio::null());
+    Ok(cmd)
+}
 
-// Record session
-let tape = shadowcat.record_session(command, output_path).await?;
+/// Create a test HTTP server for reverse proxy tests
+pub async fn start_test_http_server(port: u16) -> tokio::task::JoinHandle<()> {
+    use axum::{Router, routing::post, Json};
+    use serde_json::{json, Value};
+    
+    let app = Router::new()
+        .route("/mcp", post(|Json(payload): Json<Value>| async move {
+            // Echo back with a result
+            Json(json!({
+                "jsonrpc": "2.0",
+                "result": {"echo": payload},
+                "id": payload.get("id").cloned().unwrap_or(json!(1))
+            }))
+        }));
+    
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
+        .await
+        .unwrap();
+    
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    })
+}
 ```
 
-## Then: B.6 Integration Tests (2-3 hours)
+### Test Implementation Fixes
 
-### What Needs to Be Done
+Update the tests to use mock servers:
 
-Create comprehensive integration tests that verify the entire system works end-to-end.
+```rust
+#[tokio::test]
+async fn test_facade_simple_forward_proxy() {
+    // Use the mock MCP server command
+    let mock_cmd = create_mock_mcp_server().await.unwrap();
+    
+    let shadowcat = Shadowcat::new();
+    
+    // Create a proper shutdown mechanism
+    let (controller, token) = ShutdownController::new();
+    
+    // Start proxy with mock
+    let handle = tokio::spawn(async move {
+        // Instead of using echo, use our mock server
+        shadowcat.forward_stdio(vec!["mock_mcp".to_string()], Some(token)).await
+    });
+    
+    // Give it time to initialize
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    
+    // Trigger shutdown
+    controller.shutdown(Duration::from_secs(1)).await.unwrap();
+    
+    // Wait for completion
+    let result = timeout(Duration::from_secs(2), handle).await;
+    assert!(result.is_ok());
+}
+```
 
-**Task File**: `plans/cli-refactor-optimization/tasks/B.6-integration-tests.md`
+## Additional Test Cases to Add
 
-### Test Categories
+1. **Error Handling Tests**
+   - Test proxy behavior when server fails
+   - Test timeout handling
+   - Test invalid configuration
 
-1. **Forward Proxy Tests**
-   - Stdio forwarding with real MCP server
-   - HTTP/SSE forwarding
-   - Shutdown during active proxy
+2. **Concurrent Proxy Tests**
+   - Multiple proxies running simultaneously
+   - Resource cleanup verification
 
-2. **Recording Tests**
-   - Record and verify tape contents
-   - Replay recorded sessions
+3. **Transport-Specific Tests**
+   - HTTP transport with real HTTP mock server
+   - SSE transport testing
+   - Mixed transport scenarios
 
-3. **Reverse Proxy Tests**
-   - HTTP server with auth
-   - Load balancing
-   - Circuit breaker
+## Success Criteria
 
-4. **Resilience Tests**
-   - Graceful shutdown under load
-   - Recovery from transport failures
-   - Rate limiting enforcement
+After completing B.6:
+- [ ] All integration tests pass reliably
+- [ ] Mock servers properly simulate MCP protocol
+- [ ] Tests cover happy path and error cases
+- [ ] Tests run in < 10 seconds total
+- [ ] No test pollution between test cases
 
 ## Commands to Start With
 
@@ -83,42 +151,39 @@ Create comprehensive integration tests that verify the entire system works end-t
 # Navigate to the worktree
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
-# Review the current structure
-tree -I target -L 2 src/
+# Review existing test file
+cat tests/integration_facade.rs
 
-# Read the B.3 task file
-cat plans/cli-refactor-optimization/tasks/B.3-library-facade.md
+# Create common test utilities module
+mkdir -p tests/common
+echo "pub mod mock_servers;" > tests/common/mod.rs
 
-# Check what public API we currently expose
-grep -n "^pub " src/lib.rs
+# Run specific test with output
+cargo test --test integration_facade test_facade_simple_forward_proxy -- --nocapture
 
-# Start implementing the facade
-echo "Creating src/facade.rs for high-level API..."
+# Run all integration tests
+cargo test --test integration_facade
 ```
 
-## Success Criteria
+## After B.6: Next Tasks
 
-After B.3 & B.6:
-- Clean, intuitive library API that external users could consume
-- CLI becomes a thin wrapper around library calls
-- Comprehensive test coverage proving the system works
-- All components properly integrated and tested
-- Documentation for library usage
+- **B.4**: Extract Transport Factory (3 hours) - Refine TransportFactory
+- **B.5**: Standardize Error Handling (2 hours) - Improve error context
+- **C.1**: Documentation (4 hours) - Document the facade API
+- **C.2**: Config Files (3 hours) - Add TOML/YAML support
 
-## Why This Order
+## Files Changed in This Session
 
-1. **B.3 First**: Create the clean API that B.6 will test
-2. **B.6 Next**: Prove everything works with real integration tests
-3. This validates our architecture before optimization phases
+Key files modified:
+- `src/facade.rs` - Enhanced with HTTP forward, reverse proxy, handle types
+- `src/lib.rs` - Exported handle types
+- `src/cli/forward.rs` - Updated to use ForwardProxyHandle
+- `examples/*.rs` - 4 new example programs
+- `tests/integration_facade.rs` - New integration test suite
+- `plans/cli-refactor-optimization/cli-optimization-tracker.md` - Updated progress
 
-## Remaining Work After This Session
+## Duration Estimate: 1-2 hours
 
-- B.4: Performance optimizations (2 hours)
-- B.5: Documentation (1 hour)
-- C.1-C.5: Advanced features from Phase C (if needed)
-
-## Duration: 4-6 hours total
-
-This session will establish the proper library-first architecture and prove it works with comprehensive tests.
+Focus on getting the mock servers working first, then fix each test case. The goal is to have a reliable integration test suite that validates the facade API works correctly.
 
 Good luck!
