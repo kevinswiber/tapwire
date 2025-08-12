@@ -46,94 +46,90 @@ Remaining tasks for Phase 3 (per tracker):
 ## Primary Task: M.3 - Message Builder API
 
 ### Objective
-Add schema validation to ensure MCP messages conform to the specification:
-1. Validate method names against known MCP methods
-2. Validate parameter schemas for each method
-3. Validate response schemas
-4. Handle protocol version differences in schemas
+Create a fluent builder API for constructing MCP messages programmatically.
 
 ### Implementation Plan
 
-1. **Create `src/mcp/schema.rs`**
-   - Define method schemas for all MCP methods
-   - Implement validation logic
-   - Handle version-specific differences
-   - Provide detailed validation errors
-
-2. **MCP Methods to Validate**
+1. **Create `src/mcp/builder.rs`**
    ```rust
-   // Core methods
-   - initialize: params { protocolVersion, capabilities, clientInfo }
-   - initialized: params { }
-   - ping: params { }
-   - error: notification with error details
-   
-   // Tool methods
-   - tools/list: params { }
-   - tools/call: params { name, arguments }
-   
-   // Prompt methods
-   - prompts/list: params { }
-   - prompts/get: params { name }
-   
-   // Resource methods  
-   - resources/list: params { }
-   - resources/read: params { uri }
-   - resources/subscribe: params { uri }
-   - resources/unsubscribe: params { uri }
-   
-   // Completion methods
-   - completion/complete: params { ref, argument }
-   
-   // Logging methods
-   - logging/setLevel: params { level }
-   ```
-
-3. **Validation Interface**
-   ```rust
-   pub struct SchemaValidator {
+   pub struct MessageBuilder {
        version: ProtocolVersion,
    }
    
-   impl SchemaValidator {
-       pub fn validate(&self, msg: &McpMessage) -> Result<(), ValidationError>;
-       pub fn validate_method(&self, method: &str) -> bool;
-       pub fn validate_params(&self, method: &str, params: &Value) -> Result<(), ValidationError>;
+   impl MessageBuilder {
+       pub fn request(method: &str) -> RequestBuilder;
+       pub fn response(id: JsonRpcId) -> ResponseBuilder;
+       pub fn notification(method: &str) -> NotificationBuilder;
+       pub fn error_response(id: JsonRpcId, code: i32, message: &str) -> McpMessage;
    }
    ```
 
+2. **Fluent Builder Pattern**
+   ```rust
+   let msg = MessageBuilder::request("tools/call")
+       .with_id("123")
+       .with_param("name", "search")
+       .with_param("arguments", json!({"query": "test"}))
+       .build()?;
+   ```
+
+3. **Builder Types**
+   - `RequestBuilder` for building request messages
+   - `ResponseBuilder` for building response messages  
+   - `NotificationBuilder` for building notifications
+   - Support for all MCP methods with type-safe parameter building
+
 4. **Integration Points**
-   - Integrate with `McpParser` for optional validation
-   - Use in interceptors for method-based filtering
-   - Apply in correlation for semantic matching
+   - Ensure built messages can be parsed by `McpParser`
+   - Validate against protocol version
+   - Support both 2025-03-26 and 2025-06-18 versions
 
 ### Success Criteria
 
-1. ✅ Schema definitions for all MCP methods
-2. ✅ Version-aware validation logic
-3. ✅ Detailed validation error messages
-4. ✅ 15+ unit tests for schema validation
-5. ✅ Integration with parser (optional validation)
-6. ✅ Documentation with examples
+1. ✅ Fluent builder API for all message types
+2. ✅ Parameter validation
+3. ✅ Protocol version awareness
+4. ✅ 10+ unit tests
+5. ✅ Documentation with examples
 
-## Secondary Task: P.3 - Implement Correlation Store
+## Secondary Task: M.4 - Implement Correlation Engine
 
-If time permits, begin work on the correlation store:
-- Track request/response pairs by ID
-- Handle timeout and cleanup
-- Support concurrent correlations
-- Provide correlation statistics
+If time permits, begin work on the correlation engine:
+
+1. **Create `src/mcp/correlation.rs`**
+   ```rust
+   pub struct CorrelationEngine {
+       pending: HashMap<JsonRpcId, PendingRequest>,
+       timeout: Duration,
+   }
+   ```
+
+2. **Core Features**
+   - Track request/response pairs by ID
+   - Handle timeout and cleanup
+   - Support concurrent correlations
+   - Provide correlation statistics
+   - Thread-safe with async support
+
+## Task M.5: Wire Correlation to SSE Transport
+
+The final task will integrate the correlation engine with SSE transport:
+- Add correlation engine to `SseTransport`
+- Track outgoing requests automatically
+- Match incoming responses
+- Generate correlation metrics
 
 ## Commands for Development
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Create the schema module
-touch src/mcp/schema.rs
+# Create the builder module
+touch src/mcp/builder.rs
 
 # Run tests as you develop
-cargo test mcp::schema
+cargo test mcp::builder
+cargo test mcp::correlation
 
 # Check for warnings
 cargo clippy --all-targets -- -D warnings
@@ -144,38 +140,31 @@ cargo test
 
 ## Key Context
 
-### MCP Method Categories
-1. **Lifecycle**: initialize, initialized, ping
-2. **Tools**: list, call
-3. **Prompts**: list, get
-4. **Resources**: list, read, subscribe, unsubscribe
-5. **Completion**: complete
-6. **Logging**: setLevel
-7. **Notifications**: error, progress, etc.
-
-### Schema Validation Requirements
-- Required fields must be present
-- Field types must match specification
-- Extra fields are allowed (forward compatibility)
-- Version-specific validation (e.g., capabilities differ)
-- Clear error messages for debugging
-
 ### Available Foundation
-From P.1 implementation:
+From M.1 and M.2 implementation:
 - `McpMessage` enum with all message types
 - `McpParser` for parsing messages
 - `MessageMetadata` for tracking
 - Helper functions for common operations
 - Protocol version management
 
+### MCP Methods to Support in Builder
+1. **Lifecycle**: initialize, initialized, ping
+2. **Tools**: tools/list, tools/call
+3. **Prompts**: prompts/list, prompts/get
+4. **Resources**: resources/list, resources/read, resources/subscribe, resources/unsubscribe
+5. **Completion**: completion/complete
+6. **Logging**: logging/setLevel
+7. **Notifications**: error, progress, etc.
+
 ## Notes
 
-- Schema validation is critical for interceptor rules and security
-- Focus on the most common methods first
-- Consider using a schema definition format (JSON Schema or custom)
-- Keep performance in mind - validation should be fast
-- This will enable semantic interceptor rules in Phase 4
+- M.3 (Builder) is prerequisite for easier testing in M.4
+- M.4 (Correlation) is the most complex task - allocate full 5 hours
+- M.5 (Wiring) should be straightforward once M.4 is complete
+- Keep thread safety in mind for correlation engine
+- Consider using tokio::sync::RwLock for async access
 
 ---
 
-**Next Goal**: Implement P.2 (Schema Validation) with comprehensive method validation and testing.
+**Next Goal**: Implement M.3 (Message Builder API) with fluent interface for all message types.
