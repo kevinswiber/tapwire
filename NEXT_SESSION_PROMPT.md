@@ -1,4 +1,4 @@
-# Next Session: Continue Phase 3 - Schema Validation and Correlation
+# Next Session: Continue Phase 3 - Message Builder and Correlation
 
 ## Project Status Update
 
@@ -14,15 +14,16 @@ We are implementing SSE proxy integration with MCP message handling in Shadowcat
 
 ### Phase 3: Full MCP Parser ✅
 
-Successfully implemented P.1 (Create Full MCP Parser):
-- Created `src/mcp/parser.rs` with comprehensive MCP message support
-- Implemented `McpMessage` enum with Request, Response, and Notification variants
-- Added `McpParser` with support for both protocol versions (2025-03-26 and 2025-06-18)
-- Implemented batch message handling for 2025-03-26
-- Created `MessageMetadata` for correlation tracking
-- Added helper functions for streaming detection, session extraction, and correlation
-- Wrote 22+ comprehensive unit tests covering all edge cases
-- All tests passing, no clippy warnings
+Successfully implemented M.1 and M.2:
+- M.1: Created complete MCP message types in `src/mcp/parser.rs`
+- M.2: Implemented full message parser with:
+  - `McpMessage` enum with Request, Response, and Notification variants
+  - `McpParser` with support for both protocol versions (2025-03-26 and 2025-06-18)
+  - Batch message handling for 2025-03-26
+  - `MessageMetadata` for correlation tracking
+  - Helper functions for streaming detection, session extraction, and correlation
+  - 22+ comprehensive unit tests covering all edge cases
+  - All tests passing, no clippy warnings
 
 The parser provides:
 - Full JSON-RPC 2.0 compliance
@@ -34,16 +35,15 @@ The parser provides:
 
 ## Phase 3: Full MCP Parser and Correlation (Week 3)
 
-Remaining tasks for Phase 3:
+Remaining tasks for Phase 3 (per tracker):
 
 | ID | Task | Duration | Status |
 |----|------|----------|--------|
-| P.2 | **Add Schema Validation** | 4h | ⬜ Not Started |
-| P.3 | Implement Correlation Store | 5h | ⬜ Not Started |
-| P.4 | Add Request/Response Matching | 4h | ⬜ Not Started |
-| P.5 | **Integrate with Proxy** | 5h | ⬜ Not Started |
+| M.3 | **Message Builder API** | 2h | ⬜ Not Started |
+| M.4 | **Correlation Engine** | 5h | ⬜ Not Started |
+| M.5 | **Wire Correlation to SSE Transport** | 2h | ⬜ Not Started |
 
-## Primary Task: P.2 - Add Schema Validation
+## Primary Task: M.3 - Message Builder API
 
 ### Objective
 Add schema validation to ensure MCP messages conform to the specification:

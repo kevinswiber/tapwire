@@ -2,24 +2,42 @@
 
 ## Active Development
 
-### ✅ Transport Context Refactor - COMPLETE!
+### ⚡ Parallel Work in Progress (2025-08-12)
+
+We are currently running **two development tracks in parallel**:
+
+#### 🚀 Track 1: SSE/MCP Phase 3 - Parser & Correlation
+**[Unified Proxy-SSE-Message Tracker](proxy-sse-message-tracker.md)**  
+*Session Prompt: `NEXT_SESSION_PROMPT.md`*
+
+Status: **Phase 3 In Progress** | Phase 3: **31% Complete** (M.1-M.2 done, M.3-M.5 pending)  
+Current Tasks (using P.x naming in prompt):
+- P.2: Schema Validation (4h) - Different from M.3
+- P.3: Correlation Store (5h) - Same as M.4
+- P.4: Request/Response Matching (4h) - Part of M.4
+- P.5: Integrate with Proxy (5h) - Same as M.5
+
+Note: NEXT_SESSION_PROMPT.md uses P.x task numbering
+
+#### 📦 Track 2: CLI Optimization Phase C
+**[CLI Optimization Tracker](cli-refactor-optimization/cli-optimization-tracker.md)**  
+*Session Prompt: `NEXT_SESSION_PROMPT_CLI_OPTIMIZATION.md`*
+
+Status: **Phase C In Progress** | Overall: **52% Complete** (43 of 73 hours)  
+Current Tasks:
+- C.2: Configuration File Support (3h)
+- C.3: Improve Error Messages (2h)
+- C.4: Add Telemetry/Metrics (4h)
+
+These tracks are **independent and can run in parallel** with no risk of conflicts.
+
+### ✅ Recently Completed
+
+#### Transport Context Refactor - COMPLETE!
 **[Transport Context Refactor](transport-context-refactor/transport-context-tracker.md)**  
 *Successfully completed in 17.5 hours (71% reduction from 60 hour estimate)*
 
-Status: **✅ COMPLETE** | Actual Duration: **17.5 hours** | All Phases Complete
-
-The refactor successfully separated protocol concerns from transport metadata, introducing the MessageEnvelope system that properly handles transport context. All tests are passing and the code is clippy-clean.
-
-### 🚀 Current Focus: SSE Proxy Integration
-**[Unified Proxy-SSE-Message Tracker](proxy-sse-message-tracker.md)**  
-*Now unblocked and ready for implementation!*
-
-Status: **Ready to Start** | Duration: **120-140 hours** | Phases: **7**
-
-With the Transport Context Refactor complete, we can now:
-- Implement SSE-specific transport using the new TransportContext
-- Handle SSE event types, IDs, and retry logic properly
-- Build reverse proxy SSE support
+The refactor successfully separated protocol concerns from transport metadata, introducing the MessageEnvelope system that properly handles transport context.
 
 ## Plan Structure
 
