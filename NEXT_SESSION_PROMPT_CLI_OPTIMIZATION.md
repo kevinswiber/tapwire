@@ -1,4 +1,4 @@
-# Next Session: Begin Phase C - Quality & Testing
+# Next Session: Phase C - Quality & Testing
 
 ## Context
 
@@ -6,17 +6,28 @@ We are optimizing Shadowcat's CLI refactor to transform it from a functional CLI
 
 ## Current Status
 
-**Phase B: 100% Complete!** 🎉 (as of 2025-08-11)
-**Phase C: Ready to Begin**
+**Phase A: 100% Complete** ✅ (7 hours)
+**Phase B: 100% Complete** ✅ (24 hours) 
+**Phase B.7: 100% Complete** ✅ (5 hours)
+**Phase C: Ready to Begin** (37 hours)
 
-### Phase B Accomplishments:
-- ✅ B.1: Implement Builder Patterns (6h) - All builders working with tests
-- ✅ B.2: Add Graceful Shutdown (4h) - Full shutdown system
-- ✅ B.2.1: Fix Shutdown Integration (4h) - Fixed with real proxy implementations
-- ✅ B.3: Create High-Level API (3h) - Clean API with handles, 4 examples
-- ✅ B.4: Extract Transport Factory (3h) - Type-safe factory with TransportSpec enum
-- ✅ B.5: Standardize Error Handling (2h) - Domain-specific errors, no anyhow
-- ✅ B.6: Add Basic Integration Tests (2h) - 873 total tests, all passing
+### Overall Progress: 42% Complete (36 of 73 hours)
+
+## Recent Accomplishments
+
+### Phase B.7 (Completed 2025-08-12)
+- Fixed all 5 high-priority issues from code review
+- Zero clippy warnings, 873+ tests passing
+- Production-ready with graceful shutdown, error context, and safety attributes
+
+### Key Improvements Made:
+1. **Library-First Architecture** - Clean separation between library and CLI
+2. **Builder Patterns** - Ergonomic APIs for all major components
+3. **Graceful Shutdown** - Proper shutdown handling for all proxy types
+4. **High-Level API** - Simple Shadowcat struct with handles for lifecycle management
+5. **Transport Factory** - Centralized, type-safe transport creation
+6. **Domain-Specific Errors** - No more anyhow, proper error types throughout
+7. **Comprehensive Testing** - 873+ tests covering all functionality
 
 ## Working Directory
 
@@ -27,83 +38,50 @@ cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
 This is a separate worktree of the shadowcat submodule on branch `shadowcat-cli-refactor`.
 
-## Test Status
+## Phase C: Quality & Testing (37 hours total)
 
-All 859 tests are passing with the new transport factory implementation.
+### Available Tasks (Choose Based on Priority):
 
-## Phase C Tasks Overview
+#### High Priority - Documentation & Examples (7 hours)
+- **C.1: Comprehensive Documentation** (4h) - API docs, README, migration guide
+- **C.8: Example Programs** (3h) - Real-world usage examples
 
-Phase C focuses on polish, optimization, and production readiness. Total: 37 hours.
+#### Medium Priority - Configuration & Observability (9 hours)
+- **C.2: Configuration File Support** (3h) - TOML/YAML config files
+- **C.4: Add Telemetry/Metrics** (4h) - OpenTelemetry integration
+- **C.7: CLI Shell Completions** (2h) - Bash/zsh/fish completions
 
-### Priority Order (based on user impact):
+#### Performance & Testing (13 hours)
+- **C.5: Performance Optimization** (6h) - Profiling and optimization
+- **C.6: Extensive Test Coverage** (6h) - Reach 80%+ coverage
+- **C.10: Load Testing** (2h) - Stress testing and benchmarks
 
-1. **C.1: Comprehensive Documentation** (4h) - **START HERE**
-   - Document all public APIs with examples
-   - Create library usage guide
-   - Add module-level documentation
-   - Document migration from CLI to library usage
+#### Nice to Have (8 hours)
+- **C.3: Improve Error Messages** (2h) - User-friendly error formatting
+- **C.9: Connection Pooling** (3h) - Reuse connections for efficiency
+- **C.11: Release Preparation** (2h) - Changelog, version bump, release notes
 
-2. **C.2: Configuration File Support** (3h)
-   - Add TOML/YAML config file loading
-   - Environment variable overrides
-   - Config validation and defaults
-   - Example config files
+## Recommended Next Session Focus
 
-3. **C.3: Improve Error Messages** (2h)
-   - Make errors actionable with suggestions
-   - Add error codes for common issues
-   - Improve error display formatting
-   - Add troubleshooting guide
+### Option 1: Documentation Sprint (1 session, 7 hours)
+Complete C.1 and C.8 to make the library immediately usable:
+- Write comprehensive API documentation
+- Create README with quick start guide
+- Build 5-6 example programs showing common use cases
+- Document migration from CLI to library usage
 
-4. **C.4: Add Telemetry/Metrics** (4h)
-   - OpenTelemetry integration
-   - Performance metrics collection
-   - Request/response tracing
-   - Metrics export options
+### Option 2: Configuration & Observability (1 session, 7 hours)
+Complete C.2 and C.4 to add production features:
+- Add TOML/YAML configuration file support
+- Integrate OpenTelemetry for metrics and tracing
+- Add structured logging with tracing
 
-5. **C.5: Performance Optimization** (6h)
-   - Profile critical paths
-   - Optimize allocations
-   - Improve async performance
-   - Benchmark against targets
-
-## Next Task: C.1 - Comprehensive Documentation (4 hours)
-
-**Goal**: Make the library easily adoptable with excellent documentation.
-
-**Deliverables**:
-1. Complete API documentation for all public types and functions
-2. Module-level documentation explaining architecture
-3. Library usage guide with common patterns
-4. Migration guide from CLI to library
-5. Troubleshooting section
-
-**Implementation Plan**:
-
-### Step 1: API Documentation (1.5h)
-```bash
-# Find all public items lacking docs
-rg "^\s*pub (fn|struct|enum|trait|type)" src/ --glob '!cli/' | grep -v "^\s*///"
-
-# Generate initial docs
-cargo doc --open
-```
-
-### Step 2: Module Documentation (1h)
-- Add module-level docs to lib.rs
-- Document each public module's purpose
-- Add usage examples in module docs
-
-### Step 3: Usage Guide (1h)
-- Create examples/README.md
-- Document common patterns
-- Show error handling best practices
-- Provide complete working examples
-
-### Step 4: Migration Guide (0.5h)
-- Document CLI → Library migration
-- Show before/after code examples
-- List breaking changes and alternatives
+### Option 3: Performance & Testing Sprint (1 session, 8 hours)
+Complete C.5 and C.10 to ensure production readiness:
+- Profile current performance
+- Optimize hot paths
+- Add comprehensive benchmarks
+- Load test with 10k+ concurrent connections
 
 ## Commands to Run
 
@@ -113,55 +91,110 @@ cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
 # Check current status
 git status
-cargo test --quiet  # Should show 859+ tests passing
+cargo test --quiet  # Should show 873+ tests passing
+cargo clippy -- -D warnings  # Should have 0 warnings
 
-# Start B.5 implementation
-# Follow the audit steps above
+# Build and test
+cargo build --release
+cargo test
+cargo bench  # If doing performance work
 
-# After each change
-cargo test --quiet
-cargo clippy --all-targets -- -D warnings
+# Run example
+cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
 ```
 
-## Key Achievements from Phase B
+## Key Files to Reference
 
-- **Builder Patterns**: All major types have ergonomic builders
-- **Graceful Shutdown**: Complete shutdown system with Ctrl+C handling
-- **High-Level API**: Simple Shadowcat struct with handles for lifecycle management
-- **Transport Factory**: Type-safe factory with TransportSpec enum
-- **Error Handling**: Standardized to domain-specific errors, no anyhow in library
-- **Integration Tests**: 873 tests total, all passing
-- **Zero Clippy Warnings**: Full compliance with Rust best practices
+### Tracker and Plans
+- `plans/cli-refactor-optimization/cli-optimization-tracker.md` - Main tracker
+- `plans/cli-refactor-optimization/tasks/C.*.md` - Task definitions for Phase C
 
-## Important Notes
+### Core Implementation
+- `src/lib.rs` - Library public API
+- `src/api.rs` - High-level Shadowcat API and builders
+- `src/transport/factory.rs` - Transport factory
+- `src/proxy/builders.rs` - Proxy builders
+- `examples/` - Example programs (if C.8 completed)
 
-1. **Worktree**: We're in `/Users/kevin/src/tapwire/shadowcat-cli-refactor`
-2. **Focus**: B.5 is the LAST task in Phase B - completing it means Phase B is done!
-3. **Library vs CLI**: Focus on library code; CLI can keep using anyhow
-4. **Backwards Compatibility**: Preserve where possible
+### Documentation
+- `README.md` - Main documentation (needs update in C.1)
+- `CHANGELOG.md` - Version history (needs creation in C.11)
+- `docs/` - Additional documentation (if created in C.1)
 
-## Success Criteria for C.1
+## Success Criteria for Phase C
 
-- [ ] All public APIs have documentation with examples
-- [ ] Every module has clear purpose documentation
-- [ ] Usage guide covers 5+ common scenarios
-- [ ] Migration guide helps CLI users adopt library
-- [ ] `cargo doc` generates clean, navigable docs
-- [ ] No `missing_docs` warnings when enabled
+Based on which tasks are completed:
 
-## Session Planning
+### Documentation (C.1, C.8)
+- [ ] All public APIs have rustdoc comments
+- [ ] README has installation, quick start, and examples
+- [ ] At least 5 working example programs
+- [ ] Migration guide from CLI to library
 
-Estimated time: 4 hours
+### Configuration (C.2, C.7)
+- [ ] Support for TOML/YAML config files
+- [ ] Environment variable overrides
+- [ ] Shell completions for major shells
 
-Suggested session structure:
-1. Start with C.1 documentation (this session)
-2. Next session: C.2 + C.3 (config files + error messages) - 5 hours
-3. Following session: C.4 + start C.5 (telemetry + optimization) - 6-8 hours
-4. Final session: Complete C.5 + remaining C tasks - 4-6 hours
+### Observability (C.4)
+- [ ] OpenTelemetry integration
+- [ ] Metrics for latency, throughput, errors
+- [ ] Distributed tracing support
+- [ ] Structured logging
 
-## Overall Progress
+### Performance (C.5, C.6, C.10)
+- [ ] < 5% latency overhead verified
+- [ ] 80%+ test coverage
+- [ ] Benchmarks for all critical paths
+- [ ] Successfully handles 10k concurrent connections
 
-- **Phase A**: 100% Complete ✅
-- **Phase B**: 100% Complete ✅
-- **Phase C**: 0% Complete (starting now)
-- **Total Progress**: 38% (31 of 68 hours)
+## Architecture Decisions Made
+
+1. **Single Crate** - Using feature flags instead of workspace
+2. **Builder Pattern** - All major types have builders
+3. **Handle-Based API** - Proxy operations return handles for lifecycle management
+4. **Transport Factory** - Centralized transport creation with TransportSpec enum
+5. **Domain Errors** - Specific error types, no anyhow in public API
+
+## Current Test Status
+
+```
+Total Tests: 873+
+All Passing: Yes
+Coverage: ~70% (estimate)
+Clippy: Zero warnings
+```
+
+## Notes for Next Session
+
+1. **Branch Status**: Working in `shadowcat-cli-refactor` branch in worktree
+2. **Main Branch**: Has old CLI refactor already merged
+3. **Parent Repo**: Tapwire repository has shadowcat as a submodule
+4. **Commit Style**: Don't mention Claude in commits
+
+## Potential Challenges
+
+1. **Documentation**: Need to balance between API docs and user guides
+2. **Config Files**: Need to maintain backward compatibility with CLI args
+3. **Telemetry**: Must be optional and have minimal overhead
+4. **Performance**: Already optimized, further gains may be marginal
+
+## Questions to Consider
+
+1. Should we prioritize documentation for immediate usability?
+2. Is OpenTelemetry integration needed before production?
+3. Should we target 80% or 90% test coverage?
+4. Do we need all Phase C tasks or just the high-priority ones?
+
+## Next Steps After Phase C
+
+Once Phase C is complete (or partially complete based on priorities):
+1. Merge `shadowcat-cli-refactor` branch to main
+2. Update tapwire repository's submodule reference
+3. Create GitHub release with changelog
+4. Publish to crates.io (if desired)
+5. Update tapwire integration to use new library API
+
+---
+
+**Ready to continue with Phase C - Choose your focus area and let's complete this optimization!**

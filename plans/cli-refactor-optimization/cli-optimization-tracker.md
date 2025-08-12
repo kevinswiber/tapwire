@@ -86,12 +86,26 @@ Create ergonomic library APIs and core functionality
 
 **Phase B Total**: 24 hours (added B.2.1)
 
+### Phase B.7: Code Review Fixes (Side Quest)
+Address high-priority issues from [Comprehensive Code Review](../../reviews/cli-refactor-optimization/comprehensive-review.md)
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| B.7.1 | **Fix Shutdown Task Detachment** | 1h | B.2, B.3 | ✅ Complete | | [Details](tasks/B.7.1-fix-shutdown-detachment.md) - Fixed ForwardProxyHandle::shutdown() |
+| B.7.2 | **Implement Reverse Proxy Shutdown** | 2h | B.3 | ✅ Complete | | [Details](tasks/B.7.2-reverse-proxy-shutdown.md) - Added graceful shutdown with new start_with_shutdown method |
+| B.7.3 | **Add Must-Use Attributes** | 0.5h | B.3 | ✅ Complete | | [Details](tasks/B.7.3-add-must-use.md) - Added #[must_use] to all 4 handle types |
+| B.7.4 | **Improve Error Context** | 1h | B.4, B.5 | ✅ Complete | | [Details](tasks/B.7.4-improve-error-context.md) - Enhanced transport factory error messages |
+| B.7.5 | **Add Debug Assertions** | 0.5h | B.1 | ✅ Complete | | [Details](tasks/B.7.5-add-debug-assertions.md) - Added invariant checks to builders |
+
+**Phase B.7 Total**: 5 hours (Small-to-medium effort, worth doing now)
+**Review Grade**: A - High quality refactor with minor fixes needed
+
 ### Phase C: Quality & Testing (Days 7-12)
 Polish, optimize, and prepare for production
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Comprehensive Documentation** | 4h | Phase B | ⬜ Not Started | | [Details](tasks/C.1-documentation.md) |
+| C.1 | **Comprehensive Documentation** | 4h | Phase B, B.7 | ⬜ Not Started | | [Details](tasks/C.1-documentation.md) |
 | C.2 | **Configuration File Support** | 3h | A.3 | ⬜ Not Started | | [Details](tasks/C.2-config-files.md) |
 | C.3 | **Improve Error Messages** | 2h | B.5 | ⬜ Not Started | | [Details](tasks/C.3-error-messages.md) |
 | C.4 | **Add Telemetry/Metrics** | 4h | Phase B | ⬜ Not Started | | [Details](tasks/C.4-telemetry.md) |
@@ -252,13 +266,37 @@ If context window becomes limited:
 
 ## Next Actions
 
-**Phase B Complete! 🎉** Moving to Phase C (Quality & Testing):
+**Phase B.7: Code Review Fixes** (Side Quest - 5 hours total)
 
-1. **C.1: Comprehensive Documentation** - Document all new APIs and patterns (4 hours)
-2. **C.2: Configuration File Support** - Add TOML/YAML config loading (3 hours)
-3. **C.3: Improve Error Messages** - Make errors more actionable (2 hours)
-4. **C.4: Add Telemetry/Metrics** - Performance monitoring (4 hours)
-5. **C.5: Performance Optimization** - Profile and optimize (6 hours)
+Based on the comprehensive code review, we need to address these high-priority issues before moving to Phase C:
+
+1. **B.7.1: Fix Shutdown Task Detachment** (1 hour)
+   - Problem: `ForwardProxyHandle::shutdown()` spawns a detached task that could outlive the handle
+   - Solution: Await the shutdown directly instead of spawning a task
+   - File: `src/api.rs` lines 447-461
+
+2. **B.7.2: Implement Reverse Proxy Shutdown** (2 hours)
+   - Problem: `ReverseProxyHandle::shutdown()` has a TODO and doesn't implement graceful shutdown
+   - Solution: Add proper shutdown signaling to the Axum server
+   - File: `src/api.rs` lines 492-497
+
+3. **B.7.3: Add Must-Use Attributes** (0.5 hours)
+   - Add `#[must_use]` attributes to handle types to prevent accidental drops
+   - Files: `src/api.rs` (all handle structs)
+
+4. **B.7.4: Improve Error Context** (1 hour)
+   - Enhance transport factory error messages with more context
+   - File: `src/transport/factory.rs`
+
+5. **B.7.5: Add Debug Assertions** (0.5 hours)
+   - Add debug assertions for invariants in builder `build()` methods
+   - Files: Various builder files
+
+**Rationale for doing these now:**
+- Small effort (5 hours total)
+- High impact on reliability and correctness
+- Prevents potential production issues
+- Makes the codebase more robust before Phase C
 
 ## Progress Summary
 
@@ -271,10 +309,27 @@ If context window becomes limited:
   - B.4: ✅ Transport Factory (3h)
   - B.5: ✅ Error Handling Standardized (2h)
   - B.6: ✅ Integration Tests (2h)
+- **Phase B.7**: 100% Complete (5 hours) ✅ - Code Review Fixes
 - **Phase C**: 0% Complete (37 hours)
-- **Overall**: ~38% Complete (31 of 68 hours)
+- **Overall**: ~42% Complete (36 of 73 hours)
 
 ## Notes
+
+### Phase B.7 Completion (2025-08-12)
+- Fixed shutdown task detachment in ForwardProxyHandle - now awaits shutdown directly
+- Implemented proper graceful shutdown for ReverseProxy with new `start_with_shutdown` method
+- Added `#[must_use]` attributes to all 4 handle types for compile-time safety
+- Improved error context in TransportFactory with specific, actionable error messages
+- Added debug assertions to catch invariant violations during development
+- All 873+ tests passing, zero clippy warnings
+- **Ready for Phase C or production deployment**
+
+### Code Review Findings (2025-08-11)
+- Conducted comprehensive rust-code-reviewer analysis of all refactor changes
+- Overall Grade: **A** - High quality refactor achieving all architectural goals
+- Zero clippy warnings, no unsafe code, excellent error handling
+- Identified 5 minor issues to fix in Phase B.7 (5 hours total effort)
+- Review saved to `reviews/cli-refactor-optimization/comprehensive-review.md`
 
 ### B.5 Completion Summary (2025-08-11)
 - Replaced all anyhow usage with domain-specific error types
