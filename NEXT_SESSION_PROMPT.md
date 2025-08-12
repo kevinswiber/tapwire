@@ -1,141 +1,129 @@
-# Next Session: Wire Correlation to SSE Transport (M.5)
+# Continue Shadowcat MCP Implementation - Complete Phase 4 Interceptor Integration
 
-## Project Status Update
+## Context
 
-We are implementing SSE proxy integration with MCP message handling in Shadowcat, following the unified tracker at `plans/proxy-sse-message-tracker.md`.
+I'm working on Shadowcat, a high-performance MCP (Model Context Protocol) proxy in Rust. We're following the unified tracker at `plans/proxy-sse-message-tracker.md`.
 
-**Current Status**: Phase 3 nearly complete!  
-**Phase 0**: 100% Complete ✅ (F.1-F.5 all done)  
-**Phase 1**: 100% Complete ✅ (S.1-S.4 all done)  
-**Phase 2**: 100% Complete ✅ (R.1-R.4 all done)  
-**Phase 3**: 87% Complete ✅ (M.1-M.4 done, only M.5 remaining)
+## Current Status
 
-## Accomplishments Previous Session
+- **Phase 3: 100% Complete** ✅
+  - All MCP message handling components implemented
+  - Correlation engine fully integrated with SSE transport
+  - Code review improvements applied (Debug derive, performance optimizations, better tests)
 
-### Phase 3: Message Builder and Correlation Engine ✅
+- **Phase 4: 20% In Progress** 🔄
+  - I.1 (Message Interceptor Interface) - Started with `McpInterceptor` implementation
+  - Created MCP-aware conditions and actions in `src/interceptor/mcp_interceptor.rs`
+  - Need to complete integration and remaining tasks
 
-Successfully completed M.3 and M.4:
+## Review These Files First
 
-**M.3: Message Builder API** ✅
-- Created fluent builder API in `src/mcp/builder.rs`
-- Implemented RequestBuilder, ResponseBuilder, NotificationBuilder, BatchBuilder
-- Added specialized helpers for common MCP methods
-- 15+ comprehensive unit tests including builder/parser integration
-- All tests passing, no clippy warnings
+1. **plans/proxy-sse-message-tracker.md** - Overall progress tracker
+2. **src/interceptor/mcp_interceptor.rs** - Current MCP interceptor implementation (partially complete)
+3. **src/interceptor/engine.rs** - Base interceptor system to integrate with
+4. **plans/mcp-message-handling/interceptor-mcp-spec.md** - Full specification for MCP interceptor
 
-**M.4: Correlation Engine** ✅  
-- Created thread-safe correlation engine in `src/mcp/correlation.rs`
-- Features: request tracking, timeout management, statistics, configurable limits
-- Background cleanup task with graceful shutdown
-- 8+ comprehensive async tests
-- All tests passing, no clippy warnings
+## Primary Tasks: Complete Phase 4
 
-## Remaining Task: M.5 - Wire Correlation to SSE Transport
+### I.1: Complete Message Interceptor Interface (2h remaining)
+- ✅ Created basic McpInterceptor structure
+- ✅ Defined McpCondition and McpAction enums
+- ⬜ Add to interceptor module exports
+- ⬜ Create builder pattern for easy configuration
+- ⬜ Add more comprehensive tests
 
-### Objective
-Integrate the correlation engine with SSE transport to automatically track request/response pairs during proxying.
+### I.2: Method-Based Rules Engine (5h)
+- Implement rule evaluation engine
+- Support complex condition combinations (All, Any, Not)
+- Add rule priority and conflict resolution
+- Create rule validation and optimization
 
-### Implementation Plan
+### I.3: Interceptor Chain Integration (3h)
+- Wire McpInterceptor into the existing InterceptorChain
+- Ensure proper ordering with other interceptors
+- Add configuration for enabling/disabling MCP interception
+- Test with forward and reverse proxies
 
-1. **Modify `src/transport/sse.rs`**
-   - Add `CorrelationEngine` field to `SseTransport`
-   - Start correlation engine on transport connect
-   - Stop correlation engine on transport disconnect
+### I.4: SSE Stream Interception (3h)
+- Integrate interceptor with SSE transport
+- Handle streaming message interception
+- Support modification of SSE events in-flight
+- Test with real SSE streams
 
-2. **Track Outgoing Requests**
-   ```rust
-   // In SseTransport::send()
-   if let ProtocolMessage::Request { id, .. } = &message {
-       let metadata = parser.extract_metadata(&mcp_message);
-       self.correlation.track_request(mcp_message, metadata, None).await?;
-   }
-   ```
+### I.5: Reverse Proxy Interception (2h)
+- Add interception to reverse proxy /mcp endpoint
+- Support request/response modification
+- Add authentication-aware interception
+- Test with various MCP clients
 
-3. **Correlate Incoming Responses**
-   ```rust
-   // In SseTransport::receive()
-   if let ProtocolMessage::Response { id, .. } = &message {
-       match self.correlation.correlate_response(mcp_message).await {
-           Ok(completed) => {
-               debug!("Correlated response in {}ms", completed.duration.as_millis());
-           }
-           Err(e) => {
-               warn!("Correlation failed: {}", e);
-           }
-       }
-   }
-   ```
+## Success Criteria
 
-4. **Add Metrics Collection**
-   - Expose correlation stats via transport metrics
-   - Track success rates, timeouts, response times
-   - Integrate with existing metrics collection
+1. **Complete McpInterceptor Implementation**
+   - All condition types evaluated correctly
+   - All action types executed properly
+   - Thread-safe rule management
 
-5. **Configuration**
-   - Add correlation config to SSE transport options
-   - Allow customization of timeout and capacity limits
+2. **Integration Tests**
+   - Test interceptor with real MCP messages
+   - Verify rule matching and action execution
+   - Test performance impact (< 5% overhead)
 
-### Testing Strategy
+3. **Documentation**
+   - Document rule configuration format
+   - Add examples for common use cases
+   - Update CLI help for interceptor commands
 
-1. **Unit Tests**
-   - Mock SSE transport with correlation
-   - Test request tracking and response correlation
-   - Verify timeout handling
+## Key Implementation Notes
 
-2. **Integration Tests**  
-   - Full SSE proxy flow with correlation
-   - Multiple concurrent requests
-   - Performance impact measurement
+1. **Thread Safety**: McpInterceptor uses Arc<RwLock> for rules - ensure no deadlocks
+2. **Performance**: Rule evaluation should be optimized for hot path
+3. **Compatibility**: Must work with both protocol versions (2025-03-26 and 2025-06-18)
+4. **Error Handling**: Interceptor failures should not break message flow
 
-### Success Criteria
-
-1. ✅ Correlation engine integrated with SSE transport
-2. ✅ Automatic request/response tracking
-3. ✅ Metrics exposed for monitoring
-4. ✅ Tests demonstrating correlation in action
-5. ✅ No performance regression (< 5% overhead)
-
-## Commands for Development
+## Commands to Run
 
 ```bash
-cd /Users/kevin/src/tapwire/shadowcat
+cd shadowcat
 
-# Run SSE transport tests
-cargo test transport::sse
-
-# Run correlation tests
-cargo test mcp::correlation
-
-# Check integration
-cargo test --test sse_transport_test
-
-# Performance check
-cargo bench transport
-
-# Check for warnings
+# Check current state
+cargo test interceptor::mcp_interceptor
 cargo clippy --all-targets -- -D warnings
+
+# After changes
+cargo test interceptor::
+cargo test --test integration_test  # If integration tests exist
+
+# Run with interceptor
+cargo run -- forward stdio --intercept-config rules.yaml -- your-mcp-server
 ```
 
-## Key Files to Modify
+## Next Steps After Phase 4
 
-1. `src/transport/sse.rs` - Main integration point
-2. `tests/sse_transport_test.rs` - Integration tests
-3. `src/metrics/mod.rs` - Add correlation metrics (if exists)
+Once Phase 4 is complete, we'll move to Phase 5 (MCP-Aware Recorder):
+- C.1: MCP Tape Format (4h)
+- C.2: Session Recorder (5h)
+- C.3: Storage Backend (3h)
+- C.4: SSE Recording Integration (2h)
+- C.5: Reverse Proxy Recording (2h)
 
-## Next Steps After M.5
+## Important Context from Previous Session
 
-Once M.5 is complete, Phase 3 will be 100% done! Next phases include:
-- **Phase 4**: Interceptor Integration (I.1-I.5)
-- **Phase 5**: Recording Implementation (P.1-P.6)
-- **Phase 6**: Integration and Testing
+- We applied all rust-code-reviewer recommendations for Phase 3
+- CorrelationEngine now has Debug derive
+- Resource cleanup order fixed (connections close before engine stops)
+- Performance optimizations reduced cloning and JSON operations
+- Comprehensive integration tests added for correlation flow
 
-## Notes
+## Architecture Decisions
 
-- The correlation engine is already thread-safe and ready for integration
-- Focus on clean integration without breaking existing SSE functionality
-- Consider making correlation optional via configuration
-- Remember to handle both request and response directions in proxy mode
+1. **McpInterceptor as Separate Type**: Rather than modifying the base Interceptor trait, we created a specialized MCP-aware interceptor that implements the trait
+2. **Rule-Based System**: Using declarative rules makes it easy to configure without code changes
+3. **Correlation Integration**: The interceptor can leverage correlation data for stateful rules
 
----
+## Risk Areas
 
-**Primary Goal**: Complete M.5 by integrating the correlation engine with SSE transport for automatic request/response tracking.
+1. **Performance**: Complex rule evaluation could impact latency
+2. **Memory**: Storing many rules and tracking state could increase memory usage
+3. **Compatibility**: Need to handle both MCP protocol versions correctly
+
+Start by completing I.1 (finishing the McpInterceptor implementation), then move through the remaining Phase 4 tasks systematically.
