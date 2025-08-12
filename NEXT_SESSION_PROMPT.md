@@ -1,170 +1,141 @@
-# Next Session: Continue Phase 3 - Message Builder and Correlation
+# Next Session: Wire Correlation to SSE Transport (M.5)
 
 ## Project Status Update
 
 We are implementing SSE proxy integration with MCP message handling in Shadowcat, following the unified tracker at `plans/proxy-sse-message-tracker.md`.
 
-**Current Status**: Phase 3 in progress  
+**Current Status**: Phase 3 nearly complete!  
 **Phase 0**: 100% Complete ✅ (F.1-F.5 all done)  
 **Phase 1**: 100% Complete ✅ (S.1-S.4 all done)  
 **Phase 2**: 100% Complete ✅ (R.1-R.4 all done)  
-**Phase 3**: 31% Complete (M.1 ✅, M.2 ✅, M.3-M.5 pending)
+**Phase 3**: 87% Complete ✅ (M.1-M.4 done, only M.5 remaining)
 
 ## Accomplishments Previous Session
 
-### Phase 3: Full MCP Parser ✅
+### Phase 3: Message Builder and Correlation Engine ✅
 
-Successfully implemented M.1 and M.2:
-- M.1: Created complete MCP message types in `src/mcp/parser.rs`
-- M.2: Implemented full message parser with:
-  - `McpMessage` enum with Request, Response, and Notification variants
-  - `McpParser` with support for both protocol versions (2025-03-26 and 2025-06-18)
-  - Batch message handling for 2025-03-26
-  - `MessageMetadata` for correlation tracking
-  - Helper functions for streaming detection, session extraction, and correlation
-  - 22+ comprehensive unit tests covering all edge cases
-  - All tests passing, no clippy warnings
+Successfully completed M.3 and M.4:
 
-The parser provides:
-- Full JSON-RPC 2.0 compliance
-- Protocol version awareness
-- Batch message support (2025-03-26 only)
-- Error response handling with standard error codes
-- Metadata extraction for correlation
-- Helper functions for common operations
+**M.3: Message Builder API** ✅
+- Created fluent builder API in `src/mcp/builder.rs`
+- Implemented RequestBuilder, ResponseBuilder, NotificationBuilder, BatchBuilder
+- Added specialized helpers for common MCP methods
+- 15+ comprehensive unit tests including builder/parser integration
+- All tests passing, no clippy warnings
 
-## Phase 3: Full MCP Parser and Correlation (Week 3)
+**M.4: Correlation Engine** ✅  
+- Created thread-safe correlation engine in `src/mcp/correlation.rs`
+- Features: request tracking, timeout management, statistics, configurable limits
+- Background cleanup task with graceful shutdown
+- 8+ comprehensive async tests
+- All tests passing, no clippy warnings
 
-Remaining tasks for Phase 3 (per tracker):
-
-| ID | Task | Duration | Status |
-|----|------|----------|--------|
-| M.3 | **Message Builder API** | 2h | ⬜ Not Started |
-| M.4 | **Correlation Engine** | 5h | ⬜ Not Started |
-| M.5 | **Wire Correlation to SSE Transport** | 2h | ⬜ Not Started |
-
-## Primary Task: M.3 - Message Builder API
+## Remaining Task: M.5 - Wire Correlation to SSE Transport
 
 ### Objective
-Create a fluent builder API for constructing MCP messages programmatically.
+Integrate the correlation engine with SSE transport to automatically track request/response pairs during proxying.
 
 ### Implementation Plan
 
-1. **Create `src/mcp/builder.rs`**
+1. **Modify `src/transport/sse.rs`**
+   - Add `CorrelationEngine` field to `SseTransport`
+   - Start correlation engine on transport connect
+   - Stop correlation engine on transport disconnect
+
+2. **Track Outgoing Requests**
    ```rust
-   pub struct MessageBuilder {
-       version: ProtocolVersion,
-   }
-   
-   impl MessageBuilder {
-       pub fn request(method: &str) -> RequestBuilder;
-       pub fn response(id: JsonRpcId) -> ResponseBuilder;
-       pub fn notification(method: &str) -> NotificationBuilder;
-       pub fn error_response(id: JsonRpcId, code: i32, message: &str) -> McpMessage;
+   // In SseTransport::send()
+   if let ProtocolMessage::Request { id, .. } = &message {
+       let metadata = parser.extract_metadata(&mcp_message);
+       self.correlation.track_request(mcp_message, metadata, None).await?;
    }
    ```
 
-2. **Fluent Builder Pattern**
+3. **Correlate Incoming Responses**
    ```rust
-   let msg = MessageBuilder::request("tools/call")
-       .with_id("123")
-       .with_param("name", "search")
-       .with_param("arguments", json!({"query": "test"}))
-       .build()?;
+   // In SseTransport::receive()
+   if let ProtocolMessage::Response { id, .. } = &message {
+       match self.correlation.correlate_response(mcp_message).await {
+           Ok(completed) => {
+               debug!("Correlated response in {}ms", completed.duration.as_millis());
+           }
+           Err(e) => {
+               warn!("Correlation failed: {}", e);
+           }
+       }
+   }
    ```
 
-3. **Builder Types**
-   - `RequestBuilder` for building request messages
-   - `ResponseBuilder` for building response messages  
-   - `NotificationBuilder` for building notifications
-   - Support for all MCP methods with type-safe parameter building
+4. **Add Metrics Collection**
+   - Expose correlation stats via transport metrics
+   - Track success rates, timeouts, response times
+   - Integrate with existing metrics collection
 
-4. **Integration Points**
-   - Ensure built messages can be parsed by `McpParser`
-   - Validate against protocol version
-   - Support both 2025-03-26 and 2025-06-18 versions
+5. **Configuration**
+   - Add correlation config to SSE transport options
+   - Allow customization of timeout and capacity limits
+
+### Testing Strategy
+
+1. **Unit Tests**
+   - Mock SSE transport with correlation
+   - Test request tracking and response correlation
+   - Verify timeout handling
+
+2. **Integration Tests**  
+   - Full SSE proxy flow with correlation
+   - Multiple concurrent requests
+   - Performance impact measurement
 
 ### Success Criteria
 
-1. ✅ Fluent builder API for all message types
-2. ✅ Parameter validation
-3. ✅ Protocol version awareness
-4. ✅ 10+ unit tests
-5. ✅ Documentation with examples
-
-## Secondary Task: M.4 - Implement Correlation Engine
-
-If time permits, begin work on the correlation engine:
-
-1. **Create `src/mcp/correlation.rs`**
-   ```rust
-   pub struct CorrelationEngine {
-       pending: HashMap<JsonRpcId, PendingRequest>,
-       timeout: Duration,
-   }
-   ```
-
-2. **Core Features**
-   - Track request/response pairs by ID
-   - Handle timeout and cleanup
-   - Support concurrent correlations
-   - Provide correlation statistics
-   - Thread-safe with async support
-
-## Task M.5: Wire Correlation to SSE Transport
-
-The final task will integrate the correlation engine with SSE transport:
-- Add correlation engine to `SseTransport`
-- Track outgoing requests automatically
-- Match incoming responses
-- Generate correlation metrics
+1. ✅ Correlation engine integrated with SSE transport
+2. ✅ Automatic request/response tracking
+3. ✅ Metrics exposed for monitoring
+4. ✅ Tests demonstrating correlation in action
+5. ✅ No performance regression (< 5% overhead)
 
 ## Commands for Development
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 
-# Create the builder module
-touch src/mcp/builder.rs
+# Run SSE transport tests
+cargo test transport::sse
 
-# Run tests as you develop
-cargo test mcp::builder
+# Run correlation tests
 cargo test mcp::correlation
+
+# Check integration
+cargo test --test sse_transport_test
+
+# Performance check
+cargo bench transport
 
 # Check for warnings
 cargo clippy --all-targets -- -D warnings
-
-# Run all tests
-cargo test
 ```
 
-## Key Context
+## Key Files to Modify
 
-### Available Foundation
-From M.1 and M.2 implementation:
-- `McpMessage` enum with all message types
-- `McpParser` for parsing messages
-- `MessageMetadata` for tracking
-- Helper functions for common operations
-- Protocol version management
+1. `src/transport/sse.rs` - Main integration point
+2. `tests/sse_transport_test.rs` - Integration tests
+3. `src/metrics/mod.rs` - Add correlation metrics (if exists)
 
-### MCP Methods to Support in Builder
-1. **Lifecycle**: initialize, initialized, ping
-2. **Tools**: tools/list, tools/call
-3. **Prompts**: prompts/list, prompts/get
-4. **Resources**: resources/list, resources/read, resources/subscribe, resources/unsubscribe
-5. **Completion**: completion/complete
-6. **Logging**: logging/setLevel
-7. **Notifications**: error, progress, etc.
+## Next Steps After M.5
+
+Once M.5 is complete, Phase 3 will be 100% done! Next phases include:
+- **Phase 4**: Interceptor Integration (I.1-I.5)
+- **Phase 5**: Recording Implementation (P.1-P.6)
+- **Phase 6**: Integration and Testing
 
 ## Notes
 
-- M.3 (Builder) is prerequisite for easier testing in M.4
-- M.4 (Correlation) is the most complex task - allocate full 5 hours
-- M.5 (Wiring) should be straightforward once M.4 is complete
-- Keep thread safety in mind for correlation engine
-- Consider using tokio::sync::RwLock for async access
+- The correlation engine is already thread-safe and ready for integration
+- Focus on clean integration without breaking existing SSE functionality
+- Consider making correlation optional via configuration
+- Remember to handle both request and response directions in proxy mode
 
 ---
 
-**Next Goal**: Implement M.3 (Message Builder API) with fluent interface for all message types.
+**Primary Goal**: Complete M.5 by integrating the correlation engine with SSE transport for automatic request/response tracking.

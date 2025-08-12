@@ -4,9 +4,9 @@
 
 This is the primary tracker for implementing SSE proxy integration with MCP message handling capabilities. It interleaves work from both initiatives to maximize code reuse and ensure components work together seamlessly.
 
-**Last Updated**: 2025-08-10  
+**Last Updated**: 2025-08-12  
 **Total Estimated Duration**: ~~120-140 hours~~ → 118-138 hours (F.5 exists from refactor)  
-**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅, Phase 2: 100% Complete ✅, Phase 3: P.1 Complete ✅
+**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅, Phase 2: 100% Complete ✅, Phase 3: 87% Complete (M.1-M.4 done ✅)
 
 ## Transport Naming Clarification
 
@@ -125,8 +125,8 @@ Complete the MCP message parser and correlation engine.
 |----|------|----------|--------------|--------|-------|-------|
 | M.1 | Complete MCP Message Types | 4h | F.2 | ✅ Complete | 2025-08-10 | Implemented in parser.rs |
 | M.2 | Full Message Parser | 3h | M.1 | ✅ Complete | 2025-08-10 | McpParser with 22+ tests |
-| M.3 | Message Builder API | 2h | M.1 | ⬜ Not Started | | [MCP Task 1.3](mcp-message-handling/mcp-message-handling-tracker.md#task-13-message-builder) |
-| M.4 | Correlation Engine | 5h | M.1 | ⬜ Not Started | | [MCP Task 2.1](mcp-message-handling/mcp-message-handling-tracker.md#task-21-correlation-engine) |
+| M.3 | Message Builder API | 2h | M.1 | ✅ Complete | 2025-08-12 | Fluent builder API with 15 tests |
+| M.4 | Correlation Engine | 5h | M.1 | ✅ Complete | 2025-08-12 | Thread-safe with timeouts & stats |
 | M.5 | **Wire Correlation to SSE Transport** | 2h | M.4, S.4 | ⬜ Not Started | | [Task Details](#m5-wire-correlation) |
 
 **Phase 3 Total**: 16 hours
