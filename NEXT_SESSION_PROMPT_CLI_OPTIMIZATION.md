@@ -1,74 +1,57 @@
-# Next Session: Shadowcat CLI Optimization - Phase C Continuation
+# Next Session: Shadowcat CLI Optimization - Final Sprint
 
 ## Context
-We're continuing the Shadowcat CLI optimization in the **shadowcat-cli-refactor** worktree. 
+We're completing the final tasks for the Shadowcat CLI optimization in the **shadowcat-cli-refactor** worktree.
 
 **IMPORTANT**: Work in the `/Users/kevin/src/tapwire/shadowcat-cli-refactor` directory, NOT the main shadowcat directory.
 
-**Current Progress: 60% Complete** (49 of 73 hours completed)
+**Current Progress: 78% Complete** (57 of 73 hours completed)
 
-## What Was Just Completed: Phase C.3 and C.4
+## What Was Just Completed (2025-08-12)
 
-### C.3 - Improve Error Messages (2 hours) ✅
-- Created comprehensive error formatter with context and suggestions
-- Enhanced transport error messages (stdio and HTTP)
-- Integrated enhanced formatting into CLI
-- Fixed all clippy warnings
+### C.5 - Performance Optimization (6 hours) ✅
+- Cleaned up redundant optimization modules (deleted unused code)
+- Properly integrated HTTP connection pooling (32 connections/host, HTTP/2)
+- Created and applied buffer size constants throughout codebase
+- Integrated flamegraph profiling
+- Updated documentation to reflect actual implementation
 
-### C.4 - Telemetry and Metrics (4 hours) ✅
-- Implemented OpenTelemetry tracing with OTLP export
-- Added Prometheus metrics collection
-- Created telemetry demo example
-- Zero overhead when disabled
+### C.6 - Extensive Test Coverage (6 hours) ✅
+- Added property-based tests with proptest
+- Created integration tests for error paths
+- Implemented tests for session limits and concurrent operations
+- All 870+ tests passing
 
-## Next Tasks to Complete
+## Remaining Tasks (10 hours total)
 
-### Priority 1: C.5 - Performance Optimization (6 hours) [High Impact]
-Optimize for production loads:
-- Profile with flamegraph
-- Reduce allocations in hot paths
-- Optimize buffer sizes
-- Implement connection pooling
-- Target: < 5% latency overhead
+### Priority 1: C.7 - CLI Shell Completions (2 hours)
+**Task File**: `plans/cli-refactor-optimization/tasks/C.7-shell-completions.md`
+- Add shell completion generation using clap
+- Support bash, zsh, fish, PowerShell
+- Add completions command or --generate-completions flag
+- Document installation process
 
-### Priority 2: C.6 - Extensive Test Coverage (6 hours)
-Achieve 70%+ test coverage:
-- Analyze current coverage with tarpaulin
-- Add integration tests for error paths
-- Test shutdown scenarios comprehensively
-- Add property-based tests for builders
-- Test configuration loading edge cases
+### Priority 2: C.9 - Connection Pooling (3 hours) [Consider Skipping]
+**Task File**: `plans/cli-refactor-optimization/tasks/C.9-connection-pooling.md`
+- Note: HTTP pooling already done in C.5
+- This is for stdio process pooling
+- **Consider**: May not be needed - stdio processes are typically one-shot
+- Evaluate necessity before implementing
 
-### Priority 3: C.7 - CLI Shell Completions (2 hours)
-Add shell completion support:
-- Implement completions for bash, zsh, fish
-- Add installation instructions
-- Test completion scenarios
+### Priority 3: C.10 - Load Testing (2 hours)
+**Task File**: `plans/cli-refactor-optimization/tasks/C.10-load-testing.md`
+- Create load testing scenarios
+- Verify < 100MB memory for 1000 sessions
+- Verify > 10,000 requests/second
+- Use wrk or custom load generator
 
-## Current Status
-
-### Completed Phases
-- **Phase A**: Critical Fixes (100% - 7 hours) ✅
-- **Phase B**: Library Readiness (100% - 24 hours) ✅
-- **Phase B.7**: Code Review Fixes (100% - 5 hours) ✅
-- **Phase C**: Quality & Testing (35% - 13 of 37 hours)
-  - ✅ C.1: Comprehensive Documentation
-  - ✅ C.2: Configuration File Support
-  - ✅ C.3: Improve Error Messages (just completed)
-  - ✅ C.4: Telemetry/Metrics
-  - ✅ C.8: Example Programs
-
-### Remaining Work (24 hours)
-- C.5: Performance Optimization (6h)
-- C.6: Extensive Test Coverage (6h)
-- C.7: CLI Shell Completions (2h)
-- C.9: Connection Pooling (3h)
-- C.10: Load Testing (2h)
-- C.11: Release Preparation (2h)
-- Unallocated: 3h
-
-## Tracker Location
-Review the full tracker at: `plans/cli-refactor-optimization/cli-optimization-tracker.md`
+### Priority 4: C.11 - Release Preparation (2 hours)
+**Task File**: `plans/cli-refactor-optimization/tasks/C.11-release-prep.md`
+- Final quality checks
+- Create CHANGELOG.md
+- Update README with library usage
+- Version bumping
+- Ensure all examples work
 
 ## Commands to Run at Start
 ```bash
@@ -78,32 +61,66 @@ cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 # Verify we're on the right branch
 git status
 
-# Check what's changed
-git diff
-
 # Run tests to ensure everything is working
 cargo test --quiet
 
-# Check for any remaining clippy issues (should be none)
+# Check clippy (should be clean)
 cargo clippy --all-targets -- -D warnings
+
+# Build release binary for performance testing
+cargo build --release
 ```
 
-## Key Files to Reference
-- `plans/cli-refactor-optimization/cli-optimization-tracker.md` - Main tracker
-- `plans/cli-refactor-optimization/tasks/C.5-performance.md` - Next task details
-- `src/cli/error_formatter.rs` - Just completed error formatter
-- `examples/` - Example programs to test with
+## Key Context
+- **All tests passing**: 870+ tests, zero failures
+- **Zero clippy warnings**: Code is clean
+- **Performance optimizations integrated**: HTTP pooling, buffer constants applied
+- **Documentation updated**: Performance doc reflects actual implementation
+
+## Decision Points for This Session
+
+1. **C.9 Stdio Pooling**: 
+   - HTTP pooling is done
+   - Stdio processes are one-shot by nature
+   - **Recommendation**: Skip or reduce scope
+
+2. **Load Testing Approach**:
+   - Option A: Use `wrk` for HTTP testing
+   - Option B: Write custom Rust load generator
+   - Option C: Use existing tools like `vegeta`
+
+3. **Version for Release**:
+   - Currently at 0.1.0
+   - Consider 0.2.0 for the refactored version
+   - Or stay at 0.1.x if maintaining compatibility
+
+## Success Criteria for Completion
+- [ ] Shell completions working for at least bash and zsh
+- [ ] Load tests demonstrate performance targets
+- [ ] CHANGELOG.md documents all changes
+- [ ] README updated with library usage examples
+- [ ] Final `cargo test` and `cargo clippy` pass
+- [ ] Version bumped appropriately
+
+## Files to Reference
+- **Tracker**: `plans/cli-refactor-optimization/cli-optimization-tracker.md`
+- **Performance Doc**: `shadowcat-cli-refactor/docs/performance-optimizations.md`
+- **Constants**: `src/transport/constants.rs` (new file with buffer sizes)
+- **HTTP Client**: `src/transport/http_client.rs` (pooled client implementation)
 
 ## Important Notes
-1. All work should be done in the shadowcat-cli-refactor worktree
-2. The branch has been rebased onto main and is up to date
-3. All clippy warnings have been fixed
-4. Focus on performance optimization next as it's critical for production readiness
-5. Consider using the rust-code-reviewer agent for complex performance optimizations
+1. The refactor has received an "A" grade from comprehensive code review
+2. HTTP connection pooling is already complete - don't duplicate
+3. Consider celebrating completion - this has been a major refactor! 🎉
+4. After these tasks, Shadowcat will be production-ready as both CLI and library
 
-## Success Criteria for Next Session
-- [ ] Complete C.5 Performance Optimization
-- [ ] Achieve < 5% latency overhead in benchmarks
-- [ ] Begin C.6 Test Coverage if time permits
-- [ ] Update tracker with progress
-- [ ] Keep all tests passing and clippy clean
+## Quick Reference - What's Been Accomplished
+- ✅ Library-first architecture
+- ✅ Clean builder patterns for all types
+- ✅ Graceful shutdown system
+- ✅ Comprehensive error handling
+- ✅ Configuration from files and env
+- ✅ Telemetry and metrics
+- ✅ Performance optimizations
+- ✅ Property-based testing
+- ✅ Full documentation
