@@ -4,9 +4,9 @@
 
 This is the primary tracker for implementing SSE proxy integration with MCP message handling capabilities. It interleaves work from both initiatives to maximize code reuse and ensure components work together seamlessly.
 
-**Last Updated**: 2025-08-12  
-**Total Estimated Duration**: ~~120-140 hours~~ → 118-138 hours (F.5 exists from refactor)  
-**Status**: Phase 0 Complete ✅, Phase 1 Complete ✅, Phase 2: 100% Complete ✅, Phase 3: 100% Complete ✅, Phase 4: 80% Complete 🔄
+**Last Updated**: 2025-01-13  
+**Total Estimated Duration**: ~~120-140 hours~~ → 134-154 hours (added Phase 5.5 consolidation)  
+**Status**: Phase 0-4 Complete ✅, Phase 5: 56% Complete (9h/16h), Phase 5.5: Ready to Start
 
 ## Transport Naming Clarification
 
@@ -140,7 +140,7 @@ Enable intelligent message interception based on MCP semantics.
 | I.2 | Method-Based Rules Engine | 5h | I.1 | ✅ Complete | 2025-08-12 | McpRulesEngine with optimization, caching, validation |
 | I.3 | Interceptor Chain Integration | 3h | I.2 | ✅ Complete | 2025-08-12 | Added to InterceptorChainBuilder with tests |
 | I.4 | **SSE Stream Interception** | 3h | I.3, S.4 | ✅ Complete | 2025-08-12 | Implemented with pause/resume control |
-| I.5 | **Reverse Proxy Interception** | 2h | I.3, R.4 | ⬜ Not Started | | [Task Details](#i5-reverse-interception) |
+| I.5 | **Reverse Proxy Interception** | 2h | I.3, R.4 | ✅ Complete | 2025-08-12 | [Task Details](#i5-reverse-interception) |
 
 **Phase 4 Total**: 17 hours
 
@@ -149,13 +149,27 @@ Record MCP sessions with full semantic understanding.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | MCP Tape Format | 4h | M.1 | ⬜ Not Started | | [MCP Task 4.1](mcp-message-handling/recorder-mcp-spec.md) |
-| C.2 | Session Recorder | 5h | C.1, M.4 | ⬜ Not Started | | [MCP Task 4.2](mcp-message-handling/recorder-mcp-spec.md) |
+| C.1 | MCP Tape Format | 4h | M.1 | ✅ Complete | 2025-01-13 | Created McpTape structure |
+| C.2 | Session Recorder | 5h | C.1, M.4 | ✅ Complete | 2025-01-13 | Created SessionRecorder |
 | C.3 | Storage Backend | 3h | C.1 | ⬜ Not Started | | [MCP Task 4.3](mcp-message-handling/recorder-mcp-spec.md) |
 | C.4 | **SSE Recording Integration** | 2h | C.2, S.4 | ⬜ Not Started | | [Task Details](#c4-sse-recording) |
 | C.5 | **Reverse Proxy Recording** | 2h | C.2, R.4 | ⬜ Not Started | | [Task Details](#c5-reverse-recording) |
 
-**Phase 5 Total**: 16 hours
+**Phase 5 Total**: 16 hours (9 hours complete, 7 hours remaining)
+
+### Phase 5.5: Recorder Consolidation (Critical)
+Consolidate the dual recorder implementations to prevent technical debt.
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| D.1 | Migrate Tape to McpTape | 3h | C.1, C.2 | ⬜ Not Started | | Unify tape formats |
+| D.2 | Update Storage Layer | 2h | D.1 | ⬜ Not Started | | Adapt storage for McpTape |
+| D.3 | Migrate TapeRecorder | 4h | D.1, C.2 | ⬜ Not Started | | Replace with SessionRecorder |
+| D.4 | Update All Call Sites | 2h | D.3 | ⬜ Not Started | | Fix forward/reverse proxies |
+| D.5 | Update Replay System | 3h | D.1 | ⬜ Not Started | | Support new tape format |
+| D.6 | Migration Testing | 2h | D.1-D.5 | ⬜ Not Started | | Ensure no regressions |
+
+**Phase 5.5 Total**: 16 hours
 
 ### Phase 6: MCP-Aware Replay (Week 5)
 Enable intelligent replay of recorded sessions.
@@ -468,6 +482,93 @@ If context window becomes limited:
 4. **Build Minimal MCP Parser (F.2)**
 5. **Continue with Phase 1 once foundations ready**
 
+## Consolidation Task Details
+
+### D.1: Migrate Tape to McpTape
+**Objective**: Replace the old Tape structure with McpTape throughout the codebase
+
+**Steps**:
+1. Update `Tape` type alias to point to `McpTape`
+2. Migrate `frames: Vec<MessageEnvelope>` to `frames: Vec<TapeFrame>`
+3. Update serialization/deserialization logic
+4. Add migration utility for existing tape files
+
+**Deliverables**:
+- Single unified tape format
+- Migration utility for existing tapes
+- Updated tests
+
+### D.2: Update Storage Layer
+**Objective**: Adapt storage modules to work with McpTape
+
+**Steps**:
+1. Update `storage.rs` to handle McpTape structure
+2. Update `format.rs` for new tape format
+3. Add compression support using McpTape's CompressionType
+4. Update database schema if needed
+
+**Deliverables**:
+- Storage layer supporting McpTape
+- Compression implementation
+- Schema migration scripts
+
+### D.3: Migrate TapeRecorder
+**Objective**: Replace TapeRecorder with SessionRecorder
+
+**Steps**:
+1. Update TapeRecorder to be a thin wrapper around SessionRecorder
+2. Or completely replace TapeRecorder with SessionRecorder
+3. Update builder patterns and initialization
+4. Ensure API compatibility where possible
+
+**Deliverables**:
+- Single recorder implementation
+- Updated initialization code
+- Preserved or migrated API
+
+### D.4: Update All Call Sites
+**Objective**: Fix all code using the old recorder/tape API
+
+**Steps**:
+1. Update forward proxy recorder usage
+2. Update reverse proxy recorder usage
+3. Update CLI commands (record, replay, tape)
+4. Update API layer
+
+**Deliverables**:
+- All call sites using new API
+- No compilation warnings
+- Tests passing
+
+### D.5: Update Replay System
+**Objective**: Ensure replay works with McpTape format
+
+**Steps**:
+1. Update `replay.rs` to handle TapeFrame structure
+2. Support correlation playback
+3. Handle interceptor action replay
+4. Update replay CLI commands
+
+**Deliverables**:
+- Replay supporting McpTape
+- Correlation-aware playback
+- Updated CLI
+
+### D.6: Migration Testing
+**Objective**: Ensure no regressions from consolidation
+
+**Steps**:
+1. Test recording with all transport types
+2. Test replay of recorded sessions
+3. Test migration of old tape files
+4. Performance benchmarking
+5. Integration tests
+
+**Deliverables**:
+- Comprehensive test suite
+- Performance benchmarks
+- Migration guide
+
 ## Session History
 
 ### 2025-08-10 Session
@@ -493,8 +594,8 @@ If context window becomes limited:
 - Both actually implement "Streamable HTTP" from MCP spec
 - Should be refactored to clearer naming in future
 
-### 2025-08-12 Session (Current)
-**Duration**: ~5 hours
+### 2025-08-12 Session (Part 1)
+**Duration**: ~7 hours
 **Completed**:
 - ✅ I.4: SSE Stream Interception
   - Created `InterceptedSseTransport` wrapper for SSE transport with interceptor support
@@ -503,6 +604,14 @@ If context window becomes limited:
   - Full support for all InterceptAction types
   - Comprehensive test suite (15+ tests, all passing)
   - Fixed clippy warnings and applied code formatting
+- ✅ I.5: Reverse Proxy Interception
+  - Added InterceptorChain and PauseController to reverse proxy AppState
+  - Added interceptor configuration to ReverseProxyConfig
+  - Integrated interceptors for incoming POST requests
+  - Integrated interceptors for outgoing SSE responses
+  - Handled all InterceptAction types (Continue, Modify, Block, Pause, Mock, Delay)
+  - Added comprehensive test for reverse proxy interception
+  - Fixed all clippy warnings
 
 **Key Features Implemented**:
 - **Pause/Resume Control**: Messages can be paused and controlled via HTTP API
@@ -511,12 +620,86 @@ If context window becomes limited:
 - **Timeout Support**: Automatic resume after configurable timeout
 - **Thread-Safe**: All operations safe for concurrent use
 - **Statistics**: Track paused messages by method and session
+- **Bidirectional Interception**: Both client→server and server→client messages intercepted
+- **SSE Event Interception**: SSE events are parsed and intercepted as MCP messages
 
 **Technical Decisions**:
 - Used oneshot channels for pause/resume communication
 - PauseController manages all paused messages centrally
 - Axum-based HTTP API for control interface
 - UUID-based pause IDs for external reference
+- Consistent interceptor behavior across forward and reverse proxies
+- Applied interceptors at message processing points, not at transport layer
+
+### 2025-08-12 Session (Part 2) - Code Quality Improvements
+**Duration**: ~1 hour
+**Completed**:
+- ✅ Code quality improvements after rust-code-reviewer review
+  - Added comprehensive documentation for PauseControlExt trait with usage examples
+  - Fixed axum router path segments (changed `:id` to `{id}` format)
+  - Added background cleanup task for orphaned pause entries
+  - Enhanced PauseStats with duration metrics (avg, max, min)
+  - Improved error messages with session ID and direction context
+  - Fixed test fragility by removing Arc::strong_count assertions
+  - Added shutdown control for background cleanup task
+
+**Key Improvements**:
+- **Background Cleanup**: Automatic cleanup of expired/orphaned pause entries every 10 seconds
+- **Enhanced Metrics**: Pause duration statistics for monitoring and debugging
+- **Better Documentation**: Clear examples for API extension trait usage
+- **Resilience**: Handles upstream disconnections while messages are paused
+- **Test Stability**: Tests now handle background tasks properly
+
+**Quality Gates Passed**:
+- All tests passing (793 unit tests + integration tests)
+- Zero clippy warnings with `--all-targets -- -D warnings`
+- Code review score: 9/10 from rust-code-reviewer
+- No memory safety issues identified
+- Proper error handling throughout
+
+### 2025-01-13 Session - Phase 5: MCP-Aware Recorder
+**Duration**: ~2 hours
+**Completed**:
+- ✅ C.1: MCP Tape Format (4 hours)
+  - Created `McpTape` with full MCP protocol semantics
+  - Added correlation tracking and interceptor action recording
+  - Implemented transport-specific metadata structures
+  - Added comprehensive statistics tracking
+  - 6 tests passing
+- ✅ C.2: Session Recorder (5 hours)
+  - Implemented `SessionRecorder` with async buffering
+  - Added method filtering and sampling support
+  - Created background task for efficient processing
+  - Integrated graceful shutdown handling
+  - 6 tests passing
+
+**Key Decisions**:
+- Created parallel implementations rather than replacing existing recorder
+- Both `TapeRecorder` and `SessionRecorder` coexist temporarily
+- Enables gradual migration without breaking changes
+- Added Phase 5.5 for consolidation to eliminate duplication
+
+**Technical Achievements**:
+- McpTape captures full semantic understanding of MCP sessions
+- SessionRecorder handles high-throughput recording efficiently
+- 12 new tests added, all passing
+- Clean compilation, zero clippy warnings
+
+**Next Priority**: Phase 5.5 - Recorder Consolidation is critical to prevent technical debt
+
+## Notes
+- **Background Cleanup**: Automatic cleanup of expired/orphaned pause entries every 10 seconds
+- **Enhanced Metrics**: Pause duration statistics for monitoring and debugging
+- **Better Documentation**: Clear examples for API extension trait usage
+- **Resilience**: Handles upstream disconnections while messages are paused
+- **Test Stability**: Tests now handle background tasks properly
+
+**Quality Gates Passed**:
+- All tests passing (793 unit tests + integration tests)
+- Zero clippy warnings with `--all-targets -- -D warnings`
+- Code review score: 9/10 from rust-code-reviewer
+- No memory safety issues identified
+- Proper error handling throughout
 
 ## Notes
 
@@ -528,7 +711,7 @@ If context window becomes limited:
 
 ---
 
-**Document Version**: 1.1  
+**Document Version**: 1.2  
 **Created**: 2025-08-08  
-**Last Modified**: 2025-08-10  
+**Last Modified**: 2025-08-12  
 **Author**: Development Team

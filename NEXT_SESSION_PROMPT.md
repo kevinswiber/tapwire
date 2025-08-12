@@ -1,150 +1,124 @@
-# Next Session Prompt - Shadowcat MCP Proxy
+# Next Session: Shadowcat Recorder Consolidation
 
 ## Current Status
-**Date**: 2025-08-12  
-**Phase**: 4 (MCP-Aware Interceptor) - 80% Complete  
-**Last Completed**: Task I.4 (SSE Stream Interception)
+**Date**: 2025-01-13  
+**Phase 5**: MCP-Aware Recorder - 56% Complete (C.1 & C.2 done)  
+**Phase 5.5**: Recorder Consolidation - Ready to Start (Critical Priority)
+
+## Context Files
+1. **Main Tracker**: `/Users/kevin/src/tapwire/plans/proxy-sse-message-tracker.md`
+2. **Shadowcat Guide**: `/Users/kevin/src/tapwire/shadowcat/CLAUDE.md`
 
 ## What Was Just Completed
+- ✅ Created `McpTape` format with full MCP semantics (759 lines)
+- ✅ Implemented `SessionRecorder` with async buffering (658 lines)
+- ✅ Added 12 comprehensive tests, all passing
+- ✅ Kept both implementations temporarily to avoid breaking changes
 
-### Task I.4: SSE Stream Interception ✅
-Successfully implemented SSE stream interception with full pause/resume control:
+## Critical Issue: Dual Implementation
+We now have TWO parallel recorder systems:
+1. **Old**: `Tape`, `TapeRecorder` (simple, working, integrated)
+2. **New**: `McpTape`, `SessionRecorder` (advanced, MCP-aware, not integrated)
 
-**Files Created** (in shadowcat repo):
-- `src/transport/sse_interceptor.rs` - InterceptedSseTransport wrapper
-- `src/transport/pause_controller.rs` - Pause/resume management system  
-- `src/transport/pause_control_api.rs` - HTTP control API
-- `tests/sse_interceptor_test.rs` - SSE interceptor tests
-- `tests/pause_resume_test.rs` - Pause/resume functionality tests
+This duplication is technical debt that needs immediate consolidation.
 
-**Key Features**:
-- Full interceptor chain integration for SSE transport
-- External pause/resume control via HTTP API
-- Support for all InterceptAction types (Continue, Modify, Block, Pause, Mock, Delay)
-- Thread-safe concurrent operations
-- Timeout-based auto-resume
-- Statistics and monitoring
+## Phase 5.5: Consolidation Tasks (16 hours)
 
-**API Endpoints Available**:
-- `GET /pause/list` - List all paused messages
-- `GET /pause/stats` - Get pause statistics
-- `GET /pause/{id}` - Get specific paused message
-- `POST /pause/{id}/resume` - Resume a paused message
-- `POST /pause/{id}/modify` - Resume with modifications
-- `POST /pause/{id}/block` - Block a paused message
+### Task D.1: Migrate Tape to McpTape (3 hours)
+**Challenge**: Old Tape has `frames: Vec<MessageEnvelope>`, new has `frames: Vec<TapeFrame>`
 
-## Next Task: I.5 - Reverse Proxy Interception
+**Approach Options**:
+1. **Option A**: Make TapeFrame wrap MessageEnvelope initially
+2. **Option B**: Convert all code to use TapeFrame structure
+3. **Option C**: Create adapter layer for compatibility
 
-**Objective**: Apply the interceptor chain to the reverse proxy, enabling server-side message interception.
+**Deliverables**:
+- Single tape format used everywhere
+- Migration utility for existing tape files
+- All tape tests passing
 
-**Duration**: 2 hours
+### Task D.2: Update Storage Layer (2 hours)
+- Update `storage.rs` to handle McpTape
+- Update `format.rs` for new structure
+- Add compression support
+- Ensure backward compatibility or migration path
 
-**Files to Modify** (in shadowcat repo):
-- `src/proxy/reverse.rs` - Add interceptor chain integration
-- `src/proxy/reverse/mcp_endpoint.rs` - Apply interceptors to MCP messages
+### Task D.3: Migrate TapeRecorder (4 hours)
+**Challenge**: Different APIs between TapeRecorder and SessionRecorder
 
-**Key Work Items**:
-1. Add InterceptorChain to reverse proxy AppState
-2. Create interceptor configuration for reverse proxy
-3. Apply interceptors to incoming POST requests
-4. Apply interceptors to outgoing SSE responses
-5. Handle InterceptAction results appropriately
-6. Add tests for reverse proxy interception
+**Approach Options**:
+1. **Option A**: Make TapeRecorder a wrapper around SessionRecorder
+2. **Option B**: Replace TapeRecorder entirely, update all call sites
+3. **Option C**: Merge best of both into single implementation
 
-**Integration Points**:
-- Use existing InterceptorChain from `src/interceptor/engine.rs`
-- Leverage McpInterceptor for MCP-specific rules
-- Integrate with existing correlation engine
-- Maintain session context through interception
+**Key Differences to Resolve**:
+- `start_recording(&Session, String)` vs `start_recording(SessionId, ProtocolVersion, String, Option<CorrelationEngine>)`
+- `record_frame(MessageEnvelope)` vs `record_message(MessageEnvelope, Option<InterceptAction>)`
 
-## Important Context
+### Task D.4: Update All Call Sites (2 hours)
+- Forward proxy: `src/proxy/forward.rs`
+- Reverse proxy: `src/proxy/reverse.rs`
+- CLI commands: `src/cli/record.rs`, `src/cli/replay.rs`, `src/cli/tape.rs`
+- API layer: `src/api.rs`
 
-### Architecture Overview
-The proxy now has these layers:
-1. **Transport Layer**: stdio, HTTP, SSE (with InterceptedSseTransport)
-2. **MCP Message Layer**: Parser, Correlator, Batch Handler
-3. **Interceptor Layer**: Rules Engine, Chain, Pause Controller
-4. **Proxy Layer**: Forward and Reverse proxies
+### Task D.5: Update Replay System (3 hours)
+- Update `replay.rs` to handle TapeFrame
+- Support correlation-aware playback
+- Handle interceptor action replay
+- Update CLI replay commands
 
-### Key Design Decisions
-- Interceptors are transport-agnostic but MCP-aware
-- Pause/resume uses oneshot channels for control flow
-- External control via HTTP API for operational flexibility
-- All interceptor operations are async and thread-safe
+### Task D.6: Migration Testing (2 hours)
+- Test all transport types
+- Test replay functionality
+- Performance benchmarks
+- Migration of existing tapes
 
-### Testing Requirements
-- Run `cargo test` to ensure all tests pass
-- Run `cargo clippy --all-targets -- -D warnings` before committing
-- Test both forward and reverse proxy modes
-- Verify interceptor chain processes messages correctly
+## Key Decisions Needed
 
-## Commands to Run
+1. **Migration Strategy**: Gradual adapter layer or big-bang replacement?
+2. **API Design**: Keep old API, adopt new API, or hybrid?
+3. **Backward Compatibility**: Support old tape files or require migration?
+4. **Feature Scope**: Include all McpTape features or start minimal?
+
+## Technical Constraints
+
+- Must maintain working state throughout migration
+- 811 existing tests must continue passing
+- Zero clippy warnings policy
+- Performance target: < 10% recording overhead
+
+## Recommended Approach
+
+1. **Start with D.1**: Create adapter to make TapeFrame work with existing code
+2. **Incremental Migration**: Update one component at a time
+3. **Test Continuously**: Run full test suite after each change
+4. **Feature Flag**: Consider using feature flag for gradual rollout
+
+## Files to Review First
 
 ```bash
-# Navigate to shadowcat directory
-cd /Users/kevin/src/tapwire/shadowcat
+# Current implementations
+src/recorder/tape.rs           # Old implementation (529 lines)
+src/recorder/mcp_tape.rs       # New implementation (759 lines)
+src/recorder/session_recorder.rs # New recorder (658 lines)
 
-# Check current status
-git status
-
-# Run tests
-cargo test
-
-# Run clippy
-cargo clippy --all-targets -- -D warnings
-
-# Test the SSE interceptor
-cargo test --test sse_interceptor_test
-cargo test --test pause_resume_test
-
-# Run the proxy with SSE transport (for manual testing)
-cargo run -- forward sse --url http://localhost:8080/mcp
+# Key integration points
+src/proxy/forward.rs:143-153   # Recording initialization
+src/proxy/forward.rs:561       # Frame recording
+src/api.rs:445                 # Recorder creation
 ```
 
-## Files to Reference
+## Success Criteria
 
-**Primary Tracker**: `/Users/kevin/src/tapwire/plans/proxy-sse-message-tracker.md`
+- [ ] Single tape format (McpTape)
+- [ ] Single recorder implementation
+- [ ] All tests passing (811+)
+- [ ] Zero clippy warnings
+- [ ] No performance regression
+- [ ] Clean module structure
 
-**Key Implementation Files** (in shadowcat repo):
-- `src/interceptor/engine.rs` - InterceptorChain implementation
-- `src/interceptor/mcp_interceptor.rs` - MCP-specific interceptor
-- `src/transport/sse_interceptor.rs` - SSE interceptor wrapper (just completed)
-- `src/proxy/reverse.rs` - Reverse proxy to modify next
+## Next Session Focus
 
-**Test Files**:
-- `tests/integration/` - Integration test patterns
-- `tests/sse_interceptor_test.rs` - Reference for interceptor tests
+Begin with Task D.1 - Migrate Tape to McpTape. This is the foundation for all other consolidation work. The key challenge is converting `Vec<MessageEnvelope>` to `Vec<TapeFrame>` without breaking existing functionality.
 
-## Success Criteria for Next Task (I.5)
-
-- [ ] Interceptor chain integrated into reverse proxy
-- [ ] Incoming MCP requests intercepted
-- [ ] Outgoing SSE responses intercepted  
-- [ ] All InterceptActions handled correctly
-- [ ] Tests added and passing
-- [ ] No clippy warnings
-- [ ] Documentation updated
-
-## Notes for Next Session
-
-- The pause controller is already created and can be reused
-- Consider creating a shared interceptor configuration
-- Ensure consistency between forward and reverse proxy interception
-- Remember to handle both HTTP POST and SSE GET paths
-- The correlation engine is already integrated in reverse proxy
-
-## Potential Challenges
-
-1. **Async Complexity**: Reverse proxy has more complex async flows
-2. **Session Management**: Must maintain session context through interception
-3. **Error Handling**: Need graceful degradation if interceptor fails
-4. **Performance**: Monitor latency impact of interception
-
-## After Task I.5
-
-Once reverse proxy interception is complete, Phase 4 will be done. Next phases:
-- **Phase 5**: MCP-Aware Recorder (C.1-C.5)
-- **Phase 6**: MCP-Aware Replay (P.1-P.4)
-- **Phase 7**: Testing and Integration (T.1-T.8)
-
-The focus will shift to recording and replay capabilities, building on the interceptor foundation.
+Good luck!
