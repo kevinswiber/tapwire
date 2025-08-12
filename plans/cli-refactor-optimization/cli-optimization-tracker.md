@@ -108,7 +108,7 @@ Polish, optimize, and prepare for production
 | C.1 | **Comprehensive Documentation** | 4h | Phase B, B.7 | ✅ Complete | | [Details](tasks/C.1-documentation.md) - Enhanced lib.rs, api.rs docs, created architecture.md, configuration.md |
 | C.2 | **Configuration File Support** | 3h | A.3 | ✅ Complete | | [Details](tasks/C.2-config-files.md) - TOML/YAML loading with env overrides working |
 | C.3 | **Improve Error Messages** | 2h | B.5 | ⬜ Not Started | | [Details](tasks/C.3-error-messages.md) |
-| C.4 | **Add Telemetry/Metrics** | 4h | Phase B | ⬜ Not Started | | [Details](tasks/C.4-telemetry.md) |
+| C.4 | **Add Telemetry/Metrics** | 4h | Phase B | ✅ Complete | | [Details](tasks/C.4-telemetry.md) - OpenTelemetry + Prometheus implemented |
 | C.5 | **Performance Optimization** | 6h | Phase B | ⬜ Not Started | | [Details](tasks/C.5-performance.md) |
 | C.6 | **Extensive Test Coverage** | 6h | Phase B | ⬜ Not Started | | [Details](tasks/C.6-test-coverage.md) |
 | C.7 | **CLI Shell Completions** | 2h | Phase A | ⬜ Not Started | | [Details](tasks/C.7-shell-completions.md) |
@@ -310,12 +310,22 @@ Based on the comprehensive code review, we need to address these high-priority i
   - B.5: ✅ Error Handling Standardized (2h)
   - B.6: ✅ Integration Tests (2h)
 - **Phase B.7**: 100% Complete (5 hours) ✅ - Code Review Fixes
-- **Phase C**: 19% Complete (7 of 37 hours) - C.1 and C.8 completed
-- **Overall**: ~52% Complete (43 of 73 hours)
+- **Phase C**: 30% Complete (11 of 37 hours) - C.1, C.2, C.4, and C.8 completed
+- **Overall**: ~57% Complete (47 of 73 hours)
 
 ## Notes
 
 ### Phase C Progress (2025-08-12)
+- **C.4 Telemetry and Metrics Complete**:
+  - Implemented OpenTelemetry tracing with OTLP export (Jaeger support)
+  - Added Prometheus metrics collection with HTTP endpoint
+  - Created comprehensive metrics: request_count, request_duration, active_sessions, errors_total, etc.
+  - Added instrumentation to proxy operations and session manager
+  - Zero overhead when disabled via configuration
+  - Created telemetry_demo example showing Jaeger integration
+  - All tests passing with metrics singleton workaround for global registration
+
+### Phase C Progress (2025-08-12 - Earlier)
 - **C.1 Documentation Complete**:
   - Enhanced lib.rs with comprehensive module docs including custom interceptor examples
   - Improved api.rs with detailed rustdoc for Shadowcat and ShadowcatBuilder
