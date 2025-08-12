@@ -1,180 +1,128 @@
-# Next Session: Phase C - Remaining Production Features
+# Next Session: Phase C.4 - Telemetry and Metrics Implementation
 
 ## Context
+You are continuing the Shadowcat CLI optimization refactor. We have successfully completed:
+- **Phase A**: All critical fixes (100% complete)
+- **Phase B**: Library readiness (100% complete) 
+- **Phase B.7**: Code review fixes (100% complete)
+- **Phase C Progress**: 
+  - C.1: Documentation (✅ Complete)
+  - C.2: Configuration File Support (✅ Complete)
+  - C.8: Example Programs (✅ Complete)
 
-We are continuing the Shadowcat CLI refactor optimization, transforming it from a functional CLI tool into a production-ready library. Work is tracked in `plans/cli-refactor-optimization/cli-optimization-tracker.md`.
+## Current Task: C.4 - Add Telemetry/Metrics (4 hours)
 
-## Current Status
+### Objective
+Implement OpenTelemetry tracing and Prometheus metrics to provide production-grade observability for Shadowcat.
 
-**Completed:**
-- ✅ Phase A: 100% Complete (7 hours) - Critical fixes
-- ✅ Phase B: 100% Complete (24 hours) - Library readiness  
-- ✅ Phase B.7: 100% Complete (5 hours) - Code review fixes
-- ✅ Phase C (partial): 19% Complete (7 of 37 hours)
-  - C.1: Documentation (4h) - COMPLETE
-  - C.8: Example Programs (3h) - COMPLETE
+### Key Files to Reference
+1. **Tracker**: `plans/cli-refactor-optimization/cli-optimization-tracker.md`
+2. **Task Details**: `plans/cli-refactor-optimization/tasks/C.4-telemetry.md`
+3. **Configuration Schema**: `src/config/schema.rs` (already has telemetry/metrics config sections)
+4. **Example Config**: `shadowcat.example.toml` (has telemetry/metrics examples)
 
-**Overall Progress:** ~52% Complete (43 of 73 hours)
+### Implementation Requirements
 
-### What Was Just Completed (2025-08-12)
+#### 1. OpenTelemetry Tracing
+- Add `opentelemetry`, `opentelemetry-otlp`, and `tracing-opentelemetry` dependencies
+- Create `src/telemetry/mod.rs` with initialization logic
+- Instrument key functions with `#[tracing::instrument]`
+- Support OTLP exporter configuration from config file
+- Key spans to add:
+  - Proxy request/response lifecycle
+  - Session creation/destruction
+  - Transport operations
+  - Interceptor chain processing
 
-1. **Comprehensive Documentation (C.1)**:
-   - Enhanced lib.rs with detailed module docs and working interceptor examples
-   - Created docs/architecture.md and docs/configuration.md
-   - Fixed all 20 doctests to match actual API
+#### 2. Prometheus Metrics
+- Add `prometheus` and `axum-prometheus` dependencies (or `metrics` crate)
+- Create `src/metrics/mod.rs` with metric definitions
+- Add `/metrics` endpoint to reverse proxy
+- Key metrics to track:
+  - Request count and latency histograms
+  - Active sessions gauge
+  - Transport errors counter
+  - Rate limiting rejections counter
+  - Connection pool statistics
 
-2. **Example Programs (C.8)**:
-   - Created 8 working examples including custom_interceptor.rs
-   - All examples demonstrate best practices and compile cleanly
+#### 3. Integration Points
+- Initialize telemetry in `main.rs` based on configuration
+- Add telemetry context to `Shadowcat` struct
+- Pass spans through transport layers
+- Export metrics from session manager, rate limiter, etc.
 
-3. **Code Quality**:
-   - Applied cargo fmt to entire codebase
-   - Fixed ALL clippy warnings with -D warnings flag
-   - 870+ tests passing, zero warnings
+#### 4. Configuration
+The configuration schema is already in place:
+```toml
+[telemetry]
+enabled = false
+otlp_endpoint = "http://localhost:4317"
+service_name = "shadowcat"
+sampling_rate = 0.1
 
-## Working Directory
-
-```bash
-cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
+[metrics]
+enabled = false
+bind = "127.0.0.1:9090"
+path = "/metrics"
 ```
 
-This is a git worktree on branch `shadowcat-cli-refactor`.
+### Success Criteria
+- [ ] OpenTelemetry tracing working with Jaeger/Tempo
+- [ ] Prometheus metrics exposed and scrapeable
+- [ ] Configuration from file working
+- [ ] No performance impact when disabled
+- [ ] Example demonstrating telemetry usage
+- [ ] All tests passing, no clippy warnings
 
-## Next Priority Tasks
+### Implementation Order
+1. Add dependencies to Cargo.toml
+2. Create telemetry module with initialization
+3. Create metrics module with definitions
+4. Integrate with main.rs and api.rs
+5. Add instrumentation to key functions
+6. Test with local Jaeger and Prometheus
+7. Create example showing telemetry usage
+8. Update documentation
 
-Focus on production-critical features from Phase C:
+### Testing
+- Unit tests for metric collection
+- Integration test with mock OTLP collector
+- Manual testing with Jaeger UI
+- Performance benchmark with/without telemetry
 
-### Option 1: Configuration & Metrics (7 hours)
-**Recommended for production deployments**
+### Notes from Previous Session
+- Configuration system is fully implemented and tested
+- All configuration structs have proper validation
+- SQLite database directory creation is handled in SessionManagerBuilder
+- Code is clippy-clean with all tests passing
 
-1. **C.2: Configuration File Support** (3h)
-   - Implement TOML/YAML configuration loading
-   - Support environment variable overrides
-   - Add config validation and defaults
-   - Files to modify: src/config/mod.rs, src/main.rs
-
-2. **C.4: Add Telemetry/Metrics** (4h)
-   - Integrate OpenTelemetry for distributed tracing
-   - Add Prometheus metrics exposition
-   - Track proxy performance metrics
-   - Files to create: src/metrics/telemetry.rs
-
-### Option 2: Testing & Performance (10 hours)
-**Recommended for quality assurance**
-
-1. **C.6: Extensive Test Coverage** (4h)
-   - Current coverage: ~70%
-   - Target: 80%+ coverage
-   - Add integration tests for all commands
-   - Focus on error paths and edge cases
-
-2. **C.5: Performance Optimization** (6h)
-   - Profile current performance
-   - Optimize hot paths
-   - Reduce allocations
-   - Benchmark improvements
-
-### Option 3: Developer Experience (4 hours)
-**Nice to have features**
-
-1. **C.3: Improve Error Messages** (2h)
-   - User-friendly error formatting
-   - Actionable error suggestions
-   - Better context in error chains
-
-2. **C.7: CLI Shell Completions** (2h)
-   - Generate completions for bash, zsh, fish
-   - Add to build process
-
-## Key Information
-
-### Architecture Decisions Made
-- Single crate with feature flags (not workspace)
-- Builder pattern for all major types
-- Handle-based API for lifecycle management
-- Transport factory with TransportSpec enum
-- Domain-specific error types (no anyhow in public API)
-
-### Current Quality Metrics
-- Tests: 870+ passing (unit + integration)
-- Doctests: 20 passing
-- Examples: 8 working examples
-- Clippy: Zero warnings with -D warnings
-- Coverage: ~70% (estimated)
-
-### Important Files
-- Main tracker: `plans/cli-refactor-optimization/cli-optimization-tracker.md`
-- Task details: `plans/cli-refactor-optimization/tasks/C.*.md`
-- Public API: `src/lib.rs`, `src/api.rs`
-- Examples: `examples/` directory
-- Documentation: `docs/` directory
-
-## Commands to Run
-
+### Commands to Run
 ```bash
-# Navigate to worktree
+# Navigate to the refactor branch
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
-# Verify current state
-cargo test --quiet        # Should show 870+ tests passing
-cargo clippy -- -D warnings  # Should have 0 warnings
-cargo doc --no-deps      # Build documentation
-
-# Run examples
-cargo run --example simple_library_usage
-cargo run --example custom_interceptor
-
-# For development
-RUST_LOG=shadowcat=debug cargo run -- forward stdio -- echo test
-```
-
-## Success Criteria for Next Session
-
-Based on chosen tasks:
-
-### If C.2 + C.4 (Config & Metrics):
-- [ ] TOML config file parsing works
-- [ ] Environment variables override config
-- [ ] OpenTelemetry tracing integrated
-- [ ] Prometheus metrics endpoint working
-- [ ] All tests still passing
-
-### If C.5 + C.6 (Testing & Performance):
-- [ ] Test coverage >= 80%
-- [ ] Performance benchmarks established
-- [ ] Hot paths optimized
-- [ ] Memory usage reduced
-- [ ] All tests still passing
-
-## Git Workflow
-
-```bash
-# Check status
-git status
-
-# After changes, run quality checks
-cargo fmt
-cargo clippy --all-targets -- -D warnings
+# Run tests
 cargo test
 
-# Commit (DO NOT mention Claude)
-git add -A
-git commit -m "feat: [description of changes]"
+# Check for clippy warnings
+cargo clippy --all-targets -- -D warnings
+
+# Test with example config
+cargo run -- --config shadowcat.example.toml forward stdio -- echo
 ```
 
-## Questions for User
+### Potential Challenges
+1. **Async context propagation** - Ensure spans are properly propagated across async boundaries
+2. **Performance overhead** - Minimize impact when telemetry is disabled
+3. **Cardinality explosion** - Be careful with label values in metrics
+4. **Graceful degradation** - Handle OTLP endpoint unavailability
 
-1. Which task set should we prioritize?
-   - Config & Metrics (production features)
-   - Testing & Performance (quality)
-   - Developer Experience (nice to have)
+### Next Steps After C.4
+After completing telemetry/metrics, the next priority tasks are:
+- C.3: Improve Error Messages (2h) - User-friendly formatting
+- C.9: Connection Pooling (3h) - HTTP transport optimization
+- C.5: Performance Optimization (6h) - Profile and optimize hot paths
 
-2. Is 80% test coverage sufficient or should we aim higher?
-
-3. Any specific performance targets beyond the < 5% overhead goal?
-
-4. Should we prepare for a crates.io release after Phase C?
-
----
-
-**Ready to continue Phase C! The library is already production-ready, and these remaining tasks will make it excellent.**
+## Summary
+Implement comprehensive observability for Shadowcat using OpenTelemetry for distributed tracing and Prometheus for metrics. The configuration infrastructure is already in place, so focus on the implementation and integration aspects.
+EOF < /dev/null

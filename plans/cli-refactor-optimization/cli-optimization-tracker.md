@@ -106,7 +106,7 @@ Polish, optimize, and prepare for production
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | C.1 | **Comprehensive Documentation** | 4h | Phase B, B.7 | ✅ Complete | | [Details](tasks/C.1-documentation.md) - Enhanced lib.rs, api.rs docs, created architecture.md, configuration.md |
-| C.2 | **Configuration File Support** | 3h | A.3 | ⬜ Not Started | | [Details](tasks/C.2-config-files.md) |
+| C.2 | **Configuration File Support** | 3h | A.3 | ✅ Complete | | [Details](tasks/C.2-config-files.md) - TOML/YAML loading with env overrides working |
 | C.3 | **Improve Error Messages** | 2h | B.5 | ⬜ Not Started | | [Details](tasks/C.3-error-messages.md) |
 | C.4 | **Add Telemetry/Metrics** | 4h | Phase B | ⬜ Not Started | | [Details](tasks/C.4-telemetry.md) |
 | C.5 | **Performance Optimization** | 6h | Phase B | ⬜ Not Started | | [Details](tasks/C.5-performance.md) |
