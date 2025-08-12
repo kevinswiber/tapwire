@@ -1,87 +1,113 @@
-# Next Session: Phase C - Quality & Testing
+# Next Session: Phase C - Remaining Production Features
 
 ## Context
 
-We are optimizing Shadowcat's CLI refactor to transform it from a functional CLI tool into a production-ready library. The work is tracked in `plans/cli-refactor-optimization/cli-optimization-tracker.md`.
+We are continuing the Shadowcat CLI refactor optimization, transforming it from a functional CLI tool into a production-ready library. Work is tracked in `plans/cli-refactor-optimization/cli-optimization-tracker.md`.
 
 ## Current Status
 
-**Phase A: 100% Complete** ✅ (7 hours)
-**Phase B: 100% Complete** ✅ (24 hours) 
-**Phase B.7: 100% Complete** ✅ (5 hours)
-**Phase C: Ready to Begin** (37 hours)
+**Completed:**
+- ✅ Phase A: 100% Complete (7 hours) - Critical fixes
+- ✅ Phase B: 100% Complete (24 hours) - Library readiness  
+- ✅ Phase B.7: 100% Complete (5 hours) - Code review fixes
+- ✅ Phase C (partial): 19% Complete (7 of 37 hours)
+  - C.1: Documentation (4h) - COMPLETE
+  - C.8: Example Programs (3h) - COMPLETE
 
-### Overall Progress: 42% Complete (36 of 73 hours)
+**Overall Progress:** ~52% Complete (43 of 73 hours)
 
-## Recent Accomplishments
+### What Was Just Completed (2025-08-12)
 
-### Phase B.7 (Completed 2025-08-12)
-- Fixed all 5 high-priority issues from code review
-- Zero clippy warnings, 873+ tests passing
-- Production-ready with graceful shutdown, error context, and safety attributes
+1. **Comprehensive Documentation (C.1)**:
+   - Enhanced lib.rs with detailed module docs and working interceptor examples
+   - Created docs/architecture.md and docs/configuration.md
+   - Fixed all 20 doctests to match actual API
 
-### Key Improvements Made:
-1. **Library-First Architecture** - Clean separation between library and CLI
-2. **Builder Patterns** - Ergonomic APIs for all major components
-3. **Graceful Shutdown** - Proper shutdown handling for all proxy types
-4. **High-Level API** - Simple Shadowcat struct with handles for lifecycle management
-5. **Transport Factory** - Centralized, type-safe transport creation
-6. **Domain-Specific Errors** - No more anyhow, proper error types throughout
-7. **Comprehensive Testing** - 873+ tests covering all functionality
+2. **Example Programs (C.8)**:
+   - Created 8 working examples including custom_interceptor.rs
+   - All examples demonstrate best practices and compile cleanly
+
+3. **Code Quality**:
+   - Applied cargo fmt to entire codebase
+   - Fixed ALL clippy warnings with -D warnings flag
+   - 870+ tests passing, zero warnings
 
 ## Working Directory
 
-The work is happening in a git worktree:
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 ```
 
-This is a separate worktree of the shadowcat submodule on branch `shadowcat-cli-refactor`.
+This is a git worktree on branch `shadowcat-cli-refactor`.
 
-## Phase C: Quality & Testing (37 hours total)
+## Next Priority Tasks
 
-### Available Tasks (Choose Based on Priority):
+Focus on production-critical features from Phase C:
 
-#### High Priority - Documentation & Examples (7 hours)
-- **C.1: Comprehensive Documentation** (4h) - API docs, README, migration guide
-- **C.8: Example Programs** (3h) - Real-world usage examples
+### Option 1: Configuration & Metrics (7 hours)
+**Recommended for production deployments**
 
-#### Medium Priority - Configuration & Observability (9 hours)
-- **C.2: Configuration File Support** (3h) - TOML/YAML config files
-- **C.4: Add Telemetry/Metrics** (4h) - OpenTelemetry integration
-- **C.7: CLI Shell Completions** (2h) - Bash/zsh/fish completions
+1. **C.2: Configuration File Support** (3h)
+   - Implement TOML/YAML configuration loading
+   - Support environment variable overrides
+   - Add config validation and defaults
+   - Files to modify: src/config/mod.rs, src/main.rs
 
-#### Performance & Testing (13 hours)
-- **C.5: Performance Optimization** (6h) - Profiling and optimization
-- **C.6: Extensive Test Coverage** (6h) - Reach 80%+ coverage
-- **C.10: Load Testing** (2h) - Stress testing and benchmarks
+2. **C.4: Add Telemetry/Metrics** (4h)
+   - Integrate OpenTelemetry for distributed tracing
+   - Add Prometheus metrics exposition
+   - Track proxy performance metrics
+   - Files to create: src/metrics/telemetry.rs
 
-#### Nice to Have (8 hours)
-- **C.3: Improve Error Messages** (2h) - User-friendly error formatting
-- **C.9: Connection Pooling** (3h) - Reuse connections for efficiency
-- **C.11: Release Preparation** (2h) - Changelog, version bump, release notes
+### Option 2: Testing & Performance (10 hours)
+**Recommended for quality assurance**
 
-## Recommended Next Session Focus
+1. **C.6: Extensive Test Coverage** (4h)
+   - Current coverage: ~70%
+   - Target: 80%+ coverage
+   - Add integration tests for all commands
+   - Focus on error paths and edge cases
 
-### Option 1: Documentation Sprint (1 session, 7 hours)
-Complete C.1 and C.8 to make the library immediately usable:
-- Write comprehensive API documentation
-- Create README with quick start guide
-- Build 5-6 example programs showing common use cases
-- Document migration from CLI to library usage
+2. **C.5: Performance Optimization** (6h)
+   - Profile current performance
+   - Optimize hot paths
+   - Reduce allocations
+   - Benchmark improvements
 
-### Option 2: Configuration & Observability (1 session, 7 hours)
-Complete C.2 and C.4 to add production features:
-- Add TOML/YAML configuration file support
-- Integrate OpenTelemetry for metrics and tracing
-- Add structured logging with tracing
+### Option 3: Developer Experience (4 hours)
+**Nice to have features**
 
-### Option 3: Performance & Testing Sprint (1 session, 8 hours)
-Complete C.5 and C.10 to ensure production readiness:
-- Profile current performance
-- Optimize hot paths
-- Add comprehensive benchmarks
-- Load test with 10k+ concurrent connections
+1. **C.3: Improve Error Messages** (2h)
+   - User-friendly error formatting
+   - Actionable error suggestions
+   - Better context in error chains
+
+2. **C.7: CLI Shell Completions** (2h)
+   - Generate completions for bash, zsh, fish
+   - Add to build process
+
+## Key Information
+
+### Architecture Decisions Made
+- Single crate with feature flags (not workspace)
+- Builder pattern for all major types
+- Handle-based API for lifecycle management
+- Transport factory with TransportSpec enum
+- Domain-specific error types (no anyhow in public API)
+
+### Current Quality Metrics
+- Tests: 870+ passing (unit + integration)
+- Doctests: 20 passing
+- Examples: 8 working examples
+- Clippy: Zero warnings with -D warnings
+- Coverage: ~70% (estimated)
+
+### Important Files
+- Main tracker: `plans/cli-refactor-optimization/cli-optimization-tracker.md`
+- Task details: `plans/cli-refactor-optimization/tasks/C.*.md`
+- Public API: `src/lib.rs`, `src/api.rs`
+- Examples: `examples/` directory
+- Documentation: `docs/` directory
 
 ## Commands to Run
 
@@ -89,112 +115,66 @@ Complete C.5 and C.10 to ensure production readiness:
 # Navigate to worktree
 cd /Users/kevin/src/tapwire/shadowcat-cli-refactor
 
-# Check current status
-git status
-cargo test --quiet  # Should show 873+ tests passing
+# Verify current state
+cargo test --quiet        # Should show 870+ tests passing
 cargo clippy -- -D warnings  # Should have 0 warnings
+cargo doc --no-deps      # Build documentation
 
-# Build and test
-cargo build --release
+# Run examples
+cargo run --example simple_library_usage
+cargo run --example custom_interceptor
+
+# For development
+RUST_LOG=shadowcat=debug cargo run -- forward stdio -- echo test
+```
+
+## Success Criteria for Next Session
+
+Based on chosen tasks:
+
+### If C.2 + C.4 (Config & Metrics):
+- [ ] TOML config file parsing works
+- [ ] Environment variables override config
+- [ ] OpenTelemetry tracing integrated
+- [ ] Prometheus metrics endpoint working
+- [ ] All tests still passing
+
+### If C.5 + C.6 (Testing & Performance):
+- [ ] Test coverage >= 80%
+- [ ] Performance benchmarks established
+- [ ] Hot paths optimized
+- [ ] Memory usage reduced
+- [ ] All tests still passing
+
+## Git Workflow
+
+```bash
+# Check status
+git status
+
+# After changes, run quality checks
+cargo fmt
+cargo clippy --all-targets -- -D warnings
 cargo test
-cargo bench  # If doing performance work
 
-# Run example
-cargo run -- forward stdio -- echo '{"jsonrpc":"2.0","method":"ping","id":1}'
+# Commit (DO NOT mention Claude)
+git add -A
+git commit -m "feat: [description of changes]"
 ```
 
-## Key Files to Reference
+## Questions for User
 
-### Tracker and Plans
-- `plans/cli-refactor-optimization/cli-optimization-tracker.md` - Main tracker
-- `plans/cli-refactor-optimization/tasks/C.*.md` - Task definitions for Phase C
+1. Which task set should we prioritize?
+   - Config & Metrics (production features)
+   - Testing & Performance (quality)
+   - Developer Experience (nice to have)
 
-### Core Implementation
-- `src/lib.rs` - Library public API
-- `src/api.rs` - High-level Shadowcat API and builders
-- `src/transport/factory.rs` - Transport factory
-- `src/proxy/builders.rs` - Proxy builders
-- `examples/` - Example programs (if C.8 completed)
+2. Is 80% test coverage sufficient or should we aim higher?
 
-### Documentation
-- `README.md` - Main documentation (needs update in C.1)
-- `CHANGELOG.md` - Version history (needs creation in C.11)
-- `docs/` - Additional documentation (if created in C.1)
+3. Any specific performance targets beyond the < 5% overhead goal?
 
-## Success Criteria for Phase C
-
-Based on which tasks are completed:
-
-### Documentation (C.1, C.8)
-- [ ] All public APIs have rustdoc comments
-- [ ] README has installation, quick start, and examples
-- [ ] At least 5 working example programs
-- [ ] Migration guide from CLI to library
-
-### Configuration (C.2, C.7)
-- [ ] Support for TOML/YAML config files
-- [ ] Environment variable overrides
-- [ ] Shell completions for major shells
-
-### Observability (C.4)
-- [ ] OpenTelemetry integration
-- [ ] Metrics for latency, throughput, errors
-- [ ] Distributed tracing support
-- [ ] Structured logging
-
-### Performance (C.5, C.6, C.10)
-- [ ] < 5% latency overhead verified
-- [ ] 80%+ test coverage
-- [ ] Benchmarks for all critical paths
-- [ ] Successfully handles 10k concurrent connections
-
-## Architecture Decisions Made
-
-1. **Single Crate** - Using feature flags instead of workspace
-2. **Builder Pattern** - All major types have builders
-3. **Handle-Based API** - Proxy operations return handles for lifecycle management
-4. **Transport Factory** - Centralized transport creation with TransportSpec enum
-5. **Domain Errors** - Specific error types, no anyhow in public API
-
-## Current Test Status
-
-```
-Total Tests: 873+
-All Passing: Yes
-Coverage: ~70% (estimate)
-Clippy: Zero warnings
-```
-
-## Notes for Next Session
-
-1. **Branch Status**: Working in `shadowcat-cli-refactor` branch in worktree
-2. **Main Branch**: Has old CLI refactor already merged
-3. **Parent Repo**: Tapwire repository has shadowcat as a submodule
-4. **Commit Style**: Don't mention Claude in commits
-
-## Potential Challenges
-
-1. **Documentation**: Need to balance between API docs and user guides
-2. **Config Files**: Need to maintain backward compatibility with CLI args
-3. **Telemetry**: Must be optional and have minimal overhead
-4. **Performance**: Already optimized, further gains may be marginal
-
-## Questions to Consider
-
-1. Should we prioritize documentation for immediate usability?
-2. Is OpenTelemetry integration needed before production?
-3. Should we target 80% or 90% test coverage?
-4. Do we need all Phase C tasks or just the high-priority ones?
-
-## Next Steps After Phase C
-
-Once Phase C is complete (or partially complete based on priorities):
-1. Merge `shadowcat-cli-refactor` branch to main
-2. Update tapwire repository's submodule reference
-3. Create GitHub release with changelog
-4. Publish to crates.io (if desired)
-5. Update tapwire integration to use new library API
+4. Should we prepare for a crates.io release after Phase C?
 
 ---
 
-**Ready to continue with Phase C - Choose your focus area and let's complete this optimization!**
+**Ready to continue Phase C! The library is already production-ready, and these remaining tasks will make it excellent.**
