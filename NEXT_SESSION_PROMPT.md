@@ -1,137 +1,150 @@
-Continue Shadowcat MCP Implementation - Complete Phase 4 and Start Phase 5
-
-## Context
-
-I'm working on Shadowcat, a high-performance MCP (Model Context Protocol) proxy in Rust. We're following the unified tracker at plans/proxy-sse-message-tracker.md.
+# Next Session Prompt - Shadowcat MCP Proxy
 
 ## Current Status
+**Date**: 2025-08-12  
+**Phase**: 4 (MCP-Aware Interceptor) - 80% Complete  
+**Last Completed**: Task I.4 (SSE Stream Interception)
 
-- **Phase 3**: 100% Complete ✅
-  - All MCP message handling components implemented
-  - Correlation engine fully integrated with SSE transport
-  
-- **Phase 4**: 60% Complete 🔄
-  - I.1 ✅ Message Interceptor Interface - Complete with builder pattern, comprehensive tests
-  - I.2 ✅ Method-Based Rules Engine - McpRulesEngine with optimization, caching, validation
-  - I.3 ✅ Interceptor Chain Integration - Added to InterceptorChainBuilder with tests
-  - I.4 ⬜ SSE Stream Interception - Need to integrate with SSE transport
-  - I.5 ⬜ Reverse Proxy Interception - Need to add to /mcp endpoint
-  - **Code Review**: ✅ All rust-code-reviewer findings addressed (clippy fixes, LRU cache, better error handling)
+## What Was Just Completed
 
-## Review These Files First
+### Task I.4: SSE Stream Interception ✅
+Successfully implemented SSE stream interception with full pause/resume control:
 
-1. plans/proxy-sse-message-tracker.md - Overall progress tracker (Phase 4 60% complete)
-2. src/interceptor/mcp_interceptor.rs - Complete MCP interceptor implementation
-3. src/interceptor/mcp_rules_engine.rs - Advanced rules engine with optimization
-4. src/interceptor/builder.rs - Updated with MCP interceptor integration
+**Files Created** (in shadowcat repo):
+- `src/transport/sse_interceptor.rs` - InterceptedSseTransport wrapper
+- `src/transport/pause_controller.rs` - Pause/resume management system  
+- `src/transport/pause_control_api.rs` - HTTP control API
+- `tests/sse_interceptor_test.rs` - SSE interceptor tests
+- `tests/pause_resume_test.rs` - Pause/resume functionality tests
 
-## Primary Tasks: Complete Phase 4
+**Key Features**:
+- Full interceptor chain integration for SSE transport
+- External pause/resume control via HTTP API
+- Support for all InterceptAction types (Continue, Modify, Block, Pause, Mock, Delay)
+- Thread-safe concurrent operations
+- Timeout-based auto-resume
+- Statistics and monitoring
 
-### I.4: SSE Stream Interception (3h)
-- Integrate interceptor with SSE transport in src/transport/sse_transport.rs
-- Handle streaming message interception
-- Support modification of SSE events in-flight
-- Test with real SSE streams
+**API Endpoints Available**:
+- `GET /pause/list` - List all paused messages
+- `GET /pause/stats` - Get pause statistics
+- `GET /pause/{id}` - Get specific paused message
+- `POST /pause/{id}/resume` - Resume a paused message
+- `POST /pause/{id}/modify` - Resume with modifications
+- `POST /pause/{id}/block` - Block a paused message
 
-### I.5: Reverse Proxy Interception (2h)
-- Add interception to reverse proxy /mcp endpoint in src/proxy/reverse.rs
-- Support request/response modification
-- Add authentication-aware interception
-- Test with various MCP clients
+## Next Task: I.5 - Reverse Proxy Interception
 
-## Next Phase: Phase 5 (MCP-Aware Recorder)
+**Objective**: Apply the interceptor chain to the reverse proxy, enabling server-side message interception.
 
-Once Phase 4 is complete, move to Phase 5:
-- C.1: MCP Tape Format (4h)
-- C.2: Session Recorder (5h)
-- C.3: Storage Backend (3h)
-- C.4: SSE Recording Integration (2h)
-- C.5: Reverse Proxy Recording (2h)
+**Duration**: 2 hours
 
-## Key Accomplishments from Previous Session
+**Files to Modify** (in shadowcat repo):
+- `src/proxy/reverse.rs` - Add interceptor chain integration
+- `src/proxy/reverse/mcp_endpoint.rs` - Apply interceptors to MCP messages
 
-### Phase 4 Progress (I.1, I.2, I.3 Complete + Code Review)
+**Key Work Items**:
+1. Add InterceptorChain to reverse proxy AppState
+2. Create interceptor configuration for reverse proxy
+3. Apply interceptors to incoming POST requests
+4. Apply interceptors to outgoing SSE responses
+5. Handle InterceptAction results appropriately
+6. Add tests for reverse proxy interception
 
-1. **McpInterceptor Implementation** (src/interceptor/mcp_interceptor.rs)
-   - Full condition evaluation (method matching, params, protocol version)
-   - Action execution (allow, block, delay, modify params, inject errors)
-   - Builder pattern for easy configuration
-   - Comprehensive test suite (12 tests)
-   - Metrics tracking
-   - Added warning logs for parameter modification failures
+**Integration Points**:
+- Use existing InterceptorChain from `src/interceptor/engine.rs`
+- Leverage McpInterceptor for MCP-specific rules
+- Integrate with existing correlation engine
+- Maintain session context through interception
 
-2. **McpRulesEngine** (src/interceptor/mcp_rules_engine.rs)
-   - Advanced rule evaluation with optimization
-   - Method indexing for fast rule lookup
-   - **LRU cache implementation** with proper eviction
-   - Rule validation and conflict detection
-   - Statistics tracking
-   - **Improved cache key generation** including params fingerprint
-   - Fixed rule priority ordering in results
+## Important Context
 
-3. **InterceptorChain Integration** (src/interceptor/builder.rs)
-   - Added mcp_interceptor() method to chain builder
-   - Added mcp_interceptor_with_builder() for inline configuration
-   - Full test coverage for integration
+### Architecture Overview
+The proxy now has these layers:
+1. **Transport Layer**: stdio, HTTP, SSE (with InterceptedSseTransport)
+2. **MCP Message Layer**: Parser, Correlator, Batch Handler
+3. **Interceptor Layer**: Rules Engine, Chain, Pause Controller
+4. **Proxy Layer**: Forward and Reverse proxies
 
-4. **Code Quality Improvements**
-   - All clippy warnings resolved
-   - Better error handling with logging
-   - Safe array access with bounds checking
-   - Optimized string operations with strip_prefix
-   - 16 comprehensive tests all passing
+### Key Design Decisions
+- Interceptors are transport-agnostic but MCP-aware
+- Pause/resume uses oneshot channels for control flow
+- External control via HTTP API for operational flexibility
+- All interceptor operations are async and thread-safe
 
-## Implementation Notes
-
-### For I.4 (SSE Stream Interception)
-- The SSE transport is in src/transport/sse_transport.rs
-- Need to call interceptor chain in send() and receive() methods
-- Consider streaming nature - may need to buffer for complete messages
-- Handle SSE-specific metadata (event_id, event_type)
-
-### For I.5 (Reverse Proxy Interception)
-- Reverse proxy /mcp endpoint is in src/proxy/reverse.rs
-- Look for handle_mcp_request or similar method
-- Apply interceptors to both incoming requests and outgoing responses
-- Consider authentication context when intercepting
+### Testing Requirements
+- Run `cargo test` to ensure all tests pass
+- Run `cargo clippy --all-targets -- -D warnings` before committing
+- Test both forward and reverse proxy modes
+- Verify interceptor chain processes messages correctly
 
 ## Commands to Run
 
 ```bash
-cd shadowcat
+# Navigate to shadowcat directory
+cd /Users/kevin/src/tapwire/shadowcat
 
-# Test current implementation
-cargo test interceptor::mcp
+# Check current status
+git status
+
+# Run tests
+cargo test
+
+# Run clippy
 cargo clippy --all-targets -- -D warnings
 
-# Test SSE integration (after I.4)
-cargo test transport::sse
+# Test the SSE interceptor
+cargo test --test sse_interceptor_test
+cargo test --test pause_resume_test
 
-# Test reverse proxy (after I.5)
-cargo test proxy::reverse
-
-# Run full integration test
-cargo test --test integration_test
+# Run the proxy with SSE transport (for manual testing)
+cargo run -- forward sse --url http://localhost:8080/mcp
 ```
 
-## Success Criteria
+## Files to Reference
 
-1. **Phase 4 Completion**
-   - SSE messages intercepted and can be modified
-   - Reverse proxy applies MCP rules
-   - Performance overhead < 5%
-   - All tests pass, no clippy warnings
+**Primary Tracker**: `/Users/kevin/src/tapwire/plans/proxy-sse-message-tracker.md`
 
-2. **Ready for Phase 5**
-   - Clear understanding of message flow
-   - Interceptor chain working end-to-end
-   - Documentation updated
+**Key Implementation Files** (in shadowcat repo):
+- `src/interceptor/engine.rs` - InterceptorChain implementation
+- `src/interceptor/mcp_interceptor.rs` - MCP-specific interceptor
+- `src/transport/sse_interceptor.rs` - SSE interceptor wrapper (just completed)
+- `src/proxy/reverse.rs` - Reverse proxy to modify next
 
-## Risk Areas
+**Test Files**:
+- `tests/integration/` - Integration test patterns
+- `tests/sse_interceptor_test.rs` - Reference for interceptor tests
 
-1. **SSE Buffering**: Need to handle partial messages in stream
-2. **Performance**: Rule evaluation in hot path needs optimization
-3. **Compatibility**: Both MCP protocol versions must work
+## Success Criteria for Next Task (I.5)
 
-Start with I.4 (SSE Stream Interception) by examining the current SSE transport implementation and adding interceptor hooks.
-EOF < /dev/null
+- [ ] Interceptor chain integrated into reverse proxy
+- [ ] Incoming MCP requests intercepted
+- [ ] Outgoing SSE responses intercepted  
+- [ ] All InterceptActions handled correctly
+- [ ] Tests added and passing
+- [ ] No clippy warnings
+- [ ] Documentation updated
+
+## Notes for Next Session
+
+- The pause controller is already created and can be reused
+- Consider creating a shared interceptor configuration
+- Ensure consistency between forward and reverse proxy interception
+- Remember to handle both HTTP POST and SSE GET paths
+- The correlation engine is already integrated in reverse proxy
+
+## Potential Challenges
+
+1. **Async Complexity**: Reverse proxy has more complex async flows
+2. **Session Management**: Must maintain session context through interception
+3. **Error Handling**: Need graceful degradation if interceptor fails
+4. **Performance**: Monitor latency impact of interception
+
+## After Task I.5
+
+Once reverse proxy interception is complete, Phase 4 will be done. Next phases:
+- **Phase 5**: MCP-Aware Recorder (C.1-C.5)
+- **Phase 6**: MCP-Aware Replay (P.1-P.4)
+- **Phase 7**: Testing and Integration (T.1-T.8)
+
+The focus will shift to recording and replay capabilities, building on the interceptor foundation.
