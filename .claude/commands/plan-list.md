@@ -2,12 +2,9 @@
 description: List all available development plans
 allowed-tools:
   - ls
-  - grep
+  - find
   - basename
-  - sed
-  - sort
-  - xargs
-  - tail
+  - wc
 ---
 
 # List Available Development Plans
@@ -15,22 +12,14 @@ allowed-tools:
 ## Active Plans
 Plans currently in development (excluding archive and templates):
 
-!`ls -d plans/*/ | grep -v archive | grep -v template | xargs -n1 basename | sed 's/^/- /' | sort`
+!`ls -d plans/*/`
 
-## Check Plan Details
-For each active plan, show key information:
-
-!`ls -d plans/*/ | grep -v archive | grep -v template`
-
-Check each plan's contents manually for:
-- next-session-prompt.md file
-- *tracker.md file
-- tasks/*.md files
+!`find plans -maxdepth 1 -type d -name "*" -not -name "plans" -not -name "archive" -not -name "template"`
 
 ## Recently Archived Plans
 Completed work in the archive:
 
-!`ls plans/archive/*.md | xargs -n1 basename | sed 's/.md$//' | sed 's/^/- /' | tail -5`
+!`ls -la plans/archive/`
 
 ## Quick Actions
 

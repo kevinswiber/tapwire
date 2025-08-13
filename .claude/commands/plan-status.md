@@ -2,10 +2,8 @@
 description: Show detailed status of all active development plans
 allowed-tools:
   - ls
-  - grep
-  - basename
+  - find
   - wc
-  - xargs
 ---
 
 # Development Plans Status Report
@@ -13,34 +11,22 @@ allowed-tools:
 ## Overall Progress Summary
 
 Active plans in the plans directory:
-!`ls -d plans/*/ | grep -v archive | grep -v template | wc -l`
+!`find plans -maxdepth 1 -type d -not -name "plans" -not -name "archive" -not -name "template" | wc -l`
 
 ## List Active Plans
 
-!`ls -d plans/*/ | grep -v archive | grep -v template | xargs -n1 basename`
+!`find plans -maxdepth 1 -type d -not -name "plans" -not -name "archive" -not -name "template"`
 
 ## Plan Details
 
-For each plan listed above, review:
+!`ls -la plans/*/`
 
-### Tracker Files
-Look for *tracker.md files to understand:
-- Current phase and status
-- Task progress (✅ 🔄 ⬜ ❌)
-- Estimated duration
-- Key findings
+### What to Review
 
-### Next Session Setup
-Check for next-session-prompt.md to see:
-- Current objectives
-- Mission for next session
-- Dependencies
-
-### Resources
-Count available resources:
-- Task files in tasks/
-- Analysis documents in analysis/
-- Supporting documentation
+For each plan above, check:
+- **Tracker Files**: Current phase, task progress (✅ 🔄 ⬜ ❌), estimates
+- **Next Session**: Objectives and mission in next-session-prompt.md
+- **Resources**: Task files, analysis docs, supporting documentation
 
 ## Recent Activity
 
