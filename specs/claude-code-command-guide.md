@@ -56,6 +56,7 @@ Command content goes here...
 
 Commands with these features will require user approval:
 
+- **Variable interpolation in echo**: `echo "$ARGUMENTS"` or `echo "Value: $VAR"`
 - **Command substitution**: `$(command)` or `` `command` ``
 - **Pipes**: `|`
 - **Redirections**: `>`, `>>`, `<`, `2>`, `&>`
@@ -64,6 +65,8 @@ Commands with these features will require user approval:
 - **Background execution**: `&`
 - **Newlines in commands** (except in quoted strings)
 - **Complex loops and conditionals**
+
+**Note on Variable Interpolation**: Claude Code restricts variable interpolation in bash commands (especially with `$ARGUMENTS`) for security reasons. Instead of using `!`echo "$ARGUMENTS"`!`, simply use `$ARGUMENTS` directly in the markdown text, which Claude Code will replace automatically.
 
 ### 3. Use Allowed-Tools for Common Commands
 
@@ -194,19 +197,24 @@ Create a simple script or use multiple commands:
 Then manually filter out archive and template in the command text.
 ```
 
-### Pattern 2: Parse Arguments
+### Pattern 2: Display Arguments
 
-Instead of complex bash parsing:
+Variable interpolation in bash commands is restricted:
 ```markdown
-!`echo "$ARGUMENTS" | { read plan phase; echo "Plan: $plan"; }`
-```
+❌ **This will require approval:**
+!`echo "Arguments: $ARGUMENTS"`
+!`echo "Processing file: $ARGUMENTS"`
 
-Use simple display:
-```markdown
+✅ **Use direct markdown text instead:**
 Arguments provided: $ARGUMENTS
+
+✅ **Or use echo with allowed-tools (but without quotes):**
+!`echo $ARGUMENTS`  # Add echo:* to allowed-tools
 
 Usage: /command <plan> [phase]
 ```
+
+Claude Code automatically replaces `$ARGUMENTS` in markdown text, so there's no need to use echo commands for simple display.
 
 ### Pattern 3: Check File Existence
 

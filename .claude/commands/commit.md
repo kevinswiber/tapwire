@@ -3,7 +3,7 @@ description: Run clippy, fix issues, format, and commit changes in Rust project
 argument-hint: [submodule] ["commit message"]
 allowed-tools:
   - pwd
-  - find:*Cargo.toml
+  - find:*
   - cargo clippy:*
   - cargo fmt:*
   - git status
@@ -36,7 +36,7 @@ Examples:
 
 Parsing arguments to determine target repository and commit message:
 
-!`echo "Arguments: $ARGUMENTS"`
+Arguments provided: $ARGUMENTS
 
 Setting up repository path based on first argument (default: shadowcat):
 
