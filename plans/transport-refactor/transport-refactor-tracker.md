@@ -173,6 +173,19 @@ Understand the current state and prepare for safe refactoring.
 - ❌ Blocked - Cannot proceed due to dependency or issue
 - ⏸️ Paused - Temporarily halted
 
+## Lessons Learned from Phase 2
+
+### Critical Issues Found and Fixed
+1. **Duplicate Process Spawning**: Initial implementation spawned processes twice (via ProcessManager AND directly)
+2. **Sync/Async Mismatch**: ProcessManager trait had sync methods that needed async operations
+3. **Command Handling**: tokio::process::Command doesn't implement Clone, requiring string extraction
+
+### Best Practices Applied
+1. **Async All The Way**: Avoid futures::executor::block_on - make functions async instead
+2. **Type Aliases**: Use type aliases for complex types to satisfy clippy
+3. **Field Usage**: Use #[allow(dead_code)] for fields that will be used, not underscore prefix
+4. **Test Coverage**: Internal module tests can access private fields, external tests cannot
+
 ## Risk Assessment
 
 | Risk | Impact | Mitigation |
@@ -220,6 +233,13 @@ Understand the current state and prepare for safe refactoring.
 - [x] R.5: Create RawTransport tests - ✅ Completed
 
 **Phase 2 Complete!** All compilation errors fixed, tests passing, code formatted.
+
+**Post-Phase 2 Improvements:**
+- Fixed critical bug: duplicate process spawning in StdioRawOutgoing
+- Made ProcessManager trait fully async (removed all block_on calls)
+- Improved Command handling with better API
+- Added type aliases for complex types
+- All 22 raw transport tests passing with zero clippy warnings
 
 ### Completed Phases
 - [x] Phase 0: Prerequisites and Analysis - Completed 2025-08-13

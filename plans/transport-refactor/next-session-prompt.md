@@ -1,6 +1,6 @@
 # Next Session: Phase 3 - Protocol Layer (3h)
 
-## ✅ Phase 2 Complete!
+## ✅ Phase 2 Complete with Improvements!
 
 ### Phase 2 Achievements
 - ✅ Implemented all raw transports (StdioRawIncoming, StdioRawOutgoing, HttpRawClient, HttpRawServer)
@@ -9,14 +9,14 @@
 - ✅ Fixed ALL compilation errors
 - ✅ All 22 raw transport tests passing
 - ✅ Code formatted with cargo fmt
-- ✅ Clippy warnings resolved
+- ✅ Zero clippy warnings
 
-### Key Fixes Applied
-- Fixed MessageContext initialization with all required fields
-- Fixed Command extraction for proper process spawning
-- Fixed private field access in tests
-- Fixed unused imports and variables
-- Added missing error variants to TransportError
+### Critical Fixes Applied (Post-Review)
+- **Fixed duplicate process spawning bug** - StdioRawOutgoing was spawning TWO processes
+- **Made ProcessManager fully async** - Removed all futures::executor::block_on usage
+- **Improved Command API** - Added with_program() for direct string usage
+- **Added type aliases** - HttpRequestChannel and RequestRouter for cleaner code
+- **Fixed field visibility** - Used #[allow(dead_code)] for fields that will be used
 
 ## Context
 You're implementing a layered transport architecture to solve issues with Shadowcat's MCP transport system. Phase 2 successfully created the raw transport layer that handles byte-level I/O without protocol knowledge.
