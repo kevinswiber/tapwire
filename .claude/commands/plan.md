@@ -1,6 +1,10 @@
 ---
 description: Load a development plan for focused work session
 argument-hint: <plan-name>
+allowed-tools:
+  - ls
+  - find
+  - pwd
 ---
 
 # Load Development Plan: $ARGUMENTS

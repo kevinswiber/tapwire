@@ -1,5 +1,11 @@
 ---
 description: Show detailed status of all active development plans
+allowed-tools:
+  - ls
+  - grep
+  - basename
+  - wc
+  - xargs
 ---
 
 # Development Plans Status Report

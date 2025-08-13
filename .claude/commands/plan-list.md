@@ -1,5 +1,13 @@
 ---
 description: List all available development plans
+allowed-tools:
+  - ls
+  - grep
+  - basename
+  - sed
+  - sort
+  - xargs
+  - tail
 ---
 
 # List Available Development Plans

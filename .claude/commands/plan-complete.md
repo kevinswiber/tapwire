@@ -1,6 +1,9 @@
 ---
 description: Mark a plan phase or task as complete and prepare for next phase
 argument-hint: <plan-name> [phase-or-task-id]
+allowed-tools:
+  - echo
+  - date
 ---
 
 # Complete Plan Phase: $ARGUMENTS
