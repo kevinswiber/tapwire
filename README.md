@@ -119,6 +119,48 @@ Tapwire is built on a modular architecture:
 - **Documentation**: [Coming Soon]
 - **Blog**: [Coming Soon]
 
+## Development Tools
+
+### Claude Code Commands
+
+This repository includes custom Claude Code slash commands to streamline development workflow. These commands help manage development plans, track progress, and maintain consistency across work sessions.
+
+#### Available Commands
+
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `/plan` | Load a development plan for focused work | `/plan transport-refactor` |
+| `/plan-list` | List all available development plans | `/plan-list` |
+| `/plan-status` | Show detailed status of all active plans | `/plan-status` |
+| `/plan-complete` | Mark a plan phase/task as complete | `/plan-complete transport-refactor A.1` |
+
+#### Features
+
+- **Automatic Context Loading**: Commands automatically load relevant files (next-session-prompt, tracker, tasks)
+- **Progress Tracking**: Integration with TodoWrite tool for session task management
+- **Status Reporting**: Real-time analysis of plan progress with task counts and completion metrics
+- **Session Continuity**: Helps maintain context between Claude sessions with structured handoffs
+
+#### Quick Start
+
+1. Start a new work session: `/plan <plan-name>`
+2. Check available work: `/plan-list`
+3. Review progress: `/plan-status`
+4. Complete and transition: `/plan-complete <plan-name> <phase>`
+
+#### Plan Structure
+
+Development plans follow a standardized structure:
+```
+plans/<plan-name>/
+├── next-session-prompt.md  # Current objectives and setup
+├── *-tracker.md            # Overall progress tracking
+└── tasks/                  # Individual task specifications
+    └── *.md
+```
+
+See [plans/template/](./plans/template/) for creating new plans.
+
 ## Contributing
 
 We welcome contributions to Shadowcat! See the [Shadowcat README](./shadowcat/README.md) for details.
