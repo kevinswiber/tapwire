@@ -2,7 +2,7 @@
 
 ## Objective
 
-Design the core `IncomingTransport` and `OutgoingTransport` traits that will replace the current unified `Transport` trait, providing clearer abstractions for proxy architecture.
+Design the core `IncomingTransport` and `OutgoingTransport` traits that will replace the current unified `Transport` trait, providing clearer abstractions for proxy architecture and enabling proper support for MCP's Streamable HTTP protocol.
 
 ## Background
 
@@ -224,8 +224,45 @@ impl ForwardProxy {
 
 ## Deliverables
 
-1. `src/transport/incoming.rs` - IncomingTransport trait and types
-2. `src/transport/outgoing.rs` - OutgoingTransport trait and types
-3. `src/transport/common.rs` - Shared types (BindingInfo, TargetInfo)
-4. Updated design document with trait specifications
-5. Migration plan for existing transports
+### New Files
+- `src/transport/incoming.rs` - IncomingTransport trait and types
+- `src/transport/outgoing.rs` - OutgoingTransport trait and types
+- `src/transport/common.rs` - Shared types (BindingInfo, TargetInfo)
+
+### Documentation
+- Updated design document with trait specifications
+- Migration plan for existing transports
+- API documentation with examples
+
+## Duration Estimate
+
+**Total: 3 hours**
+- Design traits and types: 1 hour
+- Document migration strategy: 1 hour
+- Create example implementations: 1 hour
+
+## Dependencies
+
+- F.1: Design RawTransport trait hierarchy (must be complete)
+- F.2: Design ProtocolHandler abstraction (must be complete)
+
+## Risk Assessment
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Breaking existing code | HIGH | Create compatibility adapters |
+| Complex migration | MEDIUM | Phased migration approach |
+| Performance regression | LOW | Benchmark before/after |
+
+## Notes
+
+- This is the most critical design decision in the refactor
+- Must support all existing transport types
+- Should enable future transport types (WebSocket, etc.)
+- Consider async trait implications
+
+---
+
+**Task Status**: ⬜ Not Started
+**Created**: 2025-08-12
+**Last Modified**: 2025-08-13

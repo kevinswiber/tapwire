@@ -4,10 +4,10 @@
 
 This tracker manages the refactoring of Shadowcat's transport layer to introduce clearer `IncomingTransport` and `OutgoingTransport` abstractions, addressing current architectural confusion and enabling proper support for MCP's Streamable HTTP protocol.
 
-**Created**: 2025-08-12  
+**Last Updated**: 2025-08-13  
+**Total Estimated Duration**: 40-50 hours  
 **Status**: Planning  
-**Estimated Duration**: 40-50 hours  
-**Priority**: Medium (can wait until after current SSE/MCP work)
+**Priority**: High (Now that SSE/MCP is complete)
 
 ## Problem Statement
 
@@ -88,23 +88,31 @@ trait ProcessManager {
 }
 ```
 
-## Session Management
+## Session Planning Guidelines
 
-**Important**: To avoid collision with ongoing SSE/MCP work, this refactor uses a separate session prompt file:
-- **Session Prompt File**: `NEXT_SESSION_PROMPT_TRANSPORT_REFACTOR.md`
-- **Do NOT use**: `NEXT_SESSION_PROMPT.md` (reserved for SSE/MCP work)
+### Next Session Prompt
+This plan has a corresponding `next-session-prompt.md` file in this directory, based on the template in `plans/template/next-session-prompt.md`. This file should be updated at the end of each session to set up the next session with proper context.
 
-When working on this refactor:
-1. Start sessions with `NEXT_SESSION_PROMPT_TRANSPORT_REFACTOR.md`
-2. Update that file at session end
-3. Keep work isolated from main SSE/MCP development
+### Optimal Session Structure
+1. **Review** (5 min): Check this tracker and relevant task files
+2. **Implementation** (2-3 hours): Complete the task deliverables
+3. **Testing** (30 min): Run tests, fix issues
+4. **Documentation** (15 min): Update tracker, create PR if needed
+5. **Handoff** (10 min): Update next-session-prompt.md in this directory
 
 ## Work Phases
 
-### Phase 0: Prerequisites (Before Starting)
-- [ ] Complete current SSE/MCP Phase 3-7 work
-- [ ] Document all existing transport usage patterns
-- [ ] Create comprehensive test suite for current behavior
+### Phase 0: Prerequisites and Analysis (Week 1)
+Understand the current state and prepare for safe refactoring.
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| A.0 | ~~Complete SSE/MCP work~~ | - | None | ✅ Complete | | Done 2025-08-13 |
+| A.1 | Document existing transport patterns | 3h | None | ⬜ Not Started | | Analyze all current usage |
+| A.2 | Create test suite for current behavior | 4h | A.1 | ⬜ Not Started | | Ensure no regressions |
+| A.3 | Identify breaking change risks | 2h | A.1 | ⬜ Not Started | | Risk assessment |
+
+**Phase 0 Total**: 9 hours
 
 ### Phase 1: Foundation (Week 1)
 | ID | Task | Duration | Dependencies | Status |
@@ -158,6 +166,13 @@ When working on this refactor:
 
 **Phase 5 Total**: 11 hours
 
+### Status Legend
+- ⬜ Not Started - Task not yet begun
+- 🔄 In Progress - Currently being worked on
+- ✅ Complete - Task finished and tested
+- ❌ Blocked - Cannot proceed due to dependency or issue
+- ⏸️ Paused - Temporarily halted
+
 ## Risk Assessment
 
 | Risk | Impact | Mitigation |
@@ -187,17 +202,17 @@ When working on this refactor:
 - [ ] Clear naming (no more StdioClient confusion)
 - [ ] Unified handling of Streamable HTTP
 
-## Dependencies on Current Work
+## Progress Tracking
 
-This refactor should **wait until after**:
-1. Current SSE/MCP tracker Phase 3-7 complete
-2. All integration tests passing
-3. Basic recording/replay working
+### Week 1 (Starting 2025-08-13)
+- [ ] A.1: Document existing transport patterns
+- [ ] A.2: Create test suite for current behavior
+- [ ] A.3: Identify breaking change risks
+- [ ] F.1: Design RawTransport trait hierarchy
+- [ ] F.2: Design ProtocolHandler abstraction
 
-Or run **in parallel** with careful coordination:
-1. Create compatibility shim layer
-2. New transports alongside old
-3. Gradual migration per transport type
+### Completed Tasks
+- [x] A.0: Complete SSE/MCP work - Completed 2025-08-13
 
 ## CLI Changes
 
@@ -228,7 +243,12 @@ shadowcat reverse --listen :8080 --upstream subprocess -- local-server
 
 ## Related Documents
 
-- [Current SSE/MCP Tracker](../proxy-sse-message-tracker.md) - Must coordinate with this
+### Task Files
+- [Task F.3: Incoming/Outgoing Traits](tasks/F.3-incoming-outgoing-traits.md) - Core trait design
+- Task files should follow the structure defined in `plans/template/task.md`
+
+### Primary References
+- [SSE/MCP Tracker](../proxy-sse-message-tracker.md) - Recently completed work
 - [Original Architecture Plan](../002-shadowcat-architecture-plan.md) - Original design
 - [Transport Context Refactor](../transport-context-refactor/transport-context-tracker.md) - Previous refactor
 

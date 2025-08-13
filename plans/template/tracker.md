@@ -99,12 +99,15 @@ END OF INSTRUCTIONS -->
 
 ## Session Planning Guidelines
 
+### Next Session Prompt
+Each plan should have a corresponding `next-session-prompt.md` file in the same directory as this tracker, based on the template in `plans/template/next-session-prompt.md`. This file should be updated at the end of each session to set up the next session with proper context.
+
 ### Optimal Session Structure
 1. **Review** (5 min): Check this tracker and relevant task files
 2. **Implementation** (2-3 hours): Complete the task deliverables
 3. **Testing** (30 min): Run tests, fix issues
 4. **Documentation** (15 min): Update tracker, create PR if needed
-5. **Handoff** (10 min): Update NEXT_SESSION_PROMPT.md if needed
+5. **Handoff** (10 min): Update next-session-prompt.md in this plan directory
 
 ### Using the rust-code-reviewer
 For complex Rust implementation tasks, consider using the `rust-code-reviewer` subagent to:
@@ -171,7 +174,8 @@ If context window becomes limited:
 - [{Reference Document 2}](path/to/doc2.md)
 
 ### Task Files
-- [{Task Category}](path/to/tasks/)
+- [{Task Category}](tasks/)
+- Task files should follow the structure defined in `plans/template/task.md`
 
 ### Specifications
 - [{Spec Document}](path/to/spec.md)
