@@ -4,59 +4,36 @@
 
 You are working on **Shadowcat**, a high-performance MCP (Model Context Protocol) proxy written in Rust. This is part of the larger Tapwire platform vision for MCP inspection, recording, and observability.
 
-**Current Status**: Phase 0-5.5 ✅ COMPLETE, Ready for Phase 6 (Replay)
+**Current Status**: Phase 0-6 ✅ COMPLETE, Ready for Phase 7 (Testing & Integration)
 
-## Recent Achievements
+## Recent Achievements (2025-01-13)
 
-### Phase 5: MCP-Aware Recorder (Completed 2025-01-13)
-Successfully implemented all recording functionality:
+### Phase 6: MCP-Aware Replay System (Completed)
+Successfully implemented a sophisticated replay system with four integrated components:
 
-1. **C.1-C.2: MCP Tape Format & Session Recorder** ✅
-   - Created unified tape format with MessageEnvelope
-   - Implemented SessionRecorder with buffer management
-   - Thread-safe concurrent recording
+1. **Replay Engine Core** (`src/replay/engine.rs`)
+   - Tape loading and frame processing
+   - Variable speed playback (0.1x to 10x)
+   - Event-driven architecture
+   - Configurable timing control
 
-2. **C.3: Storage Backend** ✅
-   - Implemented `save_tape`, `load_tape`, `delete_tape` methods in TapeStorage
-   - Added `export_tape` and `import_tape` for tape portability
-   - Integrated TapeStorage into TapeRecorder
-   - Automatic storage initialization on recorder startup
+2. **Replay Controller** (`src/replay/controller.rs`)
+   - High-level playback controls
+   - Breakpoint system for debugging
+   - Frame-by-frame stepping
+   - State tracking and event handlers
 
-3. **C.4: SSE Recording Integration** ✅
-   - Recording already integrated at ForwardProxy level
-   - Works with StreamableHttp transport (SSE + HTTP)
-   - Automatic frame recording through MessageProcessors
+3. **Message Transformer** (`src/replay/transformer.rs`)
+   - Timestamp updates to current time
+   - Session ID regeneration/override
+   - Field replacements in JSON
+   - Authentication token stripping
 
-4. **C.5: Reverse Proxy Recording** ✅
-   - Added TapeRecorder to reverse proxy AppState
-   - Integrated recording in handle_mcp_request and SSE handlers
-   - Start recording on new session creation
-   - Records both client→server and server→client messages
-   - Added recording configuration to ReverseProxyConfig
-
-### Phase 5.5: Recorder Consolidation (Completed 2025-01-13)
-Successfully unified the recording system:
-- Migrated from dual tape formats to single unified format
-- No backward compatibility needed (pre-release advantage)
-- All tests passing with new structure
-
-## Current Architecture
-
-```rust
-// Storage Integration
-pub struct TapeRecorder {
-    storage: Arc<RwLock<TapeStorage>>,
-    active_tapes: Arc<RwLock<HashMap<SessionId, Tape>>>,
-    frame_buffer: Arc<RwLock<HashMap<SessionId, Vec<MessageEnvelope>>>>,
-}
-
-// Reverse Proxy Integration
-struct AppState {
-    session_manager: Arc<SessionManager>,
-    // ... other fields ...
-    tape_recorder: Option<Arc<TapeRecorder>>,
-}
-```
+4. **SSE Replay Support** (`src/replay/sse_support.rs`)
+   - SSE stream reconstruction
+   - Keep-alive events and retry delays
+   - Metadata comments for debugging
+   - Connection simulation features
 
 ## Completed Phases Summary
 
@@ -68,58 +45,98 @@ According to @plans/proxy-sse-message-tracker.md:
 - ✅ Phase 4: MCP-Aware Interceptor (17 hours)
 - ✅ Phase 5: MCP-Aware Recorder (16 hours)
 - ✅ Phase 5.5: Recorder Consolidation (16 hours, completed in ~3 hours)
+- ✅ Phase 6: MCP-Aware Replay (15 hours, completed in ~4 hours)
 
-**Total Completed**: 100 hours of implementation
+**Total Completed**: 115 hours of implementation (107 hours actual)
 
-## Next Tasks: Phase 6 - MCP-Aware Replay (15 hours total)
+## Next Tasks: Phase 7 - Testing and Integration (22 hours total)
 
-All tasks are unblocked and ready:
+All components are ready for comprehensive testing:
 
-### P.1: Replay Engine Core (5h)
-- Create core replay functionality
-- Load tapes from storage
-- Process frames in sequence
-- Handle timing and delays
+### T.1-T.3: Integration Tests (8h)
+- T.1: Forward Proxy SSE Tests (2h)
+- T.2: Reverse Proxy Streamable HTTP Tests (3h)
+- T.3: End-to-End MCP Flow Tests (3h)
 
-### P.2: Replay Controller (4h)
-- Playback control system (play, pause, stop, seek)
-- Speed control (1x, 2x, 0.5x, etc.)
-- Frame stepping
-- Breakpoint support
+### T.4-T.7: Component Tests (10h)
+- T.4: MCP Parser Conformance Tests (2h)
+- T.5: Correlation Engine Tests (2h)
+- T.6: Interceptor Integration Tests (3h)
+- T.7: Recorder/Replay Tests (3h)
 
-### P.3: Message Transformations (3h)
-- Transform messages during replay
-- Update timestamps
-- Modify session IDs if needed
-- Apply rules for modification
+### T.8: Performance Benchmarks (4h)
+- Measure < 5% overhead target
+- Memory usage validation
+- Throughput testing
 
-### P.4: SSE Replay Support (3h)
-- SSE-specific replay features
-- Stream reconstruction
-- Event ID management
-- Connection handling
+## Current Architecture
 
-## Phase 7: Testing and Integration (22 hours total)
+### Replay System Integration
+```rust
+// The replay system connects with existing components:
+TapeStorage → ReplayEngine → MessageTransformer → Output
+                ↓                                     ↓
+         ReplayController                    SseReplayAdapter
+```
 
-Ready when Phase 6 completes:
-- T.1-T.3: Integration tests (8h)
-- T.4-T.7: Component tests (10h)
-- T.8: Performance benchmarks (4h)
+### Key Features Implemented
+- **Recording**: Both forward and reverse proxies record sessions
+- **Replay**: Full replay system with transformation capabilities
+- **Interception**: Rule-based message interception with pause/resume
+- **Correlation**: Request-response matching with timeouts
+- **SSE Support**: Full SSE transport in forward and reverse proxies
+
+## Testing Strategy for Phase 7
+
+### Integration Test Areas
+1. **Proxy Flow Tests**
+   - Forward proxy with all transports (stdio, HTTP, SSE)
+   - Reverse proxy with MCP endpoint
+   - Session management across proxies
+
+2. **Recording/Replay Cycle**
+   - Record session → Save tape → Load tape → Replay
+   - Verify message fidelity
+   - Test transformations
+
+3. **Interceptor Chain**
+   - Multiple interceptors in sequence
+   - Pause/resume with external control
+   - Rule processing performance
+
+4. **SSE Streaming**
+   - Long-running SSE connections
+   - Reconnection handling
+   - Event ID correlation
 
 ## Key Technical Context
 
-### Recording System Features
-- Filesystem-based storage with JSON format
-- Index-based tape management
-- Automatic session recording in both proxies
-- Buffer-based frame collection for efficiency
-- Thread-safe concurrent recording
+### Performance Requirements
+- Latency overhead: < 5% p95
+- Memory per session: < 100KB
+- Throughput: > 10,000 req/sec
+- Startup time: < 100ms
 
-### Performance Considerations
-- Buffer limit of 1000 frames before flush
-- Async background storage operations
-- No blocking on recording operations
-- Graceful failure handling (warn, don't error)
+### Testing Commands
+```bash
+# Run all tests
+cargo test
+
+# Run specific phase tests
+cargo test replay::           # Replay system tests
+cargo test recorder::         # Recording tests
+cargo test interceptor::      # Interceptor tests
+cargo test transport::sse::   # SSE transport tests
+
+# Run integration tests
+cargo test --test integration_*
+
+# Run benchmarks
+cargo bench
+
+# Check test coverage
+cargo tarpaulin --out Html
+```
 
 ## Development Guidelines
 
@@ -131,19 +148,26 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-### Testing Recording
-```bash
-# Test forward proxy recording
-cargo run -- forward stdio --record ./recordings -- echo '{"jsonrpc":"2.0","method":"initialize","id":1}'
+### Key Files to Review
+- `src/replay/README.md` - Comprehensive replay documentation
+- `src/replay/mod.rs` - Module with rustdoc examples
+- `plans/proxy-sse-message-tracker.md` - Project tracker
+- `tests/integration/` - Integration test structure
 
-# Test reverse proxy recording (add to config)
-enable_recording = true
-recording_dir = "./recordings"
+## Session Focus
 
-# Check recordings
-cargo run -- tape list
-cargo run -- tape info <tape-id>
-```
+For the next session, focus on Phase 7 - Testing and Integration:
+
+1. **Start with T.1-T.3**: Integration tests for the complete flow
+2. **Then T.4-T.7**: Component-specific conformance tests
+3. **Finally T.8**: Performance benchmarking
+
+The testing phase should:
+- Validate all proxy modes work correctly
+- Ensure recording/replay cycle is complete
+- Verify MCP protocol compliance
+- Measure performance against targets
+- Test error handling and edge cases
 
 ## Quick Start Commands
 
@@ -151,60 +175,42 @@ cargo run -- tape info <tape-id>
 # Navigate to shadowcat
 cd shadowcat
 
-# Run all tests
-cargo test
+# Run replay tests to verify Phase 6
+cargo test replay::
 
-# Test recording specifically
-cargo test recorder::
+# Start integration testing
+cargo test --test integration_forward_proxy
+cargo test --test integration_reverse_proxy
 
-# List recorded tapes
-ls -la ./recordings/
+# Check for any remaining clippy issues
+cargo clippy --all-targets -- -D warnings
 ```
-
-## Session Focus
-
-For the next session, focus on implementing Phase 6 (Replay System). Start with:
-
-1. **P.1: Replay Engine Core** - The foundation for all replay functionality
-2. **P.2: Replay Controller** - User control over playback
-3. **P.3: Message Transformations** - Ability to modify during replay
-4. **P.4: SSE Replay Support** - Handle SSE-specific requirements
-
-The replay system should:
-- Load tapes from TapeStorage
-- Process frames with proper timing
-- Support various playback speeds
-- Allow message transformation
-- Handle both stdio and SSE transports
-
-## Additional Context
-
-### Storage Provider System (Planning Phase)
-A new initiative has been documented in @plans/tape-storage-providers/ to create a plugin-based storage backend system. This will allow users to provide custom storage implementations (S3, PostgreSQL, etc.) beyond the built-in filesystem storage. 
-
-**Key Design Decisions**:
-- No backward compatibility needed (Shadowcat is pre-release)
-- Clean API design without legacy constraints
-- Registry-based plugin system
-- Runtime provider registration
-
-This is documented but not yet implemented. Focus should remain on Phase 6 (Replay) first.
 
 ## Important Notes
 
-- Recording is now fully integrated in both forward and reverse proxies
-- Storage system handles persistence automatically
-- All architectural refactoring is complete
-- No backward compatibility constraints (pre-release advantage)
-- Focus on replay implementation for Phase 6
-- Maintain test coverage for new features
+- All 6 implementation phases are complete
+- Replay system has comprehensive documentation
+- 38 replay tests passing, zero clippy warnings
+- Focus should be on integration testing and validation
+- Performance benchmarking is critical for production readiness
+- Consider creating example applications demonstrating features
 
-## Key Files Modified Recently
+## Additional Context
 
-- `src/recorder/storage.rs` - Enhanced with save/load/delete/export/import methods
-- `src/recorder/tape.rs` - Integrated TapeStorage, automatic initialization
-- `src/proxy/reverse.rs` - Added tape_recorder to AppState
-- `src/proxy/reverse/types.rs` - Added recording configuration fields
-- `tests/integration/e2e_framework.rs` - Fixed test compilation
+### Replay System Capabilities
+The newly implemented replay system can:
+- Load tapes from storage or directly
+- Play at variable speeds with timing control
+- Transform messages during replay (timestamps, IDs, fields)
+- Generate SSE streams from recorded sessions
+- Support debugging with breakpoints
+- Handle both stdio and SSE transports
+
+### Integration Points
+The replay system integrates with:
+- `TapeStorage` for loading recordings
+- `MessageEnvelope` for frame structure
+- `TransportContext` for transport-specific metadata
+- `ProtocolMessage` for MCP message handling
 
 Refer to @plans/proxy-sse-message-tracker.md for the complete task breakdown and dependencies.
