@@ -7,38 +7,22 @@ description: List all available development plans
 ## Active Plans
 Plans currently in development (excluding archive and templates):
 
-!`for dir in plans/*/; do [ -d "$dir" ] && [ "$dir" != "plans/archive/" ] && [ "$dir" != "plans/template/" ] && echo "- $(basename "$dir")" || true; done | sort`
+!`ls -d plans/*/ | grep -v archive | grep -v template | xargs -n1 basename | sed 's/^/- /' | sort`
 
 ## Check Plan Details
 For each active plan, show key information:
 
-!`for dir in plans/*/; do 
-    if [ -d "$dir" ] && [ "$dir" != "plans/archive/" ] && [ "$dir" != "plans/template/" ]; then
-        plan=$(basename "$dir")
-        echo "### $plan"
-        if [ -f "$dir/next-session-prompt.md" ]; then
-            echo "  ✓ Has next-session-prompt"
-        else
-            echo "  ✗ Missing next-session-prompt"
-        fi
-        tracker=$(find "$dir" -name "*tracker.md" -type f 2>/dev/null | head -1)
-        if [ -n "$tracker" ]; then
-            echo "  ✓ Has tracker: $(basename "$tracker")"
-            # Try to extract status from tracker
-            grep -m1 "Status:" "$tracker" 2>/dev/null | sed 's/^/  /' || true
-        else
-            echo "  ✗ Missing tracker"
-        fi
-        task_count=$(find "$dir/tasks" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
-        echo "  📝 Task files: $task_count"
-        echo ""
-    fi
-done`
+!`ls -d plans/*/ | grep -v archive | grep -v template`
+
+Check each plan's contents manually for:
+- next-session-prompt.md file
+- *tracker.md file
+- tasks/*.md files
 
 ## Recently Archived Plans
 Completed work in the archive:
 
-!`ls -la plans/archive/*.md 2>/dev/null | tail -5 | awk '{print "- " $NF}' | xargs -I {} basename {} .md || echo "No archived root-level plans"`
+!`ls plans/archive/*.md | xargs -n1 basename | sed 's/.md$//' | sed 's/^/- /' | tail -5`
 
 ## Quick Actions
 

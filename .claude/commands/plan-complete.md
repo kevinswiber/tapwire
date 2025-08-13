@@ -7,12 +7,9 @@ argument-hint: <plan-name> [phase-or-task-id]
 
 ## Parse Arguments
 
-!`echo "$ARGUMENTS" | {
-    read plan_name phase_id rest
-    echo "Plan: ${plan_name:-Not specified}"
-    echo "Phase/Task: ${phase_id:-Not specified}"
-    [ -z "$plan_name" ] && echo "⚠️  Usage: /plan-complete <plan-name> [phase-or-task-id]"
-}`
+Arguments provided: $ARGUMENTS
+
+Usage: /plan-complete <plan-name> [phase-or-task-id]
 
 ## Current Plan Status
 
@@ -43,7 +40,7 @@ Please update the tracker to:
 ### 4. Archive Completed Materials
 
 If completing an entire phase:
-!`echo "Consider moving completed task files to archive if appropriate"`
+Consider moving completed task files to archive if appropriate.
 
 ### 5. Prepare Next Phase
 
