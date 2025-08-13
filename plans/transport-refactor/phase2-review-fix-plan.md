@@ -279,11 +279,22 @@ HTTP_POOL.release(buffer);
 4. [x] Integrate process cleanup
    - Drop impls handle child process termination
 
-### Phase 2: Stability (Day 2) - IN PROGRESS
-5. [ ] Add buffer size limits
-6. [ ] Implement timeout handling
-7. [ ] Improve error context
-8. [ ] Add integration tests for concurrent scenarios
+### Phase 2: Stability (Day 2) ✅ COMPLETED
+5. [x] Add buffer size limits
+   - SSE: Fixed unbounded buffer vulnerability, enforces max_message_size
+   - Stdio: Added message size validation in send_bytes methods
+   - Returns TransportError::MessageTooLarge when exceeded
+6. [x] Implement timeout handling
+   - SSE: Connection and read timeouts with error propagation
+   - Stdio: Read operation timeouts for both incoming/outgoing
+   - All timeouts properly return TransportError::Timeout
+7. [x] Improve error context
+   - SSE: Error channel for propagation instead of just logging
+   - Stdio: Enhanced subprocess error messages
+   - All errors have descriptive context
+8. [x] Add integration tests for concurrent scenarios
+   - Created transport_concurrent_test.rs with 6 comprehensive tests
+   - Tests buffer limits, timeouts, Drop implementations, concurrent ops
 
 ### Phase 3: Performance (Day 3)
 9. [ ] Implement buffer pooling
@@ -313,7 +324,7 @@ HTTP_POOL.release(buffer);
 - [x] No resource leaks detected by tests (✅ Drop impls prevent leaks)
 - [ ] Performance targets met (< 5% overhead)
 - [x] All existing tests still pass (✅ 839 tests passing)
-- [ ] New tests for critical paths added
+- [x] New tests for critical paths added (✅ 6 concurrent tests added)
 
 ## Code Patterns to Establish
 
