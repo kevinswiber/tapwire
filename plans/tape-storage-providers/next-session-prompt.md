@@ -1,4 +1,4 @@
-# Next Session: Phase 0 - Analysis & Investigation
+# Next Session: Phase 1 - Core Abstractions Implementation
 
 ## 🔴 CRITICAL: Use Git Worktree
 
@@ -16,71 +16,80 @@ Implementing a pluggable storage backend system for tape recordings in Shadowcat
 
 **Project**: Tape Storage Providers
 **Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-**Status**: Phase 0 - Analysis & Investigation (0% Complete)
+**Status**: Phase 1 - Core Abstractions (Ready to Start)
 **Git Worktree**: `shadowcat-tape-storage-providers` (branch: `feat/tape-storage-providers`)
 
 ## Current Status
 
 ### What Has Been Completed
-- **Plan Structure**: Upgraded to include analysis phase (✅ Completed 2025-08-13)
-  - Added Phase 0 for analysis before implementation
-  - Created analysis task files
-  - Set up analysis output directory
+- **Phase 0: Analysis & Investigation** (✅ Completed 2025-08-14)
+  - Current state assessment documented
+  - Storage patterns researched (8 projects analyzed)
+  - Requirements gathered (8 use cases defined)
+  - API design proposal created
+  - Design decisions documented
 
-### What's In Progress
-- **A.0: Current State Analysis** (Not Started)
+### What's Ready to Start
+- **B.1: Define TapeStorageBackend Trait** (Ready)
   - Duration: 2 hours
-  - Dependencies: None
+  - Dependencies: Phase 0 analysis complete
 
 ## Your Mission
 
-Analyze the existing tape storage implementation and research best practices to inform the design of a pluggable storage provider system.
+Implement the core abstractions for the tape storage provider system based on the completed analysis and design.
 
-### Priority 1: Current State Analysis (2 hours)
+### Priority 1: Core Trait Definition (2 hours)
 
-1. **Explore existing implementation** (45m)
-   - Map out current tape storage architecture
-   - Document all storage-related operations
-   - Identify integration points with recorder/replay
+1. **Create trait module** (30m)
+   - Set up `src/recorder/backend/mod.rs`
+   - Define module structure
+   - Add necessary imports
    
-2. **Document limitations** (45m)
-   - Performance bottlenecks
-   - Missing features
-   - User pain points
+2. **Implement TapeStorageBackend trait** (1h)
+   - Core async methods (save, load, delete, list, search)
+   - Capability discovery
+   - Configuration validation
    
-3. **Create assessment** (30m)
-   - Write `analysis/current-state-assessment.md`
-   - Include architecture diagrams
+3. **Define supporting types** (30m)
+   - StorageConfig structure
+   - StorageCapabilities enum
+   - Error types
 
-### Priority 2: Storage Patterns Research (2 hours)
+### Priority 2: Factory Pattern Implementation (2 hours)
 
-1. **Research similar projects** (1h)
-   - Database abstraction layers (sqlx, diesel)
-   - Object storage systems
-   - Plugin architectures in Rust
+1. **Create factory trait** (45m)
+   - StorageProviderFactory definition
+   - Metadata and versioning
+   - Configuration validation
    
-2. **Compile findings** (1h)
-   - Document patterns in `analysis/storage-patterns-research.md`
-   - Identify best practices and anti-patterns
-
-### Priority 3: Requirements Gathering (1.5 hours) - If time permits
-
-1. **Define use cases** (45m)
-   - Local development needs
-   - Production deployment scenarios
-   - CI/CD requirements
+2. **Implement builder helpers** (45m)
+   - Default implementations
+   - Helper macros if needed
+   - Testing utilities
    
-2. **Establish requirements** (45m)
-   - Performance targets
-   - Security requirements
-   - Configuration needs
+3. **Documentation** (30m)
+   - Trait documentation with examples
+   - Provider implementation guide
+
+### Priority 3: Configuration System (1 hour)
+
+1. **Define configuration types** (30m)
+   - StorageConfig with serde support
+   - StorageOptions for common settings
+   - Validation logic
+   
+2. **Environment variable support** (30m)
+   - Config loading from env vars
+   - Override mechanisms
+   - Default values
 
 ## Essential Context Files to Read
 
 1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md` - Full project context
-2. **Task A.0**: `plans/tape-storage-providers/tasks/A.0-current-state-analysis.md` - First task details
-3. **Task A.1**: `plans/tape-storage-providers/tasks/A.1-storage-patterns-research.md` - Research task
-4. **Current Implementation**: `shadowcat-tape-storage-providers/src/recorder/` - Existing tape storage code (IN WORKTREE)
+2. **API Design**: `plans/tape-storage-providers/analysis/api-design-proposal.md` - Detailed API specification
+3. **Design Decisions**: `plans/tape-storage-providers/analysis/design-decisions.md` - Key architectural choices
+4. **Current Implementation**: `shadowcat-tape-storage-providers/src/recorder/` - Existing code to refactor (IN WORKTREE)
+5. **Task B.1**: `plans/tape-storage-providers/tasks/B.1-core-trait-design.md` - Current task details
 
 ## Working Directory
 
@@ -100,71 +109,77 @@ pwd        # Should end with: shadowcat-tape-storage-providers
 cd shadowcat-tape-storage-providers
 git status  # Verify: On branch feat/tape-storage-providers
 
-# Review the tracker (from main tapwire)
-cat ../plans/tape-storage-providers/tape-storage-providers-tracker.md
+# Review the completed analysis
+cat ../plans/tape-storage-providers/analysis/api-design-proposal.md
+cat ../plans/tape-storage-providers/analysis/design-decisions.md
 
-# Load first task
-cat ../plans/tape-storage-providers/tasks/A.0-current-state-analysis.md
+# Load Phase 1 task
+cat ../plans/tape-storage-providers/tasks/B.1-core-trait-design.md
 
-# Explore current tape storage (in worktree)
-rg -t rust "tape" --files-with-matches
-rg -t rust "TapeStorage|TapeRecorder" src/recorder/
+# Create new module structure (in worktree)
+mkdir -p src/recorder/backend
+touch src/recorder/backend/mod.rs
+touch src/recorder/backend/traits.rs
+touch src/recorder/backend/config.rs
 
-# Check module structure
-ls -la src/recorder/
-cat src/recorder/mod.rs
+# Start implementation
+vim src/recorder/backend/traits.rs
 ```
 
 ## Success Criteria
 
-- [ ] Current tape storage implementation fully understood and documented
-- [ ] Architecture diagrams created
-- [ ] At least 5 relevant projects researched for patterns
-- [ ] Best practices and anti-patterns identified
-- [ ] Analysis documents created in `analysis/` directory
-- [ ] Tracker updated with task completion
+- [ ] TapeStorageBackend trait fully defined with async methods
+- [ ] StorageProviderFactory trait implemented
+- [ ] Configuration types created with serde support
+- [ ] All code compiles without warnings
+- [ ] Basic tests for trait implementations
+- [ ] Documentation complete for public APIs
 
-## Key Questions to Answer
+## Key Implementation Points
 
-1. How is tape storage currently implemented?
-2. What are the main limitations users face?
-3. What patterns work well for storage abstraction in Rust?
-4. What should our plugin architecture look like?
-5. How do we maintain backward compatibility?
+1. Use `async-trait` crate for async trait methods
+2. Ensure all types are Send + Sync for thread safety
+3. Use serde_json::Value for flexible configuration
+4. Maintain backward compatibility markers
+5. Follow error handling patterns from analysis
 
 ## Deliverables
 
 ### Required
-- `analysis/current-state-assessment.md` - Complete analysis of existing implementation
-- `analysis/storage-patterns-research.md` - Research findings and recommendations
+- `src/recorder/backend/traits.rs` - Core trait definitions
+- `src/recorder/backend/config.rs` - Configuration types
+- `src/recorder/backend/mod.rs` - Module exports
 
-### Optional (if time permits)
-- `analysis/requirements-analysis.md` - User requirements and use cases
-- Architecture diagrams (can use ASCII or markdown diagrams)
+### Next Session Setup
+- Registry implementation (Task B.4)
+- Filesystem provider extraction (Task C.1)
+- Integration with TapeRecorder
 
 ## Definition of Done
 
-- [ ] Tasks A.0 and A.1 completed
-- [ ] Analysis documents comprehensive and actionable
-- [ ] Current limitations clearly documented
-- [ ] Research provides clear recommendations
+- [ ] Tasks B.1, B.2, and B.3 completed (or as many as time permits)
+- [ ] Core traits compile and are well-documented
+- [ ] Configuration system functional
+- [ ] Tests pass with `cargo test`
+- [ ] No clippy warnings
 - [ ] Tracker updated with progress
 - [ ] This prompt updated for next session
-- [ ] Commit (in worktree): `feat(tape-storage): complete analysis phase for storage providers`
+- [ ] Commit (in worktree): `feat(tape-storage): implement core storage provider abstractions`
 
 ## Notes
 
 - **USE THE WORKTREE**: All shadowcat code changes in `shadowcat-tape-storage-providers`
-- This plan runs in parallel with transport-refactor (no code overlap)
-- Shadowcat is pre-release - we can make breaking changes if beneficial
-- Focus on understanding before proposing solutions
-- Document everything for future reference
+- Phase 0 analysis is complete - we have a solid design foundation
+- Start with minimal viable trait, then enhance incrementally
+- Focus on getting the abstraction right - providers come later
+- Ensure backward compatibility paths are clear
 - **When updating this prompt**: Always include the worktree reminder for next session
 
 ---
 
 *Remember: 
 1. **WORK IN THE WORKTREE** - `cd shadowcat-tape-storage-providers` first!
-2. The goal of this session is to thoroughly understand the problem space before designing solutions
-3. Take time to explore and document findings properly
-4. When creating the next session prompt, include the worktree reminder*
+2. The analysis is done - now we build based on the solid design foundation
+3. Start simple, ensure it compiles, then add complexity
+4. Test frequently to catch issues early
+5. When creating the next session prompt, include the worktree reminder*
