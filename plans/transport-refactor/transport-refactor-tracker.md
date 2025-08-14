@@ -175,10 +175,10 @@ Understand the current state and prepare for safe refactoring.
 |----|------|----------|--------------|--------|--------|
 | D.1 | Implement IncomingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | StdioIncoming, HttpServerIncoming, StreamableHttpIncoming |
 | D.2 | Implement OutgoingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | SubprocessOutgoing, HttpClientOutgoing, StreamableHttpOutgoing |
-| D.3 | Update proxy to use new transports | 6h | D.1, D.2, C.1-C.2 | ⬜ Ready | Analysis complete, implementation plan created |
+| D.3 | Update proxy to use new transports | 6h | D.1, D.2, C.1-C.2 | ✅ Complete | ForwardProxy migrated, adapters removed, factory created |
 | D.4 | Create direction-aware tests | 3h | D.1-D.3 | 🔄 Partial | 12 unit tests created, needs integration tests |
 
-**Phase 4 Total**: 14 hours (75% complete - critical fixes done, proxy integration analyzed)
+**Phase 4 Total**: 17 hours (90% complete - proxy migrated, compilation issues remain)
 
 #### Phase 4 Critical Fixes (Grade B+ → A)
 | ID | Task | Duration | Files | Status | Impact |
@@ -209,11 +209,11 @@ Understand the current state and prepare for safe refactoring.
 ### Phase 5: Migration and Cleanup (Week 3)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
-| M.1 | Migrate forward proxy | 3h | D.3, C.1-C.2, A.1 | ⬜ | Requires session ID mutability |
-| M.2 | Migrate reverse proxy | 3h | D.3, C.1-C.2, A.1 | ⬜ | Requires session ID mutability |
-| M.3 | Update CLI and factory | 2h | M.1, M.2 | ⬜ | |
-| M.4 | Remove old transport code | 1h | M.1-M.3 | ⬜ | |
-| M.5 | Update documentation | 2h | M.4 | ⬜ | |
+| M.1 | Fix compilation errors | 2h | D.3 | 🔄 In Progress | Old Transport implementations need updating |
+| M.2 | Migrate reverse proxy | 3h | M.1 | ⬜ | Needs directional transport update |
+| M.3 | Update CLI to use factory | 2h | M.1 | ⬜ | Use DirectionalTransportFactory |
+| M.4 | Remove old Transport trait | 2h | M.1-M.3 | ⬜ | Clean removal after migration |
+| M.5 | Update tests and documentation | 2h | M.4 | ⬜ | Fix test compilation |
 
 **Phase 5 Total**: 11 hours
 
