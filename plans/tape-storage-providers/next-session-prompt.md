@@ -1,4 +1,4 @@
-# Next Session: Phase 2 - Built-in Providers
+# Next Session: Phase 3 - Integration
 
 ## 🔴 CRITICAL: Use Git Worktree
 
@@ -12,11 +12,11 @@ git status  # Verify: On branch feat/tape-storage-providers
 
 ## Project Context
 
-Implementing built-in storage providers (filesystem for production and memory for testing) using the core abstractions created in Phase 1. Cloud storage providers will be implemented as external crates.
+Integrating the new storage provider system with the TapeRecorder and public API.
 
 **Project**: Tape Storage Providers
 **Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-**Status**: Phase 2 - Built-in Providers (Ready to Start)
+**Status**: Phase 3 - Integration (Ready to Start)
 **Git Worktree**: `shadowcat-tape-storage-providers` (branch: `feat/tape-storage-providers`)
 
 ## Current Status
@@ -38,76 +38,61 @@ Implementing built-in storage providers (filesystem for production and memory fo
   - Unified error handling with StorageError
   - 4 unit tests for registry functionality
 
+- **Phase 2: Built-in Providers** (✅ Completed 2025-08-14)
+  - FilesystemProvider extracted from existing storage
+  - MemoryProvider for testing with production warnings
+  - Both providers implement TapeStorageBackend trait
+  - Factories with proper registration support
+  - Comprehensive conformance test suite
+  - All tests passing (11 provider tests)
+  - No clippy warnings
+
 ### What's Ready to Start
-- **C.1: Filesystem Provider** (Ready)
+- **D.1: API Integration** (Ready)
   - Duration: 3 hours
-  - Extract and refactor existing filesystem storage
-  
-- **C.2: Memory Provider** (Ready)
-  - Duration: 2 hours
-  - Testing-only implementation with warnings for production use
+  - Update TapeRecorder to use new backend system
+  - Add public API for provider registration
+  - Ensure backward compatibility
 
 ## Your Mission
 
-Implement the built-in storage providers that will ship with Shadowcat.
+Integrate the new storage provider system into the public API and TapeRecorder.
 
-### Priority 1: Filesystem Provider (3 hours)
+### Priority 1: API Integration (3 hours)
 
-1. **Extract existing implementation** (1h)
-   - Move code from `src/recorder/storage.rs`
-   - Create `src/recorder/backend/providers/filesystem.rs`
-   - Preserve all existing functionality
+1. **Update TapeRecorder** (1.5h)
+   - Replace direct TapeStorage usage with backend trait
+   - Add factory method for provider selection
+   - Ensure backward compatibility for default filesystem storage
    
-2. **Implement TapeStorageBackend trait** (1h)
-   - Map existing methods to trait interface
-   - Add missing trait methods
-   - Ensure backward compatibility
+2. **Public API** (1h)
+   - Add `register_storage_provider()` to Shadowcat API
+   - Add `with_storage()` to ShadowcatBuilder
+   - Configuration file support for provider selection
    
-3. **Create factory and tests** (1h)
-   - FilesystemProviderFactory implementation
-   - Configuration validation
-   - Unit tests for all operations
+3. **Integration Tests** (30m)
+   - Test provider switching
+   - Test configuration loading
+   - Verify backward compatibility
 
-### Priority 2: Memory Provider (2 hours)
+### Priority 2: Migration Strategy (2 hours)
 
-1. **Design data structures** (30m)
-   - HashMap for tape storage
-   - Arc<RwLock> for thread safety
-   - Size tracking and limits
+1. **Migration Utilities** (1h)
+   - Tool to convert old storage to new format
+   - Backward compatibility adapter
    
-2. **Implement backend** (1h)
-   - Full TapeStorageBackend trait
-   - Warning logs for production use
-   - Configurable size limits
-   
-3. **Factory and tests** (30m)
-   - MemoryProviderFactory with #[cfg(test)] recommendations
-   - Unit tests for all operations
-   - Concurrent access tests
-
-### Priority 3: Provider Testing Framework (3 hours)
-
-1. **Conformance test suite** (1.5h)
-   - Standard tests all providers must pass
-   - CRUD operations
-   - Concurrent access
-   - Error scenarios
-   
-2. **Performance benchmarks** (1h)
-   - Save/load performance
-   - Search performance
-   - Memory usage
-   
-3. **Documentation** (30m)
-   - Provider implementation guide
+2. **Migration Documentation** (1h)
+   - Step-by-step migration guide
    - Configuration examples
+   - Troubleshooting section
 
 ## Essential Context Files to Read
 
 1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-2. **Existing Storage**: `shadowcat-tape-storage-providers/src/recorder/storage.rs` - Current filesystem implementation
-3. **Task C.1**: `plans/tape-storage-providers/tasks/C.1-filesystem-provider.md`
-4. **Core Traits**: `shadowcat-tape-storage-providers/src/recorder/backend/traits.rs` - Interfaces to implement
+2. **Task D.1**: `plans/tape-storage-providers/tasks/D.1-api-integration.md`
+3. **Recorder Module**: `shadowcat-tape-storage-providers/src/recorder/mod.rs`
+4. **Main API**: `shadowcat-tape-storage-providers/src/lib.rs`
+5. **Providers**: `shadowcat-tape-storage-providers/src/recorder/backend/providers/`
 
 ## Working Directory
 
@@ -127,76 +112,71 @@ pwd        # Should end with: shadowcat-tape-storage-providers
 cd shadowcat-tape-storage-providers
 git status  # Verify: On branch feat/tape-storage-providers
 
-# Create providers module
-mkdir -p src/recorder/backend/providers
-touch src/recorder/backend/providers/mod.rs
-touch src/recorder/backend/providers/filesystem.rs
-touch src/recorder/backend/providers/memory.rs
-touch src/recorder/backend/providers/tests.rs
+# Review the current TapeRecorder implementation
+grep -r "TapeStorage" src/recorder/ --include="*.rs"
 
-# Review existing storage implementation
-cat src/recorder/storage.rs | head -100
+# Check the main API
+cat src/lib.rs | head -100
 
-# Start filesystem provider
-vim src/recorder/backend/providers/filesystem.rs
+# Run existing tests to ensure nothing is broken
+cargo test --lib
 ```
 
 ## Success Criteria
 
-- [ ] Filesystem provider extracted and working
-- [ ] All existing filesystem tests still pass
-- [ ] Memory provider fully implemented with production warnings
-- [ ] Both providers pass conformance tests
-- [ ] No performance regression in filesystem provider
-- [ ] Documentation complete
+- [ ] TapeRecorder uses new backend trait
+- [ ] Public API supports provider registration
+- [ ] Configuration files support provider selection
+- [ ] Backward compatibility maintained
+- [ ] All existing tests still pass
+- [ ] Integration tests for provider switching
 
 ## Key Implementation Points
 
-1. Filesystem provider MUST be 100% backward compatible
-2. Use existing TapeStorage code as reference
-3. Memory provider should warn loudly if used outside tests
-4. Both providers must be thread-safe
-5. Design traits to naturally support object storage patterns
+1. Default to filesystem provider for backward compatibility
+2. Registry should be accessible from public API
+3. Configuration parsing should handle provider settings
+4. Error messages should be clear about provider issues
+5. Document the new API methods thoroughly
 
 ## Deliverables
 
 ### Required
-- `src/recorder/backend/providers/filesystem.rs` - Extracted filesystem provider
-- `src/recorder/backend/providers/memory.rs` - Memory provider for testing
-- `src/recorder/backend/providers/tests.rs` - Conformance test suite
-- Updated `src/recorder/backend/providers/mod.rs` - Module exports
+- Updated `src/recorder/mod.rs` with backend support
+- Updated `src/lib.rs` with public API methods
+- Integration tests in `tests/`
+- Updated configuration handling
 
 ### Next Session Setup
-- Phase 3: Integration with TapeRecorder
-- Update public API
-- Migration utilities
+- Phase 4: Migration & Documentation
+- Create migration utilities
+- Write comprehensive documentation
 
 ## Definition of Done
 
-- [ ] Tasks C.1, C.2, and C.3 completed
-- [ ] Both providers fully functional
+- [ ] Task D.1 completed
+- [ ] Public API fully integrated
 - [ ] All tests passing
 - [ ] No clippy warnings
-- [ ] Benchmarks show acceptable performance
+- [ ] Backward compatibility verified
 - [ ] Tracker updated with progress
 - [ ] This prompt updated for next session
-- [ ] Commit: `feat(tape-storage): add filesystem and memory storage providers`
+- [ ] Commit: `feat(tape-storage): integrate storage providers with public API`
 
 ## Notes
 
 - **USE THE WORKTREE**: All shadowcat code changes in `shadowcat-tape-storage-providers`
-- Phase 1 provides solid foundation - build on it
-- Filesystem extraction is critical - must not break existing users
-- Memory provider is for testing only - make this VERY clear in code
-- Cloud providers (S3, Azure, etc.) will be external crates - keep this in mind for trait design
-- Test thoroughly - these are the only providers shipping with core
+- Phase 2 providers are working well - filesystem and memory both tested
+- Focus on maintaining backward compatibility
+- Registry is already thread-safe and ready for use
+- Consider how external providers will register themselves
 - **When updating this prompt**: Always include the worktree reminder for next session
 
 ---
 
 *Remember: 
 1. **WORK IN THE WORKTREE** - `cd shadowcat-tape-storage-providers` first!
-2. Phase 1 abstractions are complete - now implement concrete providers
-3. Backward compatibility is non-negotiable for filesystem
-4. SQLite can be optimized without legacy constraints  
+2. Phase 2 is complete - all providers working and tested
+3. Integration should be seamless for existing users
+4. External providers will use the same registration API
 5. When creating the next session prompt, include the worktree reminder*
