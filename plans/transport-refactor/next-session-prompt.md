@@ -1,248 +1,267 @@
-# Next Session: Phase 4 Critical Fixes & Completion (18h)
+# Next Session: Phase 4 Proxy Integration & Testing (15h)
 
-## 📋 Current Status (2025-08-14)
+## 📋 Current Status (2025-08-14 - Session 2 Complete)
 
-### Phase 4 Implementation Review
-- ✅ **D.1 & D.2 Complete**: Directional transports implemented
-- 📊 **Code Review Grade: B+** (needs critical fixes for production)
-- ⚠️ **Critical Issues Found**: Panicking code paths that must be fixed
-- 🔧 **8 TODOs**: Non-blocking but tracked for Phase 6
+### Phase 4 Critical Fixes Complete ✅
+- ✅ **C.1 Complete**: All `.unwrap()` replaced with safe error handling
+- ✅ **C.2 Complete**: All `.expect()` replaced with Result returns  
+- ✅ **A.1 Complete**: Session ID mutability added
+- ✅ **A.3 Complete**: Comprehensive error context added
+- 🎆 **Code Review Grade: A-** (upgraded from B+)
+- 🎯 **865 tests passing, zero clippy warnings**
 
-### Test Status
-- ✅ 865 total tests passing
-- ✅ 12 directional transport unit tests passing
-- ✅ Zero clippy warnings (current code)
-- ⚠️ Missing integration tests
-- ⚠️ Missing mock implementations
+### What's Done
+- **10 hours completed** in Phase 4:
+  - 1h: Fixed timestamp `.unwrap()` calls (9 locations)
+  - 2h: Fixed HTTP client `.expect()` calls (6 constructors)
+  - 2h: Added session ID mutability
+  - 2h: Added comprehensive error context
+  - 3h: Analysis and documentation for D.3
 
-## 🚨 Critical Fixes Required (Must complete before D.3)
+### What's Next
+- **15 hours remaining** in Phase 4:
+  - 6h: D.3 - Proxy integration (analyzed, ready to implement)
+  - 3h: D.4.3 - Mock transport implementations
+  - 4h: D.4.1 - Integration tests
+  - 1h: D.4.2 - Documentation
+  - 1h: Final validation and cleanup
 
-### C.1: Fix `.unwrap()` in Timestamp Generation (1h)
-**Impact**: Can panic in production if system clock is before UNIX_EPOCH
+## 🎯 D.3 Proxy Integration Plan (Ready to Implement)
 
-**Files & Lines**:
-- `src/transport/directional/mod.rs`: lines 152-154, 222-224
-- `src/transport/directional/incoming.rs`: lines 81-83, 196-198, 336-338
-- `src/transport/directional/outgoing.rs`: lines 112-114, 219-221, 339-341
+### D.3: Update Proxies to Use Directional Transports (6h)
+**Status**: Analysis complete, implementation plan ready
+**Task File**: `tasks/D.3-proxy-integration.md`
 
-**Fix**:
+**Key Changes Required**:
+1. **ForwardProxy** (2h):
+   - Change client transport from `Transport` to `IncomingTransport`
+   - Change server transport from `Transport` to `OutgoingTransport`
+   - Update method calls:
+     - `client.connect()` → `client.accept()`
+     - `client.receive()` → `client.receive_request()`
+     - `client.send()` → `client.send_response()`
+     - Server side uses `connect()`, `send_request()`, `receive_response()`
+
+2. **ReverseProxy** (2h):
+   - Similar changes with appropriate transport directions
+   - More complex due to HTTP routing logic
+
+3. **Transport Factory** (1h):
+   - Create factory methods for directional transports
+   - Type-safe builders for each transport type
+
+4. **CLI Integration** (1h):
+   - Update main.rs to use new factory methods
+   - Maintain backward compatibility
+
+### D.4.3: Create Mock Transport Implementations (3h)
+**Purpose**: Enable testing without real transports
+
+**Mock Types to Create**:
 ```rust
-// Replace all instances of:
-timestamp_ms: std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .unwrap()
-    .as_millis() as u64,
+// src/transport/directional/mock.rs
+pub struct MockIncomingTransport {
+    requests: VecDeque<MessageEnvelope>,
+    responses: Vec<MessageEnvelope>,
+    accepting: bool,
+    session_id: SessionId,
+}
 
-// With:
-timestamp_ms: std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .unwrap_or_else(|_| std::time::Duration::from_secs(0))
-    .as_millis() as u64,
-```
-
-### C.2: Fix `.expect()` in HTTP Client Creation (2h)
-**Impact**: Panics on invalid URLs - unacceptable for proxy handling user input
-
-**Files & Lines**:
-- `src/transport/directional/outgoing.rs`: lines 148, 161, 174, 256, 269, 282
-
-**Fix**:
-```rust
-// Change constructors to return Result:
-pub fn new(target_url: String) -> TransportResult<Self> {
-    let raw = HttpRawClient::new(target_url.clone())
-        .map_err(|e| TransportError::InvalidConfiguration(
-            format!("Invalid target URL: {e}")
-        ))?;
-    // ...
-    Ok(Self { raw, protocol, session_id, target_url })
+pub struct MockOutgoingTransport {
+    requests: Vec<MessageEnvelope>,
+    responses: VecDeque<MessageEnvelope>,
+    connected: bool,
+    session_id: SessionId,
 }
 ```
 
-## 🔧 API Improvements (Required for proxy integration)
+### D.4.1: Integration Tests (4h)
+**Test Scenarios**:
+1. `test_stdio_to_subprocess_flow`
+2. `test_http_to_http_flow`
+3. `test_streamable_http_full_flow`
+4. `test_proxy_with_directional_transports`
+5. `test_session_id_propagation`
+6. `test_error_propagation`
+7. `test_transport_lifecycle`
 
-### A.1: Add Session ID Mutability (2h)
-**Impact**: Required for proxy to manage sessions correctly
+## 📝 Next Session Task Order
 
-**Implementation**:
-```rust
-// Add to IncomingTransport and OutgoingTransport traits:
-fn set_session_id(&mut self, session_id: SessionId);
+### Priority 1: Proxy Integration (6h)
+1. **Create Compatibility Adapters** (30 min)
+   - Allows gradual migration without breaking everything
+   - Transport → IncomingTransport adapter
+   - Transport → OutgoingTransport adapter
 
-// Implement in all concrete types
-```
+2. **Update ForwardProxy** (2h)
+   - Change type parameters to use directional traits
+   - Update all transport method calls
+   - Test with existing integration tests
 
-### A.2: Implement Missing Public Accessors (3h)
-**Impact**: 8 TODOs that affect functionality
+3. **Update ReverseProxy** (2h)
+   - Similar changes but for reverse proxy flow
+   - Handle HTTP routing complexity
 
-**TODOs to resolve**:
-1. HttpRawServer bind address accessor (currently hardcoded "127.0.0.1:8080")
-2. HttpRawServer header extraction (needed for session ID from headers)
-3. StreamableHttpRawServer bind address accessor (currently hardcoded)
-4. StreamableHttpRawServer streaming state tracking (for is_streaming())
-5. HttpRawClient header support (custom headers in requests)
-6. StreamableHttpRawClient header support (custom headers in requests)
-7. StreamableHttpRawClient SSE mode switching (start_streaming())
-8. Session management for streaming (incomplete current_session logic)
+4. **Create Transport Factory** (1h)
+   - Centralized transport creation
+   - Type-safe builders
 
-### A.3: Add Proper Error Context (2h)
-**Impact**: Critical for debugging production issues
+5. **Update CLI** (30 min)
+   - Use new factory methods
+   - Maintain command compatibility
 
-**Fix all error returns to include context**:
-```rust
-.map_err(|e| TransportError::ConnectionFailed(
-    format!("Failed to connect to {}: {}", self.target_url, e)
-))?;
-```
+### Priority 2: Testing Infrastructure (7h)
+1. **Mock Implementations** (3h)
+   - MockIncomingTransport
+   - MockOutgoingTransport
+   - Controllable behavior for testing
 
-## 📝 Phase 4 Task Completion Order
+2. **Integration Tests** (4h)
+   - Full proxy flow tests
+   - Transport combination tests
+   - Error propagation tests
 
-### Session 1: Critical Fixes (5h)
-1. **C.1**: Fix `.unwrap()` calls (1h)
-2. **C.2**: Fix `.expect()` calls and make constructors return Result (2h)
-3. **A.1**: Add session ID mutability (2h)
-4. Run all tests, ensure no regressions
+### Priority 3: Documentation & Cleanup (2h)
+1. **Documentation** (1h)
+   - Update module docs
+   - Add usage examples
+   - Document migration path
 
-### Session 2: API Improvements & D.3 (8h)
-1. **A.3**: Add error context (2h)
-2. **D.3**: Update proxy to use new transports (3h)
-   - Modify ForwardProxy to use IncomingTransport and OutgoingTransport
-   - Update ReverseProxy similarly
-   - Update transport factory methods
-   - Integrate with SessionManager
-3. **D.4.3**: Create mock transport implementations (3h)
+2. **Cleanup** (1h)
+   - Remove old Transport usage
+   - Remove compatibility adapters
+   - Final validation
 
-### Session 3: Testing & Documentation (5h)
-1. **D.4.1**: Create integration tests (4h)
-   - `test_stdio_incoming_to_subprocess_outgoing`
-   - `test_http_incoming_to_http_outgoing`
-   - `test_streamable_http_full_flow`
-   - `test_session_id_propagation`
-   - `test_error_propagation`
-2. **D.4.2**: Add builder pattern documentation (1h)
+## 📊 Implementation Strategy
 
-## 📊 Key Files to Modify
+### Migration Approach
+**Use Adapters for Gradual Migration**:
+- Keep proxies working during refactor
+- Test each component independently
+- Remove adapters only after full validation
 
-### Critical Fix Files
-- `src/transport/directional/mod.rs`
-- `src/transport/directional/incoming.rs`
-- `src/transport/directional/outgoing.rs`
+### Key Files to Modify
+- `src/proxy/forward.rs` (lines 112-120, 717-726)
+- `src/proxy/reverse.rs` (HTTP routing logic)
+- `src/transport/factory.rs` (new file)
+- `src/transport/directional/adapters.rs` (temporary)
+- `src/main.rs` (CLI integration)
 
-### Proxy Integration Files (D.3)
-- `src/proxy/forward.rs`
-- `src/proxy/reverse.rs`
-- `src/transport/factory.rs`
-
-### New Test Files
-- `tests/integration/directional_transport_test.rs`
+### New Files to Create
 - `src/transport/directional/mock.rs`
+- `tests/integration/directional_proxy_test.rs`
 
-## ✅ Success Criteria for Phase 4 Completion
+## ✅ Success Criteria
 
-### Must Have (Before Phase 5)
-- [ ] No `.unwrap()` or `.expect()` in production code paths
-- [ ] All public APIs return `Result` types
-- [ ] Session IDs can be updated for proxy scenarios
+### Already Complete ✅
+- [x] No `.unwrap()` or `.expect()` in production code paths
+- [x] All public APIs return `Result` types
+- [x] Session IDs can be updated for proxy scenarios
+- [x] Error messages include sufficient context
+- [x] 865 tests passing, zero clippy warnings
+
+### Must Complete This Session
 - [ ] ForwardProxy uses new directional transports
 - [ ] ReverseProxy uses new directional transports
-- [ ] Integration tests for all transport combinations
 - [ ] Mock implementations for testing
-- [ ] Error messages include sufficient context
+- [ ] Integration tests for proxy flows
+- [ ] Transport factory implementation
+- [ ] CLI updated to use new transports
 
-### Nice to Have (Can defer to Phase 6)
-- [ ] All 8 TODOs resolved (currently tracked for Phase 6)
-- [ ] Connection pooling for HTTP clients
+### Deferred to Phase 6
+- [ ] All 8 TODOs (non-blocking, tracked)
+- [ ] Connection pooling
 - [ ] Transport context caching
 - [ ] Full streaming state management
 
-## 🚀 Commands to Run First
+## 🚀 Commands to Run
 
 ```bash
-# Verify current state
-cargo test transport::directional --lib
-cargo test --lib  # Should show 865+ tests passing
+# Starting baseline (already passing)
+cargo test --lib  # 865 tests passing
+cargo clippy --all-targets -- -D warnings  # Zero warnings
 
-# After critical fixes
-cargo clippy --all-targets -- -D warnings
-cargo test --no-run  # Compile check
-
-# After each major change
+# After proxy changes
+cargo test proxy::
 cargo test transport::directional
-cargo test --test transport_regression_suite
+
+# After mock implementations
+cargo test transport::directional::mock
+
+# After integration tests
+cargo test --test directional_proxy_test
+
+# Final validation
+cargo test
+cargo clippy --all-targets -- -D warnings
 ```
 
-## 📅 Phase Timeline
+## 🎯 Key Risks & Mitigations
 
-### Phase 4 Extended (Current)
-- Original: 14h
-- With fixes: 25h total
-- Completed: ~8h (D.1, D.2)
-- Remaining: ~17h
+### Risk 1: Breaking Proxy Functionality
+**Mitigation**: Use adapters for gradual migration, extensive testing
 
-### Phase 5: Migration (Next)
-- Duration: 11h
-- Dependencies: C.1, C.2, A.1, D.3
-- Focus: Migrate proxies to new transports
+### Risk 2: Complex Message Flow Changes
+**Mitigation**: Careful mapping documented in D.3 task file
 
-### Phase 6: Raw Transport Enhancements (Future)
-- Duration: 16h
-- Focus: Resolve 8 TODOs, add missing features
+### Risk 3: Performance Regression
+**Mitigation**: Benchmark before/after, use same underlying transports
 
-### Phase 7: Advanced Features (Future)
-- Duration: 17h
-- Focus: Batch support, streaming optimizations, metrics
+### Risk 4: Session Management Issues
+**Mitigation**: Session ID mutability already implemented (A.1)
 
-## 🎯 Priority Order
-
-1. **Immediate** (Before anything else):
-   - C.1: Fix `.unwrap()` 
-   - C.2: Fix `.expect()`
-   - A.1: Session mutability
-
-2. **With D.3** (Proxy integration):
-   - A.3: Error context
-   - D.4.3: Mock transports
-
-3. **Complete Phase 4**:
-   - D.4.1: Integration tests
-   - D.4.2: Documentation
-
-4. **Defer to Phase 6**:
-   - A.2: Missing accessors (8 TODOs)
-   - P.1: Performance optimizations
-   - P.2: Connection pooling
-
-## 📝 Notes from Code Review
+## 📝 Implementation Notes
 
 ### What's Working Well ✅
-- Clean trait hierarchy (IncomingTransport vs OutgoingTransport)
-- Good type safety with Arc<dyn ProtocolHandler>
-- Generic implementations for code reuse
-- Proper async patterns with no deadlock risks
+- Clean trait hierarchy fully implemented
+- All safety issues resolved (no panics)
+- Session management ready for proxy integration
+- Comprehensive error context throughout
 
-### Key Issues to Address 🔧
-- **Safety**: Remove all panicking code paths
-- **API**: Add session mutability for proxy
-- **Testing**: Need integration tests and mocks
-- **Documentation**: Add usage examples
+### Architecture Decisions
+- **Adapters**: Temporary compatibility layer for safe migration
+- **Factory Pattern**: Centralized transport creation
+- **Mock Strategy**: Controllable test doubles for all scenarios
 
-### Technical Debt (Tracked) 📋
-- 8 TODOs deferred to Phase 6 (non-blocking)
-- Performance optimizations identified but not critical
-- ProcessManager not integrated (works without it)
+### Migration Path
+1. Add adapters (don't break anything)
+2. Update proxies (use directional traits)
+3. Test thoroughly (with mocks and integration tests)
+4. Remove old code (clean up adapters)
 
-## 🔄 Next Session Focus
+## 🔄 Session Focus
 
-**Primary Goal**: Get Phase 4 to production-ready state
-1. Fix all critical safety issues (C.1, C.2)
-2. Add session mutability (A.1)
-3. Complete proxy integration (D.3)
-4. Add comprehensive tests (D.4.1, D.4.3)
+**Primary Goal**: Complete proxy integration with directional transports
+1. Implement D.3 using the detailed task plan
+2. Create mock transports for testing
+3. Add integration tests for proxy flows
+4. Update CLI to use new transport factory
 
-**Success Metric**: Code review grade A (no panics, proper error handling, tested)
+**Success Metrics**:
+- ForwardProxy and ReverseProxy use directional transports
+- All existing tests still pass
+- New integration tests validate directional flow
+- Clean removal of old Transport usage
 
 ---
 
-**Last Updated**: 2025-08-14 (Post code review)
-**Session Time**: Estimated 17-18 hours remaining
-**Next Phase**: Phase 5 - Migration and Cleanup (11h)
+**Last Updated**: 2025-08-14 (Session 2 complete - critical fixes done)
+**Session Time**: Estimated 15 hours remaining for proxy integration
+**Completed**: 10 hours (safety fixes + error context)
+**Next Phase**: Phase 5 - Migration and Cleanup (11h) after D.3 complete
+
+## Resources
+
+### Task Files
+- **D.3 Implementation Plan**: `tasks/D.3-proxy-integration.md`
+- **Main Tracker**: `transport-refactor-tracker.md`
+
+### Key Commits
+- `7c04da3`: Eliminated panic paths, added session mutability
+- `b17cd55`: Added comprehensive error context
+
+### Current Code Quality
+- **Grade**: A- (upgraded from B+)
+- **Tests**: 865 passing
+- **Clippy**: Zero warnings
+- **Safety**: No panic paths in production code
