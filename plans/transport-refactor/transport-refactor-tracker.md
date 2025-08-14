@@ -4,9 +4,9 @@
 
 This tracker manages the refactoring of Shadowcat's transport layer to introduce clearer `IncomingTransport` and `OutgoingTransport` abstractions, addressing current architectural confusion and enabling proper support for MCP's Streamable HTTP protocol.
 
-**Last Updated**: 2025-08-14 (Session 7)  
+**Last Updated**: 2025-08-14 (Session 8)  
 **Total Estimated Duration**: 75-85 hours (extended for complete migration)  
-**Status**: COMPLETE - Old Transport system removed entirely  
+**Status**: COMPLETE - Old Transport system removed, resource cleanup issues fixed  
 **Priority**: N/A - Refactor complete
 
 ## Problem Statement
@@ -271,14 +271,31 @@ Understand the current state and prepare for safe refactoring.
 - ✅ Zero clippy warnings
 - **Final Status**: Transport refactor 100% complete - single, clean directional transport architecture
 
-### Phase 8: Test Coverage Analysis (Next Session - 5h)
+### Phase 8: Resource Cleanup Fixes (Session 8 - Complete)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
-| 8.1 | Analyze deleted test files | 1h | | ⬜ | Review what was tested in deleted files |
-| 8.2 | Map test coverage to new architecture | 2h | 8.1 | ⬜ | Identify gaps in directional transport tests |
-| 8.3 | Create missing test cases | 2h | 8.2 | ⬜ | Ensure all scenarios are covered |
+| 8.1 | Fix StdioRawIncoming task spawning | 1h | | ✅ Complete | Deferred task spawning to connect() |
+| 8.2 | Fix ConnectionPool shutdown | 2h | | ✅ Complete | Added shutdown() method and notify mechanism |
+| 8.3 | Fix PooledConnection detached tasks | 2h | | ✅ Complete | Channel-based return mechanism |
 
-**Phase 8 Total**: 5 hours
+**Phase 8 Total**: 5 hours complete
+
+**Phase 8 Accomplishments (2025-08-14)**:
+- ✅ Fixed StdioRawIncoming spawning tasks in constructor - now deferred to connect()
+- ✅ Added proper shutdown mechanism to ConnectionPool with notify channel
+- ✅ Replaced PooledConnection detached task spawning with channel-based approach
+- ✅ All examples now exit cleanly without hanging
+- ✅ 788 unit tests passing, zero clippy warnings
+- **Resource Management**: All major resource cleanup issues resolved
+
+### Phase 9: Test Coverage Analysis (Next Session - 5h)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| 9.1 | Analyze deleted test files | 1h | | ⬜ | Review what was tested in deleted files |
+| 9.2 | Map test coverage to new architecture | 2h | 9.1 | ⬜ | Identify gaps in directional transport tests |
+| 9.3 | Create missing test cases | 2h | 9.2 | ⬜ | Ensure all scenarios are covered |
+
+**Phase 9 Total**: 5 hours
 
 **Deleted Test Files to Analyze**:
 - src/transport/size_limit_tests.rs - Message size limit validation
@@ -293,7 +310,7 @@ Understand the current state and prepare for safe refactoring.
 - tests/integration_api_mock.rs - Updated but may need review
 - tests/version_negotiation_test.rs - Updated but may need review
 
-### Phase 9: Raw Transport Enhancements (Future)
+### Phase 10: Raw Transport Enhancements (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.1.1 | HttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
@@ -306,9 +323,9 @@ Understand the current state and prepare for safe refactoring.
 | P.1 | Transport context caching | 2h | | ⬜ | Performance optimization |
 | P.2 | HTTP connection pooling | 4h | | ⬜ | Performance optimization |
 
-**Phase 9 Total**: 16 hours
+**Phase 10 Total**: 16 hours
 
-### Phase 10: Advanced Features (Future)
+### Phase 11: Advanced Features (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.2 | ProcessManager integration | 4h | | ⬜ | Currently not used by SubprocessOutgoing |

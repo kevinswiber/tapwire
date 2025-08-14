@@ -1,7 +1,15 @@
 # Next Session: Test Coverage Analysis
 
 ## Context
-The transport refactor is complete (Session 7), but we deleted several test files during the cleanup. We need to analyze what test coverage was lost and ensure all important scenarios are still tested in the new directional transport architecture.
+The transport refactor is complete (Sessions 7-8). Session 7 removed the old Transport system entirely. Session 8 fixed critical resource cleanup issues that were causing programs to hang on exit. We deleted several test files during the cleanup and need to ensure all important scenarios are still tested.
+
+## Previous Session (Session 8) Accomplishments
+- ✅ Fixed StdioRawIncoming task spawning - deferred to connect() method
+- ✅ Added proper shutdown mechanism to ConnectionPool with notify channel
+- ✅ Replaced PooledConnection detached tasks with channel-based approach
+- ✅ All examples now exit cleanly without hanging
+- ✅ 788 unit tests passing, zero clippy warnings
+- ✅ Updated known-issues.md - all resource cleanup issues resolved
 
 ## Objective
 Analyze deleted test files to ensure we haven't lost important test coverage, and create any missing tests for the new IncomingTransport/OutgoingTransport system.
@@ -62,7 +70,8 @@ For each deleted test file:
 
 ## References
 - Tracker: `plans/transport-refactor/transport-refactor-tracker.md`
-- See Phase 8 in tracker for detailed task breakdown
+- See Phase 9 in tracker for detailed task breakdown
+- Known issues: `shadowcat/docs/known-issues.md` (all fixed)
 
 ## Note
-The transport refactor is functionally complete with 788 unit tests passing. This session is about ensuring we haven't lost important test coverage during the cleanup.
+The transport refactor and resource cleanup are functionally complete with 788 unit tests passing. This session is about ensuring we haven't lost important test coverage during the cleanup.
