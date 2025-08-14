@@ -4,9 +4,30 @@
 
 This tracker coordinates the migration of Shadowcat's tape recording format from monolithic JSON files to a streaming-friendly JSON Lines format. This change will enable better memory efficiency, streaming capabilities, and resilience for long-running MCP session recordings.
 
-**Last Updated**: 2025-08-13  
+**Last Updated**: 2025-08-14  
 **Total Estimated Duration**: 16-24 hours  
 **Status**: Planning
+
+## IMPORTANT: Git Worktree Configuration
+
+**🚨 CRITICAL**: All work for this feature MUST be done in a dedicated git worktree to avoid conflicts with main development.
+
+### Worktree Setup
+- **Worktree Directory**: `shadowcat-tape-format-json-lines/`
+- **Branch Name**: `feat/tape-format-json-lines`
+- **Parent Directory**: Same level as main `shadowcat/` directory
+
+### Working Directory Commands
+```bash
+# Navigate to the worktree (ALWAYS use this for development)
+cd shadowcat-tape-format-json-lines
+
+# Verify you're in the correct worktree
+git worktree list
+git branch --show-current  # Should show: feat/tape-format-json-lines
+```
+
+**Note for NEXT_SESSION_PROMPT.md**: Always include a reminder that work must be done in the `shadowcat-tape-format-json-lines` worktree directory, NOT in the main shadowcat directory.
 
 ## Goals
 
