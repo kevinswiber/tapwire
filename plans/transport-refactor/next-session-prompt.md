@@ -1,77 +1,82 @@
-# Next Session: Test Coverage Analysis
+# Next Session: Builder Pattern Review and Subprocess Tests
 
 ## Context
-The transport refactor is complete (Sessions 7-8). Session 7 removed the old Transport system entirely. Session 8 fixed critical resource cleanup issues that were causing programs to hang on exit. We deleted several test files during the cleanup and need to ensure all important scenarios are still tested.
+Session 10 successfully fixed two critical security vulnerabilities (memory exhaustion and constructor panics) but uncovered an architectural inconsistency in the builder pattern. Additionally, subprocess tests are still failing and need attention.
 
-## Previous Session (Session 8) Accomplishments
-- ✅ Fixed StdioRawIncoming task spawning - deferred to connect() method
-- ✅ Added proper shutdown mechanism to ConnectionPool with notify channel
-- ✅ Replaced PooledConnection detached tasks with channel-based approach
-- ✅ All examples now exit cleanly without hanging
-- ✅ 788 unit tests passing, zero clippy warnings
-- ✅ Updated known-issues.md - all resource cleanup issues resolved
+## Previous Session (Session 10) Accomplishments
+- ✅ Implemented message size limits in all directional transports
+- ✅ Added `with_max_message_size()` builder method to all transports
+- ✅ Fixed constructor panics - SubprocessOutgoing::new() now returns Result
+- ✅ Updated all call sites to handle Result type properly
+- ✅ Tests verify size limits and constructor validation work correctly
+- ✅ Two critical security vulnerabilities fixed
 
-## Objective
-Analyze deleted test files to ensure we haven't lost important test coverage, and create any missing tests for the new IncomingTransport/OutgoingTransport system.
+## Architectural Concern: Builder Pattern Consistency
+Current pattern creates inconsistency:
+```rust
+// Constructor returns Result
+let transport = SubprocessOutgoing::new(cmd)?;
 
-## Files Deleted (from git diff --name-only 298b72a)
-```
-src/transport/size_limit_tests.rs
-src/transport/validation_test.rs
-tests/integration_forward_proxy_sse.rs
-tests/pause_resume_test.rs
-tests/sse_interceptor_test.rs
-tests/sse_transport_test.rs
-tests/transport_regression_suite.rs
+// But builder method returns Self
+let transport = SubprocessOutgoing::new(cmd)?.with_max_message_size(1024);
 ```
 
-## Modified Test Files
+Should builder methods also return Result for consistency?
+```rust
+// Option 1: Builder methods return Result
+let transport = SubprocessOutgoing::new(cmd)?
+    .with_max_message_size(1024)?
+    .with_timeout(5000)?;
+
+// Option 2: Separate builder pattern
+let transport = SubprocessOutgoing::builder()
+    .command(cmd)
+    .max_message_size(1024)
+    .timeout(5000)
+    .build()?;  // Validation happens here
 ```
-tests/integration_api_mock.rs
-tests/version_negotiation_test.rs
-```
 
-## Tasks (5 hours)
+## Tasks (4-5 hours)
 
-### 1. Analyze Deleted Test Coverage (1h)
-For each deleted test file:
-- Review what scenarios were being tested
-- Document the test's purpose and importance
-- Note any critical functionality that needs coverage
+### 1. Evaluate and Fix Builder Pattern (2h)
+- Review all `with_*` methods in directional transports
+- Decide on consistent pattern:
+  - Option 1: Make builder methods return Result
+  - Option 2: Create separate Builder structs
+  - Option 3: Keep as-is but document the rationale
+- Implement chosen pattern consistently
+- Update tests to match new pattern
 
-### 2. Map to New Architecture (2h)
-- Identify where each test scenario should live in the new architecture
-- Check if equivalent tests already exist for directional transports
-- Create a gap analysis document
+### 2. Verify Resource Cleanup in Raw Transports (1h)
+- Check Drop implementations in all raw transports
+- Verify subprocess termination on drop
+- Check for any spawned tasks that aren't properly joined
+- Test files: `src/transport/raw/tests/subprocess.rs`
 
-### 3. Implement Missing Tests (2h)
-- Write new tests for any critical gaps identified
-- Focus on:
-  - Message size limits
-  - Transport validation
-  - SSE/streaming scenarios (if still relevant)
-  - Pause/resume functionality
-  - Regression scenarios
+### 3. Fix Failing Subprocess Tests (1-2h)
+Fix the 5 failing tests in `src/transport/raw/tests/subprocess.rs`:
+- `test_subprocess_stdin_stdout_communication`
+- `test_subprocess_working_directory`
+- `test_subprocess_environment_variables`
+- `test_subprocess_handle_crash`
+- `test_subprocess_connect_after_drop`
 
-## Key Questions to Answer
-1. **Size Limits**: Are message size limits still enforced in directional transports?
-2. **Validation**: Is transport validation logic covered in the new system?
-3. **SSE/Streaming**: Since we removed SSE transport, is streaming still supported via StreamableHttp?
-4. **Pause/Resume**: Is pause/resume functionality still needed and tested?
-5. **Regression Suite**: What regression scenarios need to be preserved?
+These tests reveal actual bugs in subprocess handling that need fixing.
 
 ## Success Criteria
-- [ ] All deleted test scenarios analyzed
-- [ ] Gap analysis document created
-- [ ] Critical missing tests identified
-- [ ] New tests written for gaps
-- [ ] All tests passing
-- [ ] Documentation updated
+- [ ] Builder pattern is consistent across all transports
+- [ ] All subprocess tests pass (5 currently failing)
+- [ ] Resource cleanup verified with no leaks
+- [ ] Documentation updated to explain builder pattern choice
+- [ ] Zero clippy warnings maintained
+- [ ] All 788+ unit tests passing
 
 ## References
-- Tracker: `plans/transport-refactor/transport-refactor-tracker.md`
-- See Phase 9 in tracker for detailed task breakdown
-- Known issues: `shadowcat/docs/known-issues.md` (all fixed)
+- Tracker: `plans/transport-refactor/transport-refactor-tracker.md` (Phase 10)
+- Test coverage: `plans/transport-refactor/analysis/test-coverage-summary.md`
+- Current failing tests: Run `cargo test --lib transport::raw::tests::subprocess`
 
-## Note
-The transport refactor and resource cleanup are functionally complete with 788 unit tests passing. This session is about ensuring we haven't lost important test coverage during the cleanup.
+## Notes
+- Builder pattern decision impacts API stability - choose carefully
+- Subprocess tests may reveal deeper issues in process management
+- Consider if we need a formal ADR (Architecture Decision Record) for the builder pattern

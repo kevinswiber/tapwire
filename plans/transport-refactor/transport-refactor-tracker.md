@@ -4,10 +4,10 @@
 
 This tracker manages the refactoring of Shadowcat's transport layer to introduce clearer `IncomingTransport` and `OutgoingTransport` abstractions, addressing current architectural confusion and enabling proper support for MCP's Streamable HTTP protocol.
 
-**Last Updated**: 2025-08-14 (Session 8)  
-**Total Estimated Duration**: 75-85 hours (extended for complete migration)  
-**Status**: COMPLETE - Old Transport system removed, resource cleanup issues fixed  
-**Priority**: N/A - Refactor complete
+**Last Updated**: 2025-08-14 (Session 10)  
+**Total Estimated Duration**: 80-90 hours (extended for security fixes)  
+**Status**: Security vulnerabilities fixed, builder pattern review needed  
+**Priority**: High - Builder pattern consistency and subprocess tests
 
 ## Problem Statement
 
@@ -288,14 +288,22 @@ Understand the current state and prepare for safe refactoring.
 - ✅ 788 unit tests passing, zero clippy warnings
 - **Resource Management**: All major resource cleanup issues resolved
 
-### Phase 9: Test Coverage Analysis (Next Session - 5h)
+### Phase 9: Test Coverage Analysis (Session 9 - Complete)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
-| 9.1 | Analyze deleted test files | 1h | | ⬜ | Review what was tested in deleted files |
-| 9.2 | Map test coverage to new architecture | 2h | 9.1 | ⬜ | Identify gaps in directional transport tests |
-| 9.3 | Create missing test cases | 2h | 9.2 | ⬜ | Ensure all scenarios are covered |
+| 9.1 | Analyze deleted test files | 1h | | ✅ Complete | Reviewed 7 deleted files, documented in test-coverage-gaps.md |
+| 9.2 | Map test coverage to new architecture | 2h | 9.1 | ✅ Complete | Created test-implementation-plan.md with mapping |
+| 9.3 | Create missing test cases | 2h | 9.2 | ✅ Complete | 41 tests created across 5 new test files |
 
-**Phase 9 Total**: 5 hours
+**Phase 9 Total**: 5 hours complete
+
+**Phase 9 Accomplishments (2025-08-14)**:
+- ✅ Analyzed all 7 deleted test files for coverage gaps
+- ✅ Created comprehensive test infrastructure for directional transports
+- ✅ Documented 3 critical security vulnerabilities (size limits, panics, resource leaks)
+- ✅ Created 41 test cases across 5 new test files
+- ✅ All tests compile and run (26 pass documenting missing features, 15 fail showing bugs)
+- **Critical Finding**: Transport refactor removed essential security features that must be restored
 
 **Deleted Test Files to Analyze**:
 - src/transport/size_limit_tests.rs - Message size limit validation
@@ -310,7 +318,32 @@ Understand the current state and prepare for safe refactoring.
 - tests/integration_api_mock.rs - Updated but may need review
 - tests/version_negotiation_test.rs - Updated but may need review
 
-### Phase 10: Raw Transport Enhancements (Future)
+### Phase 10: Critical Security Fixes (Session 10 - Complete)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| 10.1 | Implement message size limits | 3h | | ✅ Complete | Added max_message_size to all transports |
+| 10.2 | Fix constructor panics | 2h | | ✅ Complete | SubprocessOutgoing::new() now returns Result |
+| 10.3 | Verify resource cleanup | 2h | | ⬜ Next | Check raw transport cleanup |
+| 10.4 | Fix failing subprocess tests | 2h | 10.3 | ⬜ Next | 5 failing tests in subprocess.rs |
+
+**Phase 10 Total**: 9 hours (5h complete, 4h remaining)
+
+**Phase 10 Accomplishments (2025-08-14)**:
+- ✅ Added configurable message size limits to all directional transports
+- ✅ Added `with_max_message_size()` builder method to all transports
+- ✅ Implemented size checks returning `TransportError::MessageTooLarge`
+- ✅ Changed SubprocessOutgoing::new() to return Result for proper validation
+- ✅ Updated all call sites to handle Result type
+- ✅ Tests verify size limits and constructor validation work correctly
+- **Security**: Two critical vulnerabilities fixed (memory exhaustion, constructor panics)
+
+**Builder Pattern Concerns Identified**:
+- Current pattern: `new()?.with_max_message_size(1024)` returns Self, not Result
+- Inconsistent with `new()` returning Result
+- Should consider: `new()?.with_max_message_size(1024)?` for consistency
+- Alternative: Separate builder that accumulates config then builds with validation
+
+### Phase 11: Raw Transport Enhancements (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.1.1 | HttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
@@ -325,7 +358,7 @@ Understand the current state and prepare for safe refactoring.
 
 **Phase 10 Total**: 16 hours
 
-### Phase 11: Advanced Features (Future)
+### Phase 12: Advanced Features (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.2 | ProcessManager integration | 4h | | ⬜ | Currently not used by SubprocessOutgoing |
