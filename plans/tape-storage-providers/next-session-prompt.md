@@ -12,7 +12,7 @@ git status  # Verify: On branch feat/tape-storage-providers
 
 ## Project Context
 
-Implementing built-in storage providers (filesystem and SQLite) using the core abstractions created in Phase 1.
+Implementing built-in storage providers (filesystem for production and memory for testing) using the core abstractions created in Phase 1. Cloud storage providers will be implemented as external crates.
 
 **Project**: Tape Storage Providers
 **Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
@@ -43,9 +43,9 @@ Implementing built-in storage providers (filesystem and SQLite) using the core a
   - Duration: 3 hours
   - Extract and refactor existing filesystem storage
   
-- **C.2: SQLite Provider** (Ready)
-  - Duration: 4 hours
-  - New implementation using sqlx
+- **C.2: Memory Provider** (Ready)
+  - Duration: 2 hours
+  - Testing-only implementation with warnings for production use
 
 ## Your Mission
 
@@ -68,26 +68,22 @@ Implement the built-in storage providers that will ship with Shadowcat.
    - Configuration validation
    - Unit tests for all operations
 
-### Priority 2: SQLite Provider (4 hours)
+### Priority 2: Memory Provider (2 hours)
 
-1. **Design schema** (30m)
-   - Tapes table with indexes
-   - Metadata as JSON column
-   - Efficient query patterns
+1. **Design data structures** (30m)
+   - HashMap for tape storage
+   - Arc<RwLock> for thread safety
+   - Size tracking and limits
    
-2. **Implement backend** (2h)
+2. **Implement backend** (1h)
    - Full TapeStorageBackend trait
-   - Connection pooling with sqlx
-   - Transaction support
+   - Warning logs for production use
+   - Configurable size limits
    
-3. **Add search capabilities** (1h)
-   - SQL-based search queries
-   - Index optimization
-   - Performance testing
-   
-4. **Factory and tests** (30m)
-   - SqliteProviderFactory
-   - Integration tests
+3. **Factory and tests** (30m)
+   - MemoryProviderFactory with #[cfg(test)] recommendations
+   - Unit tests for all operations
+   - Concurrent access tests
 
 ### Priority 3: Provider Testing Framework (3 hours)
 
@@ -111,8 +107,7 @@ Implement the built-in storage providers that will ship with Shadowcat.
 1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
 2. **Existing Storage**: `shadowcat-tape-storage-providers/src/recorder/storage.rs` - Current filesystem implementation
 3. **Task C.1**: `plans/tape-storage-providers/tasks/C.1-filesystem-provider.md`
-4. **Task C.2**: `plans/tape-storage-providers/tasks/C.2-sqlite-provider.md`
-5. **Core Traits**: `shadowcat-tape-storage-providers/src/recorder/backend/traits.rs` - Interfaces to implement
+4. **Core Traits**: `shadowcat-tape-storage-providers/src/recorder/backend/traits.rs` - Interfaces to implement
 
 ## Working Directory
 
@@ -136,7 +131,7 @@ git status  # Verify: On branch feat/tape-storage-providers
 mkdir -p src/recorder/backend/providers
 touch src/recorder/backend/providers/mod.rs
 touch src/recorder/backend/providers/filesystem.rs
-touch src/recorder/backend/providers/sqlite.rs
+touch src/recorder/backend/providers/memory.rs
 touch src/recorder/backend/providers/tests.rs
 
 # Review existing storage implementation
@@ -150,24 +145,24 @@ vim src/recorder/backend/providers/filesystem.rs
 
 - [ ] Filesystem provider extracted and working
 - [ ] All existing filesystem tests still pass
-- [ ] SQLite provider fully implemented
+- [ ] Memory provider fully implemented with production warnings
 - [ ] Both providers pass conformance tests
-- [ ] No performance regression
+- [ ] No performance regression in filesystem provider
 - [ ] Documentation complete
 
 ## Key Implementation Points
 
 1. Filesystem provider MUST be 100% backward compatible
 2. Use existing TapeStorage code as reference
-3. SQLite schema should be optimized for search
+3. Memory provider should warn loudly if used outside tests
 4. Both providers must be thread-safe
-5. Include connection pooling for SQLite
+5. Design traits to naturally support object storage patterns
 
 ## Deliverables
 
 ### Required
 - `src/recorder/backend/providers/filesystem.rs` - Extracted filesystem provider
-- `src/recorder/backend/providers/sqlite.rs` - New SQLite provider
+- `src/recorder/backend/providers/memory.rs` - Memory provider for testing
 - `src/recorder/backend/providers/tests.rs` - Conformance test suite
 - Updated `src/recorder/backend/providers/mod.rs` - Module exports
 
@@ -185,15 +180,16 @@ vim src/recorder/backend/providers/filesystem.rs
 - [ ] Benchmarks show acceptable performance
 - [ ] Tracker updated with progress
 - [ ] This prompt updated for next session
-- [ ] Commit: `feat(tape-storage): add filesystem and sqlite storage providers`
+- [ ] Commit: `feat(tape-storage): add filesystem and memory storage providers`
 
 ## Notes
 
 - **USE THE WORKTREE**: All shadowcat code changes in `shadowcat-tape-storage-providers`
 - Phase 1 provides solid foundation - build on it
 - Filesystem extraction is critical - must not break existing users
-- SQLite provider is greenfield - design for optimal performance
-- Test thoroughly - these are the default providers users will rely on
+- Memory provider is for testing only - make this VERY clear in code
+- Cloud providers (S3, Azure, etc.) will be external crates - keep this in mind for trait design
+- Test thoroughly - these are the only providers shipping with core
 - **When updating this prompt**: Always include the worktree reminder for next session
 
 ---

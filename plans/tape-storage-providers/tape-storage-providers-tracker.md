@@ -32,7 +32,8 @@ git status  # Should show: On branch feat/tape-storage-providers
 2. **Registry System** - Enable runtime registration of storage providers
 3. **Configuration Flexibility** - Support configuration by provider name in config files
 4. **Clean API** - Design optimal API without legacy constraints (pre-release advantage)
-5. **Built-in Providers** - Include filesystem and SQLite implementations
+5. **Minimal Core** - Ship with filesystem (production) and memory (testing) providers only
+6. **Cloud-Ready Design** - Ensure traits support object storage patterns for external providers
 
 ## Architecture Vision
 
@@ -71,8 +72,13 @@ git status  # Should show: On branch feat/tape-storage-providers
          ▲                    ▲                    ▲
          │                    │                    │
 ┌────────┴─────────┐ ┌───────┴──────────┐ ┌──────┴────────┐
-│FilesystemBackend │ │  SqliteBackend   │ │ CustomBackend │
+│FilesystemBackend │ │  MemoryBackend   │ │ CustomBackend │
+│   (Production)   │ │  (Testing Only)  │ │  (External)   │
 └──────────────────┘ └──────────────────┘ └───────────────┘
+                                           Examples:
+                                           - S3 Provider
+                                           - Azure Blob
+                                           - GCS Provider
 ```
 
 ## Work Phases
@@ -102,15 +108,15 @@ Define the core traits and registry system that will enable pluggable storage.
 **Phase 1 Total**: 8 hours
 
 ### Phase 2: Built-in Providers (Week 2)
-Implement filesystem and SQLite storage providers.
+Implement filesystem and memory storage providers.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | C.1 | **Filesystem Provider** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/C.1-filesystem-provider.md) |
-| C.2 | **SQLite Provider** | 4h | B.1 | ⬜ Not Started | | [Details](tasks/C.2-sqlite-provider.md) |
-| C.3 | **Provider Testing** | 3h | C.1, C.2 | ⬜ Not Started | | [Details](tasks/C.3-provider-testing.md) |
+| C.2 | **Memory Provider (Testing)** | 2h | B.1 | ⬜ Not Started | | For testing only |
+| C.3 | **Provider Testing** | 2h | C.1, C.2 | ⬜ Not Started | | [Details](tasks/C.3-provider-testing.md) |
 
-**Phase 2 Total**: 10 hours
+**Phase 2 Total**: 7 hours
 
 ### Phase 3: Integration (Week 3)
 Update TapeRecorder and public API to use the new system.
@@ -137,10 +143,10 @@ Migrate existing code and create comprehensive documentation.
 |-------|-------------|----------|--------|
 | Phase 0 | Analysis & Investigation | 7.5h | ✅ Complete |
 | Phase 1 | Core Abstractions | 8h | ✅ Complete |
-| Phase 2 | Built-in Providers | 10h | ⬜ Not Started |
+| Phase 2 | Built-in Providers | 7h | ⬜ Not Started |
 | Phase 3 | Integration | 3h | ⬜ Not Started |
 | Phase 4 | Migration & Documentation | 4h | ⬜ Not Started |
-| **Total** | | **32.5 hours** | |
+| **Total** | | **29.5 hours** | |
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -210,13 +216,28 @@ Migrate existing code and create comprehensive documentation.
 
 ## API Design Examples
 
-### Registering a Custom Provider
+### Built-in Providers (In Shadowcat)
 ```rust
-// Define custom backend
+// Filesystem provider (default)
+let shadowcat = Shadowcat::builder()
+    .with_storage("filesystem", json!({
+        "path": "./tapes"
+    }))
+    .build()?;
+
+// Memory provider (testing only)
+#[cfg(test)]
+let shadowcat = Shadowcat::builder()
+    .with_storage("memory", json!({}))
+    .build()?;
+```
+
+### External Provider Example (Separate Crate)
+```rust
+// In external crate: shadowcat-s3-provider
 struct S3Backend { /* ... */ }
 impl TapeStorageBackend for S3Backend { /* ... */ }
 
-// Define factory
 struct S3ProviderFactory;
 impl StorageProviderFactory for S3ProviderFactory {
     fn provider_name(&self) -> &str { "s3" }
@@ -225,7 +246,8 @@ impl StorageProviderFactory for S3ProviderFactory {
     }
 }
 
-// Register with Shadowcat
+// User registers the external provider
+use shadowcat_s3_provider::S3ProviderFactory;
 Shadowcat::register_storage_provider(Arc::new(S3ProviderFactory)).await?;
 ```
 
@@ -257,9 +279,11 @@ let shadowcat = Shadowcat::builder()
 
 - This is a non-breaking change that enhances existing functionality
 - Default behavior (filesystem storage) remains unchanged
-- SQLite provider will use SQLx for async database operations
+- Memory provider is explicitly for testing only - will log warnings if used in production
+- Cloud storage providers (S3, Azure, GCS) will be implemented as external crates
 - Registry is global but can be overridden per Shadowcat instance if needed
-- Consider adding provider capabilities/features discovery in future
+- The trait design explicitly supports object storage patterns (put/get/list/delete)
+- External providers can be community-maintained or official Anthropic crates
 
 ---
 
