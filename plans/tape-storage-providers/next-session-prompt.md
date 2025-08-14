@@ -1,4 +1,4 @@
-# Next Session: Phase 3 - Integration
+# Next Session: Phase 4 - Migration & Documentation
 
 ## 🔴 CRITICAL: Use Git Worktree
 
@@ -12,11 +12,11 @@ git status  # Verify: On branch feat/tape-storage-providers
 
 ## Project Context
 
-Integrating the new storage provider system with the TapeRecorder and public API.
+Create migration utilities and comprehensive documentation for the storage provider system.
 
 **Project**: Tape Storage Providers
 **Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-**Status**: Phase 3 - Integration (Ready to Start)
+**Status**: Phase 4 - Migration & Documentation (Ready to Start)
 **Git Worktree**: `shadowcat-tape-storage-providers` (branch: `feat/tape-storage-providers`)
 
 ## Current Status
@@ -47,52 +47,62 @@ Integrating the new storage provider system with the TapeRecorder and public API
   - All tests passing (11 provider tests)
   - No clippy warnings
 
+- **Phase 3: API Integration** (✅ Completed 2025-08-14)
+  - TapeRecorder updated to use storage backend trait
+  - Factory methods added for provider selection
+  - Public API methods for provider registration
+  - ShadowcatBuilder with_storage() method
+  - Lazy registration of built-in providers
+  - Integration tests for provider switching
+  - Backward compatibility maintained
+  - All tests passing (4 integration tests)
+
 ### What's Ready to Start
-- **D.1: API Integration** (Ready)
-  - Duration: 3 hours
-  - Update TapeRecorder to use new backend system
-  - Add public API for provider registration
-  - Ensure backward compatibility
+- **E.1: Migration Strategy** (Ready)
+  - Duration: 2 hours
+  - Create migration utilities for existing storage
+  - Backward compatibility adapter
+  
+- **E.2: Documentation & Examples** (Ready)
+  - Duration: 2 hours
+  - Comprehensive documentation
+  - Example external provider implementation
 
 ## Your Mission
 
-Integrate the new storage provider system into the public API and TapeRecorder.
+Create migration utilities and comprehensive documentation for the storage provider system.
 
-### Priority 1: API Integration (3 hours)
-
-1. **Update TapeRecorder** (1.5h)
-   - Replace direct TapeStorage usage with backend trait
-   - Add factory method for provider selection
-   - Ensure backward compatibility for default filesystem storage
-   
-2. **Public API** (1h)
-   - Add `register_storage_provider()` to Shadowcat API
-   - Add `with_storage()` to ShadowcatBuilder
-   - Configuration file support for provider selection
-   
-3. **Integration Tests** (30m)
-   - Test provider switching
-   - Test configuration loading
-   - Verify backward compatibility
-
-### Priority 2: Migration Strategy (2 hours)
+### Priority 1: Migration Strategy (2 hours)
 
 1. **Migration Utilities** (1h)
-   - Tool to convert old storage to new format
-   - Backward compatibility adapter
+   - Create tool to convert old storage format to new
+   - Backward compatibility adapter for smooth transition
+   - Auto-detection of legacy storage directories
    
 2. **Migration Documentation** (1h)
    - Step-by-step migration guide
-   - Configuration examples
-   - Troubleshooting section
+   - Configuration examples for all providers
+   - Troubleshooting section for common issues
+
+### Priority 2: Documentation & Examples (2 hours)
+
+1. **API Documentation** (1h)
+   - Document all public APIs with examples
+   - Provider development guide
+   - Best practices for external providers
+   
+2. **Example Implementation** (1h)
+   - Create example S3 provider skeleton
+   - Show proper error handling patterns
+   - Demonstrate async operations
 
 ## Essential Context Files to Read
 
 1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-2. **Task D.1**: `plans/tape-storage-providers/tasks/D.1-api-integration.md`
-3. **Recorder Module**: `shadowcat-tape-storage-providers/src/recorder/mod.rs`
-4. **Main API**: `shadowcat-tape-storage-providers/src/lib.rs`
-5. **Providers**: `shadowcat-tape-storage-providers/src/recorder/backend/providers/`
+2. **Task E.1**: `plans/tape-storage-providers/tasks/E.1-migration-strategy.md`
+3. **Task E.2**: `plans/tape-storage-providers/tasks/E.2-documentation.md`
+4. **Backend Module**: `shadowcat-tape-storage-providers/src/recorder/backend/`
+5. **API Module**: `shadowcat-tape-storage-providers/src/api.rs`
 
 ## Working Directory
 
@@ -124,12 +134,12 @@ cargo test --lib
 
 ## Success Criteria
 
-- [ ] TapeRecorder uses new backend trait
-- [ ] Public API supports provider registration
-- [ ] Configuration files support provider selection
-- [ ] Backward compatibility maintained
-- [ ] All existing tests still pass
-- [ ] Integration tests for provider switching
+- [ ] Migration utility created for existing storage
+- [ ] Backward compatibility adapter implemented
+- [ ] Comprehensive documentation written
+- [ ] Example external provider created
+- [ ] Migration guide completed
+- [ ] All documentation reviewed and accurate
 
 ## Key Implementation Points
 
@@ -142,41 +152,40 @@ cargo test --lib
 ## Deliverables
 
 ### Required
-- Updated `src/recorder/mod.rs` with backend support
-- Updated `src/lib.rs` with public API methods
-- Integration tests in `tests/`
-- Updated configuration handling
+- Migration utility in `src/recorder/backend/migration.rs`
+- Documentation in `docs/storage-providers.md`
+- Example provider in `examples/s3-provider/`
+- Migration guide in `docs/migration-guide.md`
 
 ### Next Session Setup
-- Phase 4: Migration & Documentation
-- Create migration utilities
-- Write comprehensive documentation
+- Project Complete!
+- Ready for PR and merge
 
 ## Definition of Done
 
-- [ ] Task D.1 completed
-- [ ] Public API fully integrated
+- [ ] Task E.1 completed
+- [ ] Task E.2 completed  
+- [ ] Migration utilities created
+- [ ] Documentation comprehensive
 - [ ] All tests passing
 - [ ] No clippy warnings
-- [ ] Backward compatibility verified
-- [ ] Tracker updated with progress
-- [ ] This prompt updated for next session
-- [ ] Commit: `feat(tape-storage): integrate storage providers with public API`
+- [ ] Tracker updated to show completion
+- [ ] Ready for PR: `feat(tape-storage): add pluggable storage provider system`
 
 ## Notes
 
 - **USE THE WORKTREE**: All shadowcat code changes in `shadowcat-tape-storage-providers`
-- Phase 2 providers are working well - filesystem and memory both tested
-- Focus on maintaining backward compatibility
-- Registry is already thread-safe and ready for use
-- Consider how external providers will register themselves
+- Phase 3 integration complete - all APIs working
+- Focus on making migration smooth for existing users
+- Documentation should be comprehensive for external provider developers
+- Consider creating a crate template for external providers
 - **When updating this prompt**: Always include the worktree reminder for next session
 
 ---
 
 *Remember: 
 1. **WORK IN THE WORKTREE** - `cd shadowcat-tape-storage-providers` first!
-2. Phase 2 is complete - all providers working and tested
-3. Integration should be seamless for existing users
-4. External providers will use the same registration API
-5. When creating the next session prompt, include the worktree reminder*
+2. Phase 3 is complete - API integration fully working
+3. Migration utilities should handle edge cases gracefully
+4. Documentation is key for adoption - make it excellent
+5. This is the final phase - aim for production readiness*
