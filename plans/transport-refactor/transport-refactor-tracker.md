@@ -4,10 +4,10 @@
 
 This tracker manages the refactoring of Shadowcat's transport layer to introduce clearer `IncomingTransport` and `OutgoingTransport` abstractions, addressing current architectural confusion and enabling proper support for MCP's Streamable HTTP protocol.
 
-**Last Updated**: 2025-08-14 (Session 4)  
+**Last Updated**: 2025-08-14 (Session 6)  
 **Total Estimated Duration**: 75-85 hours (extended for complete migration)  
-**Status**: Phase 5 Complete - ForwardProxy migrated, old Transport trait remains  
-**Priority**: Critical - Phase 6 needed to complete migration and remove technical debt
+**Status**: Phase 6B Complete - Both ForwardProxy and ReverseProxy migrated to directional transports  
+**Priority**: Low - Core migration complete, old trait removal can be deferred
 
 ## Problem Statement
 
@@ -225,19 +225,29 @@ Understand the current state and prepare for safe refactoring.
 - ⚠️ Integration tests and examples need updates for boxed transports
 - ⚠️ Old Transport trait remains (needed by existing components)
 
-### Phase 6: Complete Transport Migration (Week 4 - Session 5 Partial Complete)
+### Phase 6: Complete Transport Migration (Week 4 - Sessions 5-6 Complete)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | C.1 | Update integration test MockTransport | 3h | | ✅ Complete | Both integration_api_mock.rs and version_negotiation_test.rs updated |
 | C.2 | Update examples to use directional transports | 2h | C.1 | N/A | No examples found in codebase |
-| C.3 | Migrate ReverseProxy to SubprocessOutgoing | 4h | | ⏸️ Blocked | Pool uses StdioTransport, different axum pattern |
-| C.4 | Migrate recording/replay transports | 3h | | ⏸️ Blocked | ReplayTransport still uses old Transport trait |
-| C.5 | Update transport tests | 3h | C.1-C.4 | ✅ Partial | All tests compile, 860 unit tests pass |
-| C.6 | Remove old Transport trait | 2h | C.1-C.5 | ❌ Blocked | Still needed by pool and ReverseProxy |
-| C.7 | Remove old transport implementations | 2h | C.6 | ❌ Blocked | Cannot remove while trait is in use |
+| C.3 | Migrate ReverseProxy to SubprocessOutgoing | 4h | | ✅ Complete | Pool now uses PoolableOutgoingTransport (Session 6) |
+| C.4 | Migrate recording/replay transports | 3h | | ✅ Complete | ReplayTransport now implements directional traits (Session 6) |
+| C.5 | Update transport tests | 3h | C.1-C.4 | ✅ Complete | All tests compile, 860 unit tests pass |
+| C.6 | Remove old Transport trait | 2h | C.1-C.5 | ⏸️ Deferred | Still needed by factory/builders |
+| C.7 | Remove old transport implementations | 2h | C.6 | ⏸️ Deferred | Cannot remove while trait is in use |
 | C.8 | Update documentation | 2h | C.7 | ⏸️ Deferred | Waiting for full migration |
 
-**Phase 6 Actual**: 6h complete, 15h blocked/deferred
+**Phase 6 Actual**: 15h complete, 6h deferred
+
+### Phase 6B: ReverseProxy Migration (Session 6 - Complete)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| 6B.1 | Create PoolableOutgoingTransport | 4h | | ✅ Complete | Wrapper for Box<dyn OutgoingTransport> |
+| 6B.2 | Update ReverseProxy HTTP handler | 4h | 6B.1 | ✅ Complete | process_via_stdio_pooled now uses directional |
+| 6B.3 | Migrate ReplayTransport | 3h | | ✅ Complete | Implements both IncomingTransport and OutgoingTransport |
+| 6B.4 | Fix test ambiguities | 1h | 6B.1-6B.3 | ✅ Complete | All 860 unit tests passing |
+
+**Phase 6B Total**: 12h complete
 
 ### Phase 7: Raw Transport Enhancements (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
@@ -309,29 +319,32 @@ Understand the current state and prepare for safe refactoring.
 3. **Generic implementations**: Code reuse through GenericIncomingTransport/GenericOutgoingTransport
 4. **Async patterns**: Proper use of async_trait with no deadlock risks
 
-## 🚨 Phase 6 Status: Partial Migration Complete (2025-08-14 Session 5)
+## 🎯 Phase 6B Status: Critical Migration Complete (2025-08-14 Session 6)
 
-**Current State**: We have TWO transport systems running in parallel:
-- Old `Transport` trait (used by ReverseProxy pool, ReplayTransport, old implementations)
-- New `IncomingTransport`/`OutgoingTransport` (used by ForwardProxy, all tests updated)
+**Current State**: Core proxy components fully migrated to directional transports:
+- ✅ **ForwardProxy**: Uses Box<dyn IncomingTransport> and Box<dyn OutgoingTransport>
+- ✅ **ReverseProxy**: Pool now uses PoolableOutgoingTransport with SubprocessOutgoing
+- ✅ **ReplayTransport**: Implements both IncomingTransport and OutgoingTransport
+- ⚠️ **Old Transport trait**: Still exists for factory/builders but no longer critical
 
-**What Was Completed in Session 5**:
-1. ✅ **All test MockTransports fixed** - Both integration_api_mock.rs and version_negotiation_test.rs now implement directional traits
-2. ✅ **Test calls updated** - All proxy.start() calls now use Box::new() for transports
-3. ✅ **860 unit tests passing** - Core functionality verified
-4. ✅ **Integration tests compile** - All test files now build successfully
+**What Was Completed in Session 6**:
+1. ✅ **Created PoolableOutgoingTransport** - New wrapper allowing Box<dyn OutgoingTransport> pooling
+2. ✅ **Migrated ReverseProxy pool** - process_via_stdio_pooled now uses SubprocessOutgoing
+3. ✅ **Added directional traits to ReplayTransport** - Can act as both incoming and outgoing
+4. ✅ **Fixed test ambiguities** - All 860 unit tests passing with disambiguated calls
+5. ✅ **Updated all pool references** - create_outgoing_pool() replaces create_stdio_pool()
 
-**Why Full Migration Is Blocked**:
-1. **ReverseProxy uses connection pooling** - PoolableStdioTransport wraps old StdioTransport
-2. **Different architectural pattern** - ReverseProxy uses axum HTTP server pattern, not compatible with simple migration
-3. **Production dependency** - Pool system actively used in production, needs careful migration
-4. **ReplayTransport** - Still implements old Transport trait
+**Architectural Achievement**:
+- Both major proxy types (Forward and Reverse) now use clean directional architecture
+- Connection pooling works with new transport system
+- No more critical dependencies on old Transport trait
+- System can operate with both old and new transports coexisting
 
-**Technical Debt Assessment**:
-- Having dual systems is confusing but currently necessary
-- ForwardProxy fully migrated (clean)
-- ReverseProxy migration requires architectural changes to pool system
-- Migration path exists but needs dedicated effort
+**Remaining Technical Debt** (Non-Critical):
+- Transport factory and builders still create old transport types
+- Some old transports (HttpTransport, SseTransport) only implement old trait
+- Dead code like non-pooled process_via_stdio function
+- Old Transport trait can be removed once factory/builders are migrated or removed
 
 ## Risk Assessment
 
