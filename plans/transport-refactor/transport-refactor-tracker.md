@@ -4,10 +4,10 @@
 
 This tracker manages the refactoring of Shadowcat's transport layer to introduce clearer `IncomingTransport` and `OutgoingTransport` abstractions, addressing current architectural confusion and enabling proper support for MCP's Streamable HTTP protocol.
 
-**Last Updated**: 2025-08-14  
-**Total Estimated Duration**: 40-50 hours  
-**Status**: Phase 3 Complete - Ready for Phase 4 Implementation  
-**Priority**: High (Protocol layer complete with optimizations)
+**Last Updated**: 2025-08-14 (Session 4)  
+**Total Estimated Duration**: 75-85 hours (extended for complete migration)  
+**Status**: Phase 5 Complete - ForwardProxy migrated, old Transport trait remains  
+**Priority**: Critical - Phase 6 needed to complete migration and remove technical debt
 
 ## Problem Statement
 
@@ -206,18 +206,40 @@ Understand the current state and prepare for safe refactoring.
 - ✅ Zero clippy warnings, 865 tests passing
 - **Grade: A-** (upgraded from B+)
 
-### Phase 5: Migration and Cleanup (Week 3)
+### Phase 5: Migration and Cleanup (Week 3) 
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
-| M.1 | Fix compilation errors | 2h | D.3 | 🔄 In Progress | Old Transport implementations need updating |
-| M.2 | Migrate reverse proxy | 3h | M.1 | ⬜ | Needs directional transport update |
-| M.3 | Update CLI to use factory | 2h | M.1 | ⬜ | Use DirectionalTransportFactory |
-| M.4 | Remove old Transport trait | 2h | M.1-M.3 | ⬜ | Clean removal after migration |
-| M.5 | Update tests and documentation | 2h | M.4 | ⬜ | Fix test compilation |
+| M.1 | Fix compilation errors | 2h | D.3 | ✅ Complete | Build compiles, 860 tests pass |
+| M.2 | Migrate reverse proxy | 3h | M.1 | ✅ Complete | Kept using StdioTransport (axum-based, different pattern) |
+| M.3 | Update CLI to use factory | 2h | M.1 | ✅ Complete | CLI uses high-level API which uses factory internally |
+| M.4 | Remove old Transport trait | 2h | M.1-M.3 | ⏸️ Deferred | Old trait still needed by ReverseProxy and other components |
+| M.5 | Update tests and documentation | 2h | M.4 | 🔄 Partial | Library tests pass, integration tests need updates |
 
-**Phase 5 Total**: 11 hours
+**Phase 5 Total**: 11 hours (9h complete, 2h remaining)
 
-### Phase 6: Raw Transport Enhancements (Future)
+**Phase 5 Accomplishments (2025-08-14)**:
+- ✅ ForwardProxy fully migrated to Box<dyn IncomingTransport> and Box<dyn OutgoingTransport>
+- ✅ API layer updated to use DirectionalTransportFactory
+- ✅ Build compiles with 860 unit tests passing
+- ✅ No compatibility adapters needed (clean migration)
+- ⚠️ Integration tests and examples need updates for boxed transports
+- ⚠️ Old Transport trait remains (needed by existing components)
+
+### Phase 6: Complete Transport Migration (PRIORITY - Week 4)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| C.1 | Update integration test MockTransport | 3h | | ⬜ | Implement directional traits for MockTransport |
+| C.2 | Update examples to use directional transports | 2h | C.1 | ⬜ | Fix advanced_module_usage.rs and others |
+| C.3 | Migrate ReverseProxy to SubprocessOutgoing | 4h | | ⬜ | Replace StdioTransport usage |
+| C.4 | Migrate recording/replay transports | 3h | | ⬜ | Update to directional traits |
+| C.5 | Update transport tests | 3h | C.1-C.4 | ⬜ | Fix transport_regression_suite.rs |
+| C.6 | Remove old Transport trait | 2h | C.1-C.5 | ⬜ | Clean removal after full migration |
+| C.7 | Remove old transport implementations | 2h | C.6 | ⬜ | Remove StdioTransport, HttpTransport, etc. |
+| C.8 | Update documentation | 2h | C.7 | ⬜ | Update architecture.md and examples |
+
+**Phase 6 Total**: 21 hours
+
+### Phase 7: Raw Transport Enhancements (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.1.1 | HttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
@@ -230,9 +252,9 @@ Understand the current state and prepare for safe refactoring.
 | P.1 | Transport context caching | 2h | | ⬜ | Performance optimization |
 | P.2 | HTTP connection pooling | 4h | | ⬜ | Performance optimization |
 
-**Phase 6 Total**: 16 hours
+**Phase 7 Total**: 16 hours
 
-### Phase 7: Advanced Features (Future)
+### Phase 8: Advanced Features (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.2 | ProcessManager integration | 4h | | ⬜ | Currently not used by SubprocessOutgoing |
@@ -240,7 +262,7 @@ Understand the current state and prepare for safe refactoring.
 | S.1 | Streaming optimizations | 4h | T.1.4, T.1.7 | ⬜ | SSE performance improvements |
 | M.1 | Metrics and observability | 3h | | ⬜ | Transport-level metrics |
 
-**Phase 7 Total**: 17 hours
+**Phase 8 Total**: 17 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -286,6 +308,21 @@ Understand the current state and prepare for safe refactoring.
 2. **Type safety**: Good use of Arc<dyn ProtocolHandler> and UUID-based SessionId
 3. **Generic implementations**: Code reuse through GenericIncomingTransport/GenericOutgoingTransport
 4. **Async patterns**: Proper use of async_trait with no deadlock risks
+
+## 🚨 CRITICAL: Phase 6 Must Be Completed
+
+**Current State**: We have TWO transport systems running in parallel:
+- Old `Transport` trait (used by ReverseProxy, tests, examples)
+- New `IncomingTransport`/`OutgoingTransport` (used by ForwardProxy)
+
+**Why This Is Critical**:
+1. **Confusion**: Developers don't know which system to use
+2. **Maintenance Burden**: Every change must consider both systems
+3. **Technical Debt**: Gets worse every day we delay
+4. **Broken Tests**: Integration tests and examples don't compile
+5. **Inconsistency**: Different components use different patterns
+
+**Recommendation**: Complete Phase 6 (21 hours) immediately before continuing any other work. The longer we wait, the harder this becomes.
 
 ## Risk Assessment
 
