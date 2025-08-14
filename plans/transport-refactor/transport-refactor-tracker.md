@@ -175,21 +175,64 @@ Understand the current state and prepare for safe refactoring.
 |----|------|----------|--------------|--------|--------|
 | D.1 | Implement IncomingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | StdioIncoming, HttpServerIncoming, StreamableHttpIncoming |
 | D.2 | Implement OutgoingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | SubprocessOutgoing, HttpClientOutgoing, StreamableHttpOutgoing |
-| D.3 | Update proxy to use new transports | 3h | D.1, D.2 | ⬜ | |
-| D.4 | Create direction-aware tests | 3h | D.1-D.3 | 🔄 Partial | 12 unit tests created and passing |
+| D.3 | Update proxy to use new transports | 3h | D.1, D.2, C.1-C.2 | ⬜ | Requires critical fixes first |
+| D.4 | Create direction-aware tests | 3h | D.1-D.3 | 🔄 Partial | 12 unit tests created, needs integration tests |
 
 **Phase 4 Total**: 14 hours (50% complete)
 
+#### Phase 4 Critical Fixes (Grade B+ → A)
+| ID | Task | Duration | Files | Status | Impact |
+|----|------|----------|-------|--------|--------|
+| C.1 | Fix `.unwrap()` in timestamp generation | 1h | mod.rs:152-154,222-224; incoming.rs:81-83,196-198; outgoing.rs:112-114,219-221,339-341 | ⬜ | **CRITICAL**: Can panic in production |
+| C.2 | Fix `.expect()` in HTTP client creation | 2h | outgoing.rs:148,161,174,256,269,282 | ⬜ | **CRITICAL**: Panics on invalid URLs |
+| A.1 | Add session ID mutability support | 2h | All directional transports | ⬜ | **Required for proxy** |
+| A.2 | Implement missing public accessors | 3h | incoming.rs:166-168,286-288; outgoing.rs:172-183,280-291,305-308 | ⬜ | 8 TODOs to resolve |
+| A.3 | Add proper error context | 2h | All implementations | ⬜ | Debugging support |
+
+#### Phase 4 Testing Enhancements
+| ID | Task | Duration | Description | Status |
+|----|------|----------|-------------|--------|
+| D.4.1 | Create directional transport integration tests | 4h | stdio→subprocess, http→http, streamable full flow | ⬜ |
+| D.4.2 | Add builder pattern documentation | 1h | Module docs with examples | ⬜ |
+| D.4.3 | Create mock transport implementations | 3h | Enable proxy testing without real transports | ⬜ |
+
+**Phase 4 Extended Total**: 25 hours (with fixes and full testing)
+
 ### Phase 5: Migration and Cleanup (Week 3)
-| ID | Task | Duration | Dependencies | Status |
-|----|------|----------|--------------|--------|
-| M.1 | Migrate forward proxy | 3h | D.3 | ⬜ |
-| M.2 | Migrate reverse proxy | 3h | D.3 | ⬜ |
-| M.3 | Update CLI and factory | 2h | M.1, M.2 | ⬜ |
-| M.4 | Remove old transport code | 1h | M.1-M.3 | ⬜ |
-| M.5 | Update documentation | 2h | M.4 | ⬜ |
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| M.1 | Migrate forward proxy | 3h | D.3, C.1-C.2, A.1 | ⬜ | Requires session ID mutability |
+| M.2 | Migrate reverse proxy | 3h | D.3, C.1-C.2, A.1 | ⬜ | Requires session ID mutability |
+| M.3 | Update CLI and factory | 2h | M.1, M.2 | ⬜ | |
+| M.4 | Remove old transport code | 1h | M.1-M.3 | ⬜ | |
+| M.5 | Update documentation | 2h | M.4 | ⬜ | |
 
 **Phase 5 Total**: 11 hours
+
+### Phase 6: Raw Transport Enhancements (Future)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| T.1.1 | HttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
+| T.1.2 | HttpRawServer header extraction | 2h | | ⬜ | Needed for session ID from headers |
+| T.1.3 | StreamableHttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
+| T.1.4 | StreamableHttpRawServer streaming state tracking | 2h | | ⬜ | For is_streaming() method |
+| T.1.5 | HttpRawClient header support | 1h | | ⬜ | Custom headers in requests |
+| T.1.6 | StreamableHttpRawClient header support | 1h | | ⬜ | Custom headers in requests |
+| T.1.7 | StreamableHttpRawClient SSE mode switching | 2h | | ⬜ | start_streaming() implementation |
+| P.1 | Transport context caching | 2h | | ⬜ | Performance optimization |
+| P.2 | HTTP connection pooling | 4h | | ⬜ | Performance optimization |
+
+**Phase 6 Total**: 16 hours
+
+### Phase 7: Advanced Features (Future)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| T.2 | ProcessManager integration | 4h | | ⬜ | Currently not used by SubprocessOutgoing |
+| B.1 | Full batch message support | 6h | | ⬜ | See plans/full-batch-support/ |
+| S.1 | Streaming optimizations | 4h | T.1.4, T.1.7 | ⬜ | SSE performance improvements |
+| M.1 | Metrics and observability | 3h | | ⬜ | Transport-level metrics |
+
+**Phase 7 Total**: 17 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -211,34 +254,71 @@ Understand the current state and prepare for safe refactoring.
 3. **Field Usage**: Use #[allow(dead_code)] for fields that will be used, not underscore prefix
 4. **Test Coverage**: Internal module tests can access private fields, external tests cannot
 
+## Lessons Learned from Phase 4 (Code Review Grade: B+)
+
+### Critical Safety Issues Found
+1. **Unchecked `.unwrap()` calls**: Timestamp generation can panic if system clock is before UNIX_EPOCH
+2. **Panicking constructors**: HTTP clients use `.expect("valid URL")` which panics on invalid input
+3. **Hardcoded values**: bind_address() returns `"127.0.0.1:8080"` instead of actual address
+
+### Design Issues Identified
+1. **Session ID immutability**: Session IDs can't be updated for proxy scenarios
+2. **Missing public accessors**: 8 TODOs for missing raw transport functionality
+3. **Incomplete streaming state**: Session management for streaming not fully implemented
+4. **Confusing API**: Using `connect()` for both client and server operations
+
+### Performance Opportunities
+1. **Transport context allocation**: Created on every message (could be cached)
+2. **String cloning**: Redundant cloning in constructors
+3. **Command parsing**: Inefficient split and allocation for every argument
+4. **No connection pooling**: New HTTP connection per request
+
+### What Worked Well
+1. **Clean trait hierarchy**: IncomingTransport vs OutgoingTransport separation is intuitive
+2. **Type safety**: Good use of Arc<dyn ProtocolHandler> and UUID-based SessionId
+3. **Generic implementations**: Code reuse through GenericIncomingTransport/GenericOutgoingTransport
+4. **Async patterns**: Proper use of async_trait with no deadlock risks
+
 ## Risk Assessment
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Breaking existing functionality | HIGH | Comprehensive test suite before starting |
-| Disrupting ongoing SSE/MCP work | HIGH | Wait until Phase 3-7 complete |
-| Complex migration | MEDIUM | Gradual migration with compatibility layer |
-| Performance regression | MEDIUM | Benchmark before/after each phase |
+| Risk | Impact | Mitigation | Status |
+|------|--------|------------|--------|
+| Breaking existing functionality | HIGH | Comprehensive test suite before starting | ✅ Mitigated |
+| Disrupting ongoing SSE/MCP work | HIGH | Wait until Phase 3-7 complete | ✅ Resolved |
+| Complex migration | MEDIUM | Gradual migration with compatibility layer | 🔄 In Progress |
+| Performance regression | MEDIUM | Benchmark before/after each phase | ✅ No regression |
+| **Panic in production (NEW)** | **HIGH** | Fix all `.unwrap()` and `.expect()` calls | ⬜ C.1, C.2 tasks |
+| **Invalid URL handling (NEW)** | **HIGH** | Return Result from constructors | ⬜ C.2 task |
+| **Session management bugs (NEW)** | **MEDIUM** | Add session ID mutability | ⬜ A.1 task |
+| **Missing functionality (NEW)** | **LOW** | Track TODOs, defer to Phase 6 | 🔄 8 TODOs tracked |
 
 ## Success Criteria
 
 ### Functional
-- [x] All existing tests pass with new architecture (853 tests passing)
+- [x] All existing tests pass with new architecture (865 tests passing)
 - [x] Streamable HTTP works as single transport (Phase 2 complete)
-- [ ] Clear separation between incoming/outgoing (Phase 4 pending)
+- [x] Clear separation between incoming/outgoing (Phase 4 D.1-D.2 complete)
 - [x] Process management extracted from transports (ProcessManager complete)
+- [ ] **No `.unwrap()` or `.expect()` in production code paths** (C.1, C.2)
+- [ ] **All public APIs return `Result` types** (C.2)
+- [ ] **Session IDs can be updated for proxy scenarios** (A.1)
 
 ### Quality
 - [x] Zero clippy warnings (all phases pass clippy)
 - [x] 95% test coverage on new code (comprehensive test suites)
 - [x] Performance within 2% of current (buffer pools >80% hit rate)
 - [x] Clear documentation and examples (all phases documented)
+- [ ] **Integration tests cover all transport combinations** (D.4.1)
+- [ ] **Mock implementations available for testing** (D.4.3)
+- [ ] **Error messages include sufficient context** (A.3)
 
 ### Architecture
 - [x] No protocol logic in transport layer (clean separation)
 - [x] No process management in transport layer (ProcessManager extracted)
 - [x] Clear naming (no more StdioClient confusion)
 - [x] Unified handling of Streamable HTTP (StreamableHttpRawTransport complete)
+- [ ] **Documentation includes usage examples** (D.4.2)
+- [ ] **Builder pattern for complex configurations** (D.4.2)
 
 ## Progress Tracking
 
