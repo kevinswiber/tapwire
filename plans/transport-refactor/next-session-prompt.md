@@ -1,246 +1,226 @@
-# Next Session: Phase 6 Complete Transport Migration (21h)
+# Next Session: Phase 6B - ReverseProxy Transport Migration (15h)
 
-## 📋 Current Status (2025-08-14 - Session 4 Complete)
+## 📋 Current Status (2025-08-14 - Session 5 Complete)
 
-### Phase 5 Major Success ✅
-- ✅ **Build Fixed**: All compilation errors resolved
-- ✅ **ForwardProxy Migrated**: Uses Box<dyn IncomingTransport> and Box<dyn OutgoingTransport>
-- ✅ **API Updated**: DirectionalTransportFactory integrated
-- ✅ **860 Unit Tests Pass**: Core functionality verified
-- ⚠️ **Technical Debt**: Old Transport trait still exists alongside new directional traits
+### Phase 6 Partial Success ✅
+- ✅ **All Test MockTransports Fixed**: integration_api_mock.rs and version_negotiation_test.rs now use directional traits
+- ✅ **Tests Compile and Pass**: 860 unit tests passing, all integration tests compile
+- ✅ **ForwardProxy Fully Migrated**: Clean use of Box<dyn IncomingTransport> and Box<dyn OutgoingTransport>
+- ⚠️ **Dual System Still Active**: Old Transport trait cannot be removed yet
 
-### What We Accomplished
-- **Clean ForwardProxy migration** - No compatibility adapters needed
-- **API abstraction working** - High-level API uses factory internally
-- **Build stable** - Compiles with minimal clippy warnings
-- **Strategic decision** - Keep old Transport for now to maintain stability
+### Why We're Stuck
+The old `Transport` trait is still required by:
+1. **ReverseProxy Connection Pool** - `PoolableStdioTransport` wraps `StdioTransport`
+2. **ReplayTransport** - Implements old `Transport` trait
+3. **All Old Implementations** - StdioTransport, HttpTransport, SseTransport, etc.
 
-### Current Problems
-- **Dual transport systems** - Old Transport and new directional traits coexist
-- **Integration tests broken** - MockTransport needs directional trait implementation
-- **Examples broken** - Still using old Transport with ForwardProxy
-- **ReverseProxy uses StdioTransport** - Should migrate to SubprocessOutgoing
-- **Confusion risk** - Two transport systems make codebase harder to understand
+### Architecture Challenge
+ReverseProxy uses a fundamentally different pattern:
+- **Axum HTTP Server**: Handles incoming HTTP requests
+- **Connection Pool**: Manages multiple `StdioTransport` instances
+- **Different Flow**: HTTP request → Pool → StdioTransport → subprocess
 
-## 🎯 Phase 6: Complete the Migration (Critical)
+This is NOT a simple transport swap like ForwardProxy was.
 
-We MUST complete the transport migration to avoid technical debt accumulation. Having two transport systems is confusing and will lead to maintenance problems.
+## 🎯 Phase 6B: Complete ReverseProxy Migration
 
-### Priority Order
+### Priority Tasks
 
-#### C.1: Fix MockTransport for Tests (3h) 🔴 URGENT
-**Status**: Not Started
-**Why First**: Unblocks all integration tests
+#### Task 1: Create PoolableOutgoingTransport (4h)
+**Goal**: Replace PoolableStdioTransport with directional version
 
-**Implementation**:
+**Implementation Strategy**:
 ```rust
-// In tests/common/mock_transport.rs or similar
-impl IncomingTransport for MockTransport {
-    // Implementation
+// In src/proxy/pool.rs
+pub struct PoolableOutgoingTransport {
+    transport: Box<dyn OutgoingTransport>,
+    id: String,
+    created_at: Instant,
 }
 
-impl OutgoingTransport for MockTransport {
-    // Implementation
+impl PoolableConnection for PoolableOutgoingTransport {
+    async fn is_healthy(&self) -> bool {
+        self.transport.is_connected()
+    }
+    // ... other methods
 }
 ```
 
-#### C.2: Update Examples (2h)
-**Status**: Blocked by C.1
-**Files**:
-- `examples/advanced_module_usage.rs`
-- Any other examples using ForwardProxy
+**Key Changes**:
+1. Replace `StdioTransport` with `SubprocessOutgoing`
+2. Update pool factory to create `SubprocessOutgoing`
+3. Ensure pool lifecycle management works with new transport
 
-**Change Pattern**:
-```rust
-// Old
-proxy.start(client_transport, server_transport)
-
-// New
-proxy.start(
-    Box::new(client_transport),
-    Box::new(server_transport)
-)
+#### Task 2: Update ReverseProxy Message Flow (4h)
+**Current Flow**:
+```
+HTTP Request → Extract JSON-RPC → Pool.acquire() → StdioTransport → Send/Receive → HTTP Response
 ```
 
-#### C.3: Migrate ReverseProxy (4h)
-**Status**: Not Started
-**Why Important**: Major component still using old transports
+**New Flow**:
+```
+HTTP Request → Extract JSON-RPC → Pool.acquire() → OutgoingTransport → Send/Receive → HTTP Response
+```
 
 **Changes Needed**:
-- Replace `StdioTransport::new()` with `SubprocessOutgoing::new()`
-- Update pool to use directional transports
-- Ensure compatibility with axum HTTP server pattern
+- Update `handle_http_request` to work with `OutgoingTransport`
+- Convert HTTP body to `MessageEnvelope` for `send_request()`
+- Convert `receive_response()` back to HTTP response
 
-#### C.4: Migrate Recording/Replay (3h)
-**Status**: Not Started
-**Files**:
-- `src/transport/replay.rs`
-- Recording interceptors
+#### Task 3: Migrate ReplayTransport (3h)
+**Options**:
+1. Implement both `IncomingTransport` and `OutgoingTransport` for `ReplayTransport`
+2. Create separate `ReplayIncoming` and `ReplayOutgoing` types
+3. Consider if replay even needs to be a Transport
 
-#### C.5: Update Transport Tests (3h)
-**Status**: Blocked by C.1-C.4
-**Files**:
-- `tests/transport_regression_suite.rs`
-- `tests/version_negotiation_test.rs`
+**Recommendation**: Option 1 - Add directional traits to existing ReplayTransport
 
-#### C.6-C.8: Remove Old Transport System (6h)
-**Status**: Blocked by C.1-C.5
-**Critical**: This MUST be done to avoid confusion
-
-**Removal List**:
-- `trait Transport` definition
-- `StdioTransport` (replaced by SubprocessOutgoing)
-- `StdioClientTransport` (replaced by StdioIncoming)
-- `HttpTransport` (replaced by HttpClientOutgoing)
-- `HttpMcpTransport` (replaced by HttpServerIncoming)
-- `SseTransport` (replaced by StreamableHttpOutgoing)
-- Old `TransportFactory`
+#### Task 4: Remove Old Transport System (4h)
+**Once Tasks 1-3 complete**:
+1. Delete `trait Transport` from `src/transport/mod.rs`
+2. Remove all old implementations:
+   - `src/transport/stdio.rs` (StdioTransport)
+   - `src/transport/stdio_client.rs` (StdioClientTransport)
+   - `src/transport/http.rs` (HttpTransport)
+   - `src/transport/http_mcp.rs` (HttpMcpTransport)
+   - `src/transport/sse_transport.rs` (SseTransport)
+   - `src/transport/sse_interceptor.rs` (InterceptedSseTransport)
+3. Update all imports
+4. Clean up transport/mod.rs exports
 
 ## ✅ Success Criteria
 
-### Must Complete This Session
-- [ ] All integration tests compile and pass
-- [ ] All examples compile and run
-- [ ] ReverseProxy uses directional transports
-- [ ] MockTransport implements directional traits
-- [ ] Old Transport trait removed completely
-- [ ] Zero clippy warnings
+### Must Complete
+- [ ] ReverseProxy works with directional transports
+- [ ] Connection pool uses `PoolableOutgoingTransport`
+- [ ] ReplayTransport implements directional traits
+- [ ] Old Transport trait completely removed
 - [ ] All 869+ tests pass
+- [ ] Zero clippy warnings
 
 ### Quality Metrics
 - [ ] Single transport system (directional only)
-- [ ] Clear documentation on new patterns
 - [ ] No confusion between old and new
-- [ ] Migration guide for external users
+- [ ] Pool performance unchanged
+- [ ] ReverseProxy latency unchanged
 
 ## 🚀 Commands to Run
 
 ```bash
-# Start with MockTransport fix
-rg "struct MockTransport" tests/
+# Start with pool changes
+rg "PoolableStdioTransport" src/
+
+# Check ReverseProxy usage
+rg "StdioTransport" src/proxy/
 
 # Find all Transport trait implementations
-rg "impl Transport for"
+rg "impl Transport for" src/
 
-# Check what uses StdioTransport
-rg "StdioTransport::new"
-
-# Run tests after each fix
+# Test after each change
 cargo test --lib
 cargo test --test integration_api_mock
-cargo test --examples
 
 # Final validation
 cargo test
 cargo clippy --all-targets -- -D warnings
 ```
 
-## 📊 Implementation Strategy
+## 📊 Implementation Order
 
-### Step 1: Fix MockTransport (First Priority!)
-1. Find MockTransport definition
-2. Add directional trait implementations
-3. Update test usage patterns
-4. Verify tests compile
+### Step 1: Pool Migration (Morning)
+1. Create `PoolableOutgoingTransport`
+2. Update pool factory
+3. Test pool operations
+4. Verify health checks work
 
-### Step 2: Update All Usage Sites
-1. Examples: Box the transports
-2. ReverseProxy: Use SubprocessOutgoing
-3. Tests: Update to new patterns
+### Step 2: ReverseProxy Update (Afternoon)
+1. Update HTTP request handler
+2. Convert message formats
+3. Test with curl/httpie
+4. Verify SSE still works
 
-### Step 3: Remove Old System
-1. Delete trait Transport
-2. Remove all old implementations
-3. Delete old factory
-4. Update imports everywhere
+### Step 3: Cleanup (Evening)
+1. Add directional traits to ReplayTransport
+2. Delete old Transport trait
+3. Remove all old implementations
+4. Update documentation
 
-## ⚠️ Critical Decision Point
+## ⚠️ Risk Areas
 
-**We are at a crossroads:**
-1. **Option A**: Complete migration now (recommended) - 21 hours work
-2. **Option B**: Leave dual system (technical debt) - Problems compound
+### High Risk
+- **Pool Lifecycle**: Ensure connections are properly managed
+- **Message Conversion**: HTTP ↔ MessageEnvelope conversion must be correct
+- **SSE Streaming**: Must still work after migration
 
-**Recommendation**: Complete the migration NOW before the codebase grows further. Every day we delay makes this harder.
+### Mitigation
+- Test each component in isolation first
+- Keep old code until new code is verified
+- Use feature flags if needed for gradual rollout
 
-## 🔍 Key Files to Focus On
+## 🔍 Key Files to Modify
 
 ### Must Update
-- `tests/common/mock_transport.rs` (or wherever MockTransport lives)
-- `src/proxy/reverse.rs` (StdioTransport usage)
-- `examples/advanced_module_usage.rs`
-- `tests/integration_api_mock.rs`
+- `src/proxy/pool.rs` - Create PoolableOutgoingTransport
+- `src/proxy/reverse.rs` - Update to use new pool
+- `src/transport/replay.rs` - Add directional traits
+- `src/transport/mod.rs` - Remove Transport trait
 
 ### Must Delete (After Migration)
 - `src/transport/stdio.rs`
 - `src/transport/stdio_client.rs`
 - `src/transport/http.rs`
-- `src/transport/factory.rs` (old one)
+- `src/transport/http_mcp.rs`
+- `src/transport/sse_transport.rs`
+- `src/transport/sse_interceptor.rs`
 
 ## 📝 Architecture Notes
 
-### Current State (Confusing)
-```
-Transport (old trait) + DirectionalTransports (new)
-├── Both systems active
-├── ForwardProxy uses new
-├── ReverseProxy uses old
-└── Tests broken between them
-```
+### Why This Is Hard
+ReverseProxy is fundamentally different from ForwardProxy:
+- **ForwardProxy**: Client transport → Proxy → Server transport (both sides are transports)
+- **ReverseProxy**: HTTP server → Proxy → Subprocess pool (HTTP on one side, transports on other)
 
-### Target State (Clean)
-```
-DirectionalTransports ONLY
-├── IncomingTransport (accept connections)
-├── OutgoingTransport (make connections)
-└── All components use same system
-```
+### Key Insight
+The pool doesn't care about transport direction - it just needs:
+1. Ability to send messages
+2. Ability to receive responses
+3. Health checking
+4. Connection lifecycle
+
+This maps well to `OutgoingTransport`.
+
+## 🏁 Definition of Done
+
+When Phase 6B is complete:
+- No `trait Transport` in codebase
+- No old transport implementations
+- ReverseProxy fully functional with new system
+- All tests passing
+- Documentation updated
+- Single, clear transport architecture
 
 ---
 
-**Session Time**: Estimated 21 hours
-**Urgency**: HIGH - Technical debt is accumulating
-**Next Session**: Phase 7 - Raw transport enhancements (after cleanup)
+**Session Time**: Estimated 15 hours
+**Complexity**: High - Architectural changes required
+**Priority**: CRITICAL - Technical debt growing daily
 
 ## Resources
 
 ### Key Documentation
 - **Main Tracker**: `transport-refactor-tracker.md`
-- **Architecture**: `shadowcat/docs/architecture.md`
-- **Previous Session**: Session 4 notes (this document)
+- **Session 5 Work**: MockTransport fixes in tests/
+- **Pool Pattern**: `src/proxy/pool.rs`
+- **ReverseProxy**: `src/proxy/reverse.rs`
 
-### Migration Examples
-```rust
-// Old Pattern
-let transport = StdioTransport::new(cmd);
-transport.connect().await?;
+### What Session 5 Accomplished
+- Fixed MockTransport in integration_api_mock.rs (added directional traits)
+- Fixed MockTransport in version_negotiation_test.rs (added directional traits)
+- Updated all test proxy.start() calls to use Box::new()
+- Verified 860 unit tests pass
+- Identified blockers for full migration
 
-// New Pattern  
-let transport = Box::new(SubprocessOutgoing::new(cmd_string));
-transport.connect().await?;
-```
+### Technical Context
+The transport refactor introduced `IncomingTransport` and `OutgoingTransport` to replace the old `Transport` trait. ForwardProxy was successfully migrated, but ReverseProxy's connection pool architecture prevents simple migration. The pool wraps StdioTransport in PoolableStdioTransport, which is tightly coupled to the old system.
 
-### Test Pattern
-```rust
-// MockTransport needs both traits
-impl IncomingTransport for MockTransport {
-    async fn receive_request(&mut self) -> Result<MessageEnvelope> {
-        // Use existing receive() logic
-    }
-    
-    async fn send_response(&mut self, response: MessageEnvelope) -> Result<()> {
-        // Use existing send() logic
-    }
-}
-
-impl OutgoingTransport for MockTransport {
-    async fn send_request(&mut self, request: MessageEnvelope) -> Result<()> {
-        // Use existing send() logic
-    }
-    
-    async fn receive_response(&mut self) -> Result<MessageEnvelope> {
-        // Use existing receive() logic
-    }
-}
-```
-
-**IMPORTANT**: Do not leave this migration half-done. Complete it fully or the codebase will become increasingly difficult to maintain.
+**IMPORTANT**: This migration cannot be done piecemeal. Once we start modifying the pool, we must complete the entire ReverseProxy migration to maintain a working system.
