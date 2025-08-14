@@ -4,9 +4,27 @@
 
 This tracker coordinates the implementation of a flexible, plugin-based storage backend system for tape recordings in Shadowcat. The system will allow users to provide custom storage implementations with a clean API design (no backwards compatibility needed since Shadowcat is pre-release).
 
-**Last Updated**: 2025-01-13  
-**Total Estimated Duration**: 20-25 hours  
-**Status**: Planning
+**Last Updated**: 2025-08-13  
+**Total Estimated Duration**: 27-32 hours  
+**Status**: Planning - Analysis Phase Added
+**Git Worktree**: `shadowcat-tape-storage-providers` (branch: `feat/tape-storage-providers`)
+
+### ⚠️ IMPORTANT: Development Environment
+**All shadowcat development for this feature MUST happen in the git worktree:**
+```bash
+cd shadowcat-tape-storage-providers
+git status  # Should show: On branch feat/tape-storage-providers
+```
+
+**DO NOT modify shadowcat files in the main worktree during this feature development.**
+
+## Working Directory & Branch
+
+- **Worktree Location**: `shadowcat-tape-storage-providers`
+- **Branch**: `feat/tape-storage-providers` 
+- **Commit Hash**: e57bb75
+- **All code changes**: Make in the worktree, not main shadowcat directory
+- **Session prompts**: Always include worktree reminder
 
 ## Goals
 
@@ -59,61 +77,70 @@ This tracker coordinates the implementation of a flexible, plugin-based storage 
 
 ## Work Phases
 
-### Phase 1: Core Abstractions (Week 1)
+### Phase 0: Analysis & Investigation (Week 1)
+Understand the current system and research best practices before implementation.
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| A.0 | **Current State Analysis** | 2h | None | ⬜ Not Started | | [Details](tasks/A.0-current-state-analysis.md) |
+| A.1 | **Storage Patterns Research** | 2h | None | ⬜ Not Started | | [Details](tasks/A.1-storage-patterns-research.md) |
+| A.2 | **Requirements Gathering** | 1.5h | A.0 | ⬜ Not Started | | [Details](tasks/A.2-requirements-gathering.md) |
+| A.3 | **Design Proposal** | 2h | A.0, A.1, A.2 | ⬜ Not Started | | [Details](tasks/A.3-design-proposal.md) |
+
+**Phase 0 Total**: 7.5 hours
+
+### Phase 1: Core Abstractions (Week 1-2)
 Define the core traits and registry system that will enable pluggable storage.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| A.1 | **Define TapeStorageBackend Trait** | 2h | None | ⬜ Not Started | | [Details](tasks/A.1-storage-backend-trait.md) |
-| A.2 | **Create StorageProviderFactory Trait** | 2h | A.1 | ⬜ Not Started | | [Details](tasks/A.2-provider-factory-trait.md) |
-| A.3 | **Implement Storage Registry** | 3h | A.2 | ⬜ Not Started | | [Details](tasks/A.3-storage-registry.md) |
-| A.4 | **Create Configuration Types** | 1h | A.2 | ⬜ Not Started | | [Details](tasks/A.4-configuration-types.md) |
+| B.1 | **Define TapeStorageBackend Trait** | 2h | A.3 | ⬜ Not Started | | [Details](tasks/B.1-core-trait-design.md) |
+| B.2 | **Create StorageProviderFactory Trait** | 2h | B.1 | ⬜ Not Started | | [Details](tasks/B.2-factory-pattern.md) |
+| B.3 | **Create Configuration Types** | 1h | B.2 | ⬜ Not Started | | [Details](tasks/B.3-configuration-system.md) |
+| B.4 | **Implement Storage Registry** | 3h | B.2 | ⬜ Not Started | | [Details](tasks/B.4-registry-implementation.md) |
 
 **Phase 1 Total**: 8 hours
 
-### Phase 2: Filesystem Provider (Week 1-2)
-Refactor existing filesystem storage to use the new trait system.
+### Phase 2: Built-in Providers (Week 2)
+Implement filesystem and SQLite storage providers.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.1 | **Extract FilesystemBackend** | 3h | A.1 | ⬜ Not Started | | [Details](tasks/B.1-filesystem-backend.md) |
-| B.2 | **Implement FilesystemProviderFactory** | 2h | A.2, B.1 | ⬜ Not Started | | [Details](tasks/B.2-filesystem-factory.md) |
-| B.3 | **Migrate Existing Storage Code** | 2h | B.1 | ⬜ Not Started | | [Details](tasks/B.3-migrate-storage.md) |
+| C.1 | **Filesystem Provider** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/C.1-filesystem-provider.md) |
+| C.2 | **SQLite Provider** | 4h | B.1 | ⬜ Not Started | | [Details](tasks/C.2-sqlite-provider.md) |
+| C.3 | **Provider Testing** | 3h | C.1, C.2 | ⬜ Not Started | | [Details](tasks/C.3-provider-testing.md) |
 
-**Phase 2 Total**: 7 hours
+**Phase 2 Total**: 10 hours
 
-### Phase 3: SQLite Provider (Week 2)
-Implement SQLite as an alternative storage backend.
-
-| ID | Task | Duration | Dependencies | Status | Owner | Notes |
-|----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Design SQLite Schema** | 1h | A.1 | ⬜ Not Started | | [Details](tasks/C.1-sqlite-schema.md) |
-| C.2 | **Implement SqliteBackend** | 4h | C.1 | ⬜ Not Started | | [Details](tasks/C.2-sqlite-backend.md) |
-| C.3 | **Create SqliteProviderFactory** | 1h | A.2, C.2 | ⬜ Not Started | | [Details](tasks/C.3-sqlite-factory.md) |
-
-**Phase 3 Total**: 6 hours
-
-### Phase 4: Integration (Week 2)
+### Phase 3: Integration (Week 3)
 Update TapeRecorder and public API to use the new system.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| D.1 | **Update TapeRecorder** | 2h | A.3, B.2 | ⬜ Not Started | | [Details](tasks/D.1-update-recorder.md) |
-| D.2 | **Add Registry to Public API** | 2h | A.3, D.1 | ⬜ Not Started | | [Details](tasks/D.2-public-api.md) |
-| D.3 | **Update Configuration Loading** | 2h | D.2 | ⬜ Not Started | | [Details](tasks/D.3-config-loading.md) |
+| D.1 | **API Integration** | 3h | B.4, C.3 | ⬜ Not Started | | [Details](tasks/D.1-api-integration.md) |
 
-**Phase 4 Total**: 6 hours
+**Phase 3 Total**: 3 hours
 
-### Phase 5: Testing & Documentation (Week 3)
-Comprehensive testing and documentation of the new system.
+### Phase 4: Migration & Documentation (Week 3)
+Migrate existing code and create comprehensive documentation.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.1 | **Unit Tests for Registry** | 1h | A.3 | ⬜ Not Started | | [Details](tasks/E.1-registry-tests.md) |
-| E.2 | **Integration Tests** | 2h | D.3 | ⬜ Not Started | | [Details](tasks/E.2-integration-tests.md) |
-| E.3 | **Documentation & Examples** | 1h | D.3 | ⬜ Not Started | | [Details](tasks/E.3-documentation.md) |
+| E.1 | **Migration Strategy** | 2h | D.1 | ⬜ Not Started | | [Details](tasks/E.1-migration-strategy.md) |
+| E.2 | **Documentation & Examples** | 2h | D.1 | ⬜ Not Started | | [Details](tasks/E.2-documentation.md) |
 
-**Phase 5 Total**: 4 hours
+**Phase 4 Total**: 4 hours
+
+## Phase Summary
+
+| Phase | Description | Duration | Status |
+|-------|-------------|----------|--------|
+| Phase 0 | Analysis & Investigation | 7.5h | ⬜ Not Started |
+| Phase 1 | Core Abstractions | 8h | ⬜ Not Started |
+| Phase 2 | Built-in Providers | 10h | ⬜ Not Started |
+| Phase 3 | Integration | 3h | ⬜ Not Started |
+| Phase 4 | Migration & Documentation | 4h | ⬜ Not Started |
+| **Total** | | **32.5 hours** | |
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -154,6 +181,14 @@ Comprehensive testing and documentation of the new system.
 | Performance regression | MEDIUM | Benchmark before/after, optimize critical paths | Planned |
 
 ## Critical Implementation Guidelines
+
+### Git Worktree Usage
+**MANDATORY for all development:**
+- Use `shadowcat-tape-storage-providers` worktree for ALL code changes
+- Never modify shadowcat files in the main tapwire directory
+- All testing and development happens in the worktree
+- Commit to `feat/tape-storage-providers` branch
+- When creating next-session-prompt.md updates, always include worktree reminder
 
 ### Backward Compatibility
 **MUST maintain compatibility with existing filesystem storage:**
