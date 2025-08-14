@@ -1,4 +1,4 @@
-# Next Session: Phase 1 - Core Abstractions Implementation
+# Next Session: Phase 2 - Built-in Providers
 
 ## 🔴 CRITICAL: Use Git Worktree
 
@@ -12,11 +12,11 @@ git status  # Verify: On branch feat/tape-storage-providers
 
 ## Project Context
 
-Implementing a pluggable storage backend system for tape recordings in Shadowcat, allowing users to provide custom storage implementations beyond the default filesystem storage.
+Implementing built-in storage providers (filesystem and SQLite) using the core abstractions created in Phase 1.
 
 **Project**: Tape Storage Providers
 **Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
-**Status**: Phase 1 - Core Abstractions (Ready to Start)
+**Status**: Phase 2 - Built-in Providers (Ready to Start)
 **Git Worktree**: `shadowcat-tape-storage-providers` (branch: `feat/tape-storage-providers`)
 
 ## Current Status
@@ -29,67 +29,90 @@ Implementing a pluggable storage backend system for tape recordings in Shadowcat
   - API design proposal created
   - Design decisions documented
 
+- **Phase 1: Core Abstractions** (✅ Completed 2025-08-14)
+  - TapeStorageBackend trait with async methods
+  - StorageProviderFactory trait with metadata
+  - Global StorageRegistry for provider management
+  - Configuration types with serde support
+  - StorageCapabilities for feature discovery
+  - Unified error handling with StorageError
+  - 4 unit tests for registry functionality
+
 ### What's Ready to Start
-- **B.1: Define TapeStorageBackend Trait** (Ready)
-  - Duration: 2 hours
-  - Dependencies: Phase 0 analysis complete
+- **C.1: Filesystem Provider** (Ready)
+  - Duration: 3 hours
+  - Extract and refactor existing filesystem storage
+  
+- **C.2: SQLite Provider** (Ready)
+  - Duration: 4 hours
+  - New implementation using sqlx
 
 ## Your Mission
 
-Implement the core abstractions for the tape storage provider system based on the completed analysis and design.
+Implement the built-in storage providers that will ship with Shadowcat.
 
-### Priority 1: Core Trait Definition (2 hours)
+### Priority 1: Filesystem Provider (3 hours)
 
-1. **Create trait module** (30m)
-   - Set up `src/recorder/backend/mod.rs`
-   - Define module structure
-   - Add necessary imports
+1. **Extract existing implementation** (1h)
+   - Move code from `src/recorder/storage.rs`
+   - Create `src/recorder/backend/providers/filesystem.rs`
+   - Preserve all existing functionality
    
 2. **Implement TapeStorageBackend trait** (1h)
-   - Core async methods (save, load, delete, list, search)
-   - Capability discovery
-   - Configuration validation
+   - Map existing methods to trait interface
+   - Add missing trait methods
+   - Ensure backward compatibility
    
-3. **Define supporting types** (30m)
-   - StorageConfig structure
-   - StorageCapabilities enum
-   - Error types
-
-### Priority 2: Factory Pattern Implementation (2 hours)
-
-1. **Create factory trait** (45m)
-   - StorageProviderFactory definition
-   - Metadata and versioning
+3. **Create factory and tests** (1h)
+   - FilesystemProviderFactory implementation
    - Configuration validation
+   - Unit tests for all operations
+
+### Priority 2: SQLite Provider (4 hours)
+
+1. **Design schema** (30m)
+   - Tapes table with indexes
+   - Metadata as JSON column
+   - Efficient query patterns
    
-2. **Implement builder helpers** (45m)
-   - Default implementations
-   - Helper macros if needed
-   - Testing utilities
+2. **Implement backend** (2h)
+   - Full TapeStorageBackend trait
+   - Connection pooling with sqlx
+   - Transaction support
+   
+3. **Add search capabilities** (1h)
+   - SQL-based search queries
+   - Index optimization
+   - Performance testing
+   
+4. **Factory and tests** (30m)
+   - SqliteProviderFactory
+   - Integration tests
+
+### Priority 3: Provider Testing Framework (3 hours)
+
+1. **Conformance test suite** (1.5h)
+   - Standard tests all providers must pass
+   - CRUD operations
+   - Concurrent access
+   - Error scenarios
+   
+2. **Performance benchmarks** (1h)
+   - Save/load performance
+   - Search performance
+   - Memory usage
    
 3. **Documentation** (30m)
-   - Trait documentation with examples
    - Provider implementation guide
-
-### Priority 3: Configuration System (1 hour)
-
-1. **Define configuration types** (30m)
-   - StorageConfig with serde support
-   - StorageOptions for common settings
-   - Validation logic
-   
-2. **Environment variable support** (30m)
-   - Config loading from env vars
-   - Override mechanisms
-   - Default values
+   - Configuration examples
 
 ## Essential Context Files to Read
 
-1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md` - Full project context
-2. **API Design**: `plans/tape-storage-providers/analysis/api-design-proposal.md` - Detailed API specification
-3. **Design Decisions**: `plans/tape-storage-providers/analysis/design-decisions.md` - Key architectural choices
-4. **Current Implementation**: `shadowcat-tape-storage-providers/src/recorder/` - Existing code to refactor (IN WORKTREE)
-5. **Task B.1**: `plans/tape-storage-providers/tasks/B.1-core-trait-design.md` - Current task details
+1. **Primary Tracker**: `plans/tape-storage-providers/tape-storage-providers-tracker.md`
+2. **Existing Storage**: `shadowcat-tape-storage-providers/src/recorder/storage.rs` - Current filesystem implementation
+3. **Task C.1**: `plans/tape-storage-providers/tasks/C.1-filesystem-provider.md`
+4. **Task C.2**: `plans/tape-storage-providers/tasks/C.2-sqlite-provider.md`
+5. **Core Traits**: `shadowcat-tape-storage-providers/src/recorder/backend/traits.rs` - Interfaces to implement
 
 ## Working Directory
 
@@ -109,77 +132,75 @@ pwd        # Should end with: shadowcat-tape-storage-providers
 cd shadowcat-tape-storage-providers
 git status  # Verify: On branch feat/tape-storage-providers
 
-# Review the completed analysis
-cat ../plans/tape-storage-providers/analysis/api-design-proposal.md
-cat ../plans/tape-storage-providers/analysis/design-decisions.md
+# Create providers module
+mkdir -p src/recorder/backend/providers
+touch src/recorder/backend/providers/mod.rs
+touch src/recorder/backend/providers/filesystem.rs
+touch src/recorder/backend/providers/sqlite.rs
+touch src/recorder/backend/providers/tests.rs
 
-# Load Phase 1 task
-cat ../plans/tape-storage-providers/tasks/B.1-core-trait-design.md
+# Review existing storage implementation
+cat src/recorder/storage.rs | head -100
 
-# Create new module structure (in worktree)
-mkdir -p src/recorder/backend
-touch src/recorder/backend/mod.rs
-touch src/recorder/backend/traits.rs
-touch src/recorder/backend/config.rs
-
-# Start implementation
-vim src/recorder/backend/traits.rs
+# Start filesystem provider
+vim src/recorder/backend/providers/filesystem.rs
 ```
 
 ## Success Criteria
 
-- [ ] TapeStorageBackend trait fully defined with async methods
-- [ ] StorageProviderFactory trait implemented
-- [ ] Configuration types created with serde support
-- [ ] All code compiles without warnings
-- [ ] Basic tests for trait implementations
-- [ ] Documentation complete for public APIs
+- [ ] Filesystem provider extracted and working
+- [ ] All existing filesystem tests still pass
+- [ ] SQLite provider fully implemented
+- [ ] Both providers pass conformance tests
+- [ ] No performance regression
+- [ ] Documentation complete
 
 ## Key Implementation Points
 
-1. Use `async-trait` crate for async trait methods
-2. Ensure all types are Send + Sync for thread safety
-3. Use serde_json::Value for flexible configuration
-4. Maintain backward compatibility markers
-5. Follow error handling patterns from analysis
+1. Filesystem provider MUST be 100% backward compatible
+2. Use existing TapeStorage code as reference
+3. SQLite schema should be optimized for search
+4. Both providers must be thread-safe
+5. Include connection pooling for SQLite
 
 ## Deliverables
 
 ### Required
-- `src/recorder/backend/traits.rs` - Core trait definitions
-- `src/recorder/backend/config.rs` - Configuration types
-- `src/recorder/backend/mod.rs` - Module exports
+- `src/recorder/backend/providers/filesystem.rs` - Extracted filesystem provider
+- `src/recorder/backend/providers/sqlite.rs` - New SQLite provider
+- `src/recorder/backend/providers/tests.rs` - Conformance test suite
+- Updated `src/recorder/backend/providers/mod.rs` - Module exports
 
 ### Next Session Setup
-- Registry implementation (Task B.4)
-- Filesystem provider extraction (Task C.1)
-- Integration with TapeRecorder
+- Phase 3: Integration with TapeRecorder
+- Update public API
+- Migration utilities
 
 ## Definition of Done
 
-- [ ] Tasks B.1, B.2, and B.3 completed (or as many as time permits)
-- [ ] Core traits compile and are well-documented
-- [ ] Configuration system functional
-- [ ] Tests pass with `cargo test`
+- [ ] Tasks C.1, C.2, and C.3 completed
+- [ ] Both providers fully functional
+- [ ] All tests passing
 - [ ] No clippy warnings
+- [ ] Benchmarks show acceptable performance
 - [ ] Tracker updated with progress
 - [ ] This prompt updated for next session
-- [ ] Commit (in worktree): `feat(tape-storage): implement core storage provider abstractions`
+- [ ] Commit: `feat(tape-storage): add filesystem and sqlite storage providers`
 
 ## Notes
 
 - **USE THE WORKTREE**: All shadowcat code changes in `shadowcat-tape-storage-providers`
-- Phase 0 analysis is complete - we have a solid design foundation
-- Start with minimal viable trait, then enhance incrementally
-- Focus on getting the abstraction right - providers come later
-- Ensure backward compatibility paths are clear
+- Phase 1 provides solid foundation - build on it
+- Filesystem extraction is critical - must not break existing users
+- SQLite provider is greenfield - design for optimal performance
+- Test thoroughly - these are the default providers users will rely on
 - **When updating this prompt**: Always include the worktree reminder for next session
 
 ---
 
 *Remember: 
 1. **WORK IN THE WORKTREE** - `cd shadowcat-tape-storage-providers` first!
-2. The analysis is done - now we build based on the solid design foundation
-3. Start simple, ensure it compiles, then add complexity
-4. Test frequently to catch issues early
+2. Phase 1 abstractions are complete - now implement concrete providers
+3. Backward compatibility is non-negotiable for filesystem
+4. SQLite can be optimized without legacy constraints  
 5. When creating the next session prompt, include the worktree reminder*
