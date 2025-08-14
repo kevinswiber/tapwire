@@ -171,14 +171,14 @@ Understand the current state and prepare for safe refactoring.
 **Review Summary**: Conducted comprehensive code review using rust-code-reviewer agent. Found no critical issues, only performance optimizations and code quality improvements. All 853 tests passing with zero clippy warnings. Full review documented in `reviews/phase3-review.md`.
 
 ### Phase 4: Direction-Aware Transports (Week 2-3)
-| ID | Task | Duration | Dependencies | Status |
-|----|------|----------|--------------|--------|
-| D.1 | Implement IncomingTransport types | 4h | F.3, R.1-R.4 | ⬜ |
-| D.2 | Implement OutgoingTransport types | 4h | F.3, R.1-R.4 | ⬜ |
-| D.3 | Update proxy to use new transports | 3h | D.1, D.2 | ⬜ |
-| D.4 | Create direction-aware tests | 3h | D.1-D.3 | ⬜ |
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| D.1 | Implement IncomingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | StdioIncoming, HttpServerIncoming, StreamableHttpIncoming |
+| D.2 | Implement OutgoingTransport types | 4h | F.3, R.1-R.4 | ✅ Complete | SubprocessOutgoing, HttpClientOutgoing, StreamableHttpOutgoing |
+| D.3 | Update proxy to use new transports | 3h | D.1, D.2 | ⬜ | |
+| D.4 | Create direction-aware tests | 3h | D.1-D.3 | 🔄 Partial | 12 unit tests created and passing |
 
-**Phase 4 Total**: 14 hours
+**Phase 4 Total**: 14 hours (50% complete)
 
 ### Phase 5: Migration and Cleanup (Week 3)
 | ID | Task | Duration | Dependencies | Status |
