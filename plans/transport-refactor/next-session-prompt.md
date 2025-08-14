@@ -1,104 +1,99 @@
-# Next Session: Phase 3 - Protocol Layer (3h)
+# Next Session: Phase 4 - Direction-Aware Transports (5h)
 
-## ✅ Phase 2 Complete with Improvements!
+## ✅ Phase 3 Complete!
 
-### Phase 2 Achievements
-- ✅ Implemented all raw transports (StdioRawIncoming, StdioRawOutgoing, HttpRawClient, HttpRawServer)
-- ✅ Implemented SSE transport (SseRawClient, SseRawServer)
-- ✅ Implemented StreamableHttpRawTransport (KEY INNOVATION - unified HTTP+SSE)
-- ✅ Fixed ALL compilation errors
-- ✅ All 22 raw transport tests passing
-- ✅ Code formatted with cargo fmt
-- ✅ Zero clippy warnings
+### Phase 3 Achievements
+- ✅ Enhanced McpProtocolHandler with full batch message support
+- ✅ Implemented strict JSON-RPC 2.0 validation with error code checking
+- ✅ Created protocol negotiation module with capability exchange
+- ✅ Added EnvelopeProtocolHandler implementation
+- ✅ 21 comprehensive protocol tests passing
+- ✅ Zero clippy warnings, code formatted
 
-### Critical Fixes Applied (Post-Review)
-- **Fixed duplicate process spawning bug** - StdioRawOutgoing was spawning TWO processes
-- **Made ProcessManager fully async** - Removed all futures::executor::block_on usage
-- **Improved Command API** - Added with_program() for direct string usage
-- **Added type aliases** - HttpRequestChannel and RequestRouter for cleaner code
-- **Fixed field visibility** - Used #[allow(dead_code)] for fields that will be used
+### Key Additions
+- **Batch message support**: serialize_batch/deserialize_batch methods
+- **Protocol negotiation**: ProtocolNegotiator class with version/capability handling
+- **Enhanced validation**: Error code ranges, method validation, strict mode
+- **Metadata extraction**: Extract JSON-RPC metadata from messages
+- **Protocol upgrader**: Future-proof upgrade path support
 
 ## Context
-You're implementing a layered transport architecture to solve issues with Shadowcat's MCP transport system. Phase 2 successfully created the raw transport layer that handles byte-level I/O without protocol knowledge.
+You're implementing a layered transport architecture for Shadowcat's MCP proxy. Phases 0-3 have successfully created the foundation, raw transport layer, and protocol handling layer.
 
 ## Current Status
 - Phase 0: Prerequisites ✅ Complete
 - Phase 1: Foundation Design ✅ Complete  
-- Phase 2: Raw Transport Layer ✅ Complete (2025-08-13)
-- Phase 3: Protocol Layer 📋 Ready to start
+- Phase 2: Raw Transport Layer ✅ Complete
+- Phase 3: Protocol Handler ✅ Complete (2025-08-13)
+- Phase 4: Direction-Aware Transports 📋 Ready to start
 
-## Next Tasks (Phase 3 - 3h total)
+## Next Tasks (Phase 4 - 5h total)
 
-### P.1: Implement JsonRpcProtocolHandler (1h)
-From file: `plans/transport-refactor/tasks/P.1-json-rpc-protocol-handler.md`
-- The foundation already exists in src/transport/protocol/mod.rs (McpProtocolHandler)
-- Enhance with proper batch message support
-- Add strict validation mode
-- Implement proper error handling
+### D.1: Implement IncomingTransport types (2h)
+- StdioIncoming using StdioRawIncoming
+- HttpServerIncoming using HttpRawServer
+- StreamableHttpIncoming using StreamableHttpRawTransport
+- All should use McpProtocolHandler for serialization
 
-### P.2: Implement McpProtocolValidator (30m)
-From file: `plans/transport-refactor/tasks/P.2-mcp-protocol-validator.md`
-- Validate MCP-specific requirements
-- Check required fields and methods
-- Enforce protocol version constraints
-- Add known method validation
+### D.2: Implement OutgoingTransport types (2h)
+- SubprocessOutgoing using StdioRawOutgoing
+- HttpClientOutgoing using HttpRawClient  
+- StreamableHttpOutgoing using StreamableHttpRawTransport
+- Integrate with ProcessManager for subprocess handling
 
-### P.3: Implement protocol negotiation (1h)
-From file: `plans/transport-refactor/tasks/P.3-protocol-negotiation.md`
-- Version negotiation for MCP
-- Capability exchange
-- Protocol upgrade paths
-- Header-based negotiation
+### D.3: Update proxy to use new transports (30m)
+- Modify forward proxy to use new transport types
+- Update transport factory to create appropriate types
+- Ensure backward compatibility where needed
 
-### P.4: Create protocol tests (30m)
-From file: `plans/transport-refactor/tasks/P.4-protocol-tests.md`
-- Unit tests for all handlers
-- Protocol compliance tests
-- Error handling tests
-- Batch message tests
+### D.4: Create direction-aware tests (30m)
+- Test IncomingTransport implementations
+- Test OutgoingTransport implementations
+- Verify protocol handler integration
+- Test end-to-end message flow
 
 ## Key Files
 - Tracker: `plans/transport-refactor/transport-refactor-tracker.md`
-- Protocol implementation: `src/transport/protocol/mod.rs` (McpProtocolHandler already started)
-- Raw transports: `src/transport/raw/*.rs` (all implemented in Phase 2)
-- Directional: `src/transport/directional/mod.rs` (uses protocol handler)
+- Directional base: `src/transport/directional/mod.rs`
+- Raw transports: `src/transport/raw/*.rs` (all implemented)
+- Protocol: `src/transport/protocol/mod.rs` (enhanced with batch/negotiation)
+- Process manager: `src/process/mod.rs`
 
 ## Foundation Already in Place
-From Phase 2, we have:
-- `RawTransport` trait fully implemented
-- All raw transports working and tested
-- Process management extracted to `src/process/mod.rs`
-- Error types extended with needed variants
+From Phases 1-3:
+- `RawTransport` trait with all implementations working
+- `IncomingTransport` and `OutgoingTransport` traits defined
+- `McpProtocolHandler` with batch support and validation
+- `ProtocolNegotiator` for version/capability exchange
+- Process management separated into ProcessManager
+- 22 raw transport tests + 21 protocol tests passing
 
 ## Success Criteria
-- [ ] McpProtocolHandler enhanced with full functionality
-- [ ] MCP validation working correctly
-- [ ] Protocol negotiation functional
-- [ ] All protocol tests passing
+- [ ] All IncomingTransport types implemented and tested
+- [ ] All OutgoingTransport types implemented and tested
+- [ ] Proxy updated to use new transport abstractions
+- [ ] Protocol handler properly integrated
+- [ ] All existing tests still passing
 - [ ] No clippy warnings
-- [ ] Regression tests still passing
-
-## Implementation Notes
-- The McpProtocolHandler already exists with basic serialize/deserialize
-- Focus on enhancing it with proper validation and batch support
-- Ensure compatibility with existing MCP flows
-- The protocol layer bridges raw transports and directional transports
 
 ## Commands to Run First
 ```bash
-# Verify Phase 2 tests still pass
+# Verify Phase 3 tests still pass
+cargo test transport::protocol --lib
+
+# Check raw transports still work
 cargo test --test raw_transport_tests
 
-# Check protocol module
-cargo check
+# Verify no regressions
+cargo test --test transport_regression_suite
 
-# See current protocol implementation
-cat src/transport/protocol/mod.rs
+# Check overall compilation
+cargo check
 ```
 
 ## Session Goal
-Enhance the existing McpProtocolHandler with full JSON-RPC 2.0 and MCP compliance, including batch messages, validation, and protocol negotiation.
+Implement the direction-aware transport layer that combines raw transports with protocol handling, providing clean IncomingTransport and OutgoingTransport abstractions for the proxy to use.
 
-**Last Updated**: 2025-08-13 (End of Phase 2)
-**Session Time**: Phase 3 estimated at 3 hours
-**Next Phase**: Phase 4 - Direction-aware transports (5h)
+**Last Updated**: 2025-08-13 (End of Phase 3)
+**Session Time**: Phase 4 estimated at 5 hours
+**Next Phase**: Phase 5 - Migration and Cleanup (11h)
