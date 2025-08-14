@@ -1,81 +1,68 @@
-# Transport Refactor COMPLETE ✅
+# Next Session: Test Coverage Analysis
 
-## Summary of Completed Work (Session 7)
+## Context
+The transport refactor is complete (Session 7), but we deleted several test files during the cleanup. We need to analyze what test coverage was lost and ensure all important scenarios are still tested in the new directional transport architecture.
 
-The transport layer refactor is now **100% complete**. The old Transport trait and all its implementations have been successfully removed from the codebase, leaving a single, clean directional transport architecture.
+## Objective
+Analyze deleted test files to ensure we haven't lost important test coverage, and create any missing tests for the new IncomingTransport/OutgoingTransport system.
 
-### What Was Accomplished
+## Files Deleted (from git diff --name-only 298b72a)
+```
+src/transport/size_limit_tests.rs
+src/transport/validation_test.rs
+tests/integration_forward_proxy_sse.rs
+tests/pause_resume_test.rs
+tests/sse_interceptor_test.rs
+tests/sse_transport_test.rs
+tests/transport_regression_suite.rs
+```
 
-1. **Removed Old Transport System Entirely**:
-   - Deleted Transport trait from mod.rs
-   - Removed all old transport implementations (stdio.rs, http.rs, sse_transport.rs, etc.)
-   - Deleted factory.rs and builders.rs
-   - Removed obsolete tests and examples
+## Modified Test Files
+```
+tests/integration_api_mock.rs
+tests/version_negotiation_test.rs
+```
 
-2. **Preserved Essential Functionality**:
-   - Created http_utils.rs to preserve needed utility functions
-   - Updated all integration tests to use directional transports
-   - Fixed all compilation errors
+## Tasks (5 hours)
 
-3. **Final State**:
-   - ✅ All 788 unit tests passing
-   - ✅ Zero clippy warnings
-   - ✅ Single, clean directional transport architecture
-   - ✅ Both ForwardProxy and ReverseProxy fully migrated
-   - ✅ No more dual transport system technical debt
+### 1. Analyze Deleted Test Coverage (1h)
+For each deleted test file:
+- Review what scenarios were being tested
+- Document the test's purpose and importance
+- Note any critical functionality that needs coverage
 
-## Next Steps for Future Sessions
+### 2. Map to New Architecture (2h)
+- Identify where each test scenario should live in the new architecture
+- Check if equivalent tests already exist for directional transports
+- Create a gap analysis document
 
-The transport refactor is complete. Future work can focus on:
+### 3. Implement Missing Tests (2h)
+- Write new tests for any critical gaps identified
+- Focus on:
+  - Message size limits
+  - Transport validation
+  - SSE/streaming scenarios (if still relevant)
+  - Pause/resume functionality
+  - Regression scenarios
 
-1. **Performance Optimizations** (Phase 8 in tracker):
-   - HTTP connection pooling
-   - Transport context caching
-   - Streaming optimizations
+## Key Questions to Answer
+1. **Size Limits**: Are message size limits still enforced in directional transports?
+2. **Validation**: Is transport validation logic covered in the new system?
+3. **SSE/Streaming**: Since we removed SSE transport, is streaming still supported via StreamableHttp?
+4. **Pause/Resume**: Is pause/resume functionality still needed and tested?
+5. **Regression Suite**: What regression scenarios need to be preserved?
 
-2. **Feature Enhancements**:
-   - Full batch message support
-   - Metrics and observability
-   - ProcessManager integration
+## Success Criteria
+- [ ] All deleted test scenarios analyzed
+- [ ] Gap analysis document created
+- [ ] Critical missing tests identified
+- [ ] New tests written for gaps
+- [ ] All tests passing
+- [ ] Documentation updated
 
-3. **Other Areas**:
-   - Move on to other refactoring tasks
-   - Implement new features
-   - Performance testing and benchmarking
+## References
+- Tracker: `plans/transport-refactor/transport-refactor-tracker.md`
+- See Phase 8 in tracker for detailed task breakdown
 
-## Files Changed in Session 7
-
-### Deleted Files:
-- src/transport/stdio.rs
-- src/transport/stdio_client.rs
-- src/transport/http.rs
-- src/transport/http_mcp.rs
-- src/transport/sse_transport.rs
-- src/transport/sse_interceptor.rs
-- src/transport/factory.rs
-- src/transport/builders.rs
-- tests/transport_regression_suite.rs
-- tests/integration_forward_proxy_sse.rs
-- tests/sse_transport_test.rs
-- tests/sse_interceptor_test.rs
-- tests/pause_resume_test.rs
-- examples/transport_factory.rs
-
-### Created Files:
-- src/transport/http_utils.rs (preserved utility functions)
-
-### Modified Files:
-- src/transport/mod.rs (removed Transport trait and old exports)
-- tests/integration_api_mock.rs (updated to use directional traits)
-- tests/version_negotiation_test.rs (updated to use directional traits)
-- plans/transport-refactor/transport-refactor-tracker.md (marked complete)
-
-## Technical Debt Resolved
-
-- ✅ No more dual transport system
-- ✅ Clear separation of concerns
-- ✅ Consistent directional architecture
-- ✅ Improved testability
-- ✅ Reduced complexity
-
-The transport layer is now clean, maintainable, and ready for future enhancements.
+## Note
+The transport refactor is functionally complete with 788 unit tests passing. This session is about ensuring we haven't lost important test coverage during the cleanup.

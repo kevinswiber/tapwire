@@ -271,7 +271,29 @@ Understand the current state and prepare for safe refactoring.
 - ✅ Zero clippy warnings
 - **Final Status**: Transport refactor 100% complete - single, clean directional transport architecture
 
-### Phase 8: Raw Transport Enhancements (Future)
+### Phase 8: Test Coverage Analysis (Next Session - 5h)
+| ID | Task | Duration | Dependencies | Status | Notes |
+|----|------|----------|--------------|--------|--------|
+| 8.1 | Analyze deleted test files | 1h | | ⬜ | Review what was tested in deleted files |
+| 8.2 | Map test coverage to new architecture | 2h | 8.1 | ⬜ | Identify gaps in directional transport tests |
+| 8.3 | Create missing test cases | 2h | 8.2 | ⬜ | Ensure all scenarios are covered |
+
+**Phase 8 Total**: 5 hours
+
+**Deleted Test Files to Analyze**:
+- src/transport/size_limit_tests.rs - Message size limit validation
+- src/transport/validation_test.rs - Transport validation logic
+- tests/integration_forward_proxy_sse.rs - SSE forward proxy scenarios
+- tests/pause_resume_test.rs - Pause/resume functionality
+- tests/sse_interceptor_test.rs - SSE interceptor behavior
+- tests/sse_transport_test.rs - SSE transport functionality
+- tests/transport_regression_suite.rs - Regression test suite
+
+**Modified Test Files to Review**:
+- tests/integration_api_mock.rs - Updated but may need review
+- tests/version_negotiation_test.rs - Updated but may need review
+
+### Phase 9: Raw Transport Enhancements (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.1.1 | HttpRawServer bind address accessor | 1h | | ⬜ | Currently returns hardcoded value |
@@ -284,9 +306,9 @@ Understand the current state and prepare for safe refactoring.
 | P.1 | Transport context caching | 2h | | ⬜ | Performance optimization |
 | P.2 | HTTP connection pooling | 4h | | ⬜ | Performance optimization |
 
-**Phase 7 Total**: 16 hours
+**Phase 9 Total**: 16 hours
 
-### Phase 8: Advanced Features (Future)
+### Phase 10: Advanced Features (Future)
 | ID | Task | Duration | Dependencies | Status | Notes |
 |----|------|----------|--------------|--------|--------|
 | T.2 | ProcessManager integration | 4h | | ⬜ | Currently not used by SubprocessOutgoing |
@@ -294,7 +316,7 @@ Understand the current state and prepare for safe refactoring.
 | S.1 | Streaming optimizations | 4h | T.1.4, T.1.7 | ⬜ | SSE performance improvements |
 | M.1 | Metrics and observability | 3h | | ⬜ | Transport-level metrics |
 
-**Phase 8 Total**: 17 hours
+**Phase 10 Total**: 17 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
