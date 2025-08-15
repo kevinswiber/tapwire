@@ -4,9 +4,10 @@
 
 This tracker coordinates the improvement of Shadowcat's CLI interface to provide a more intuitive developer experience. The plan implements a hybrid approach with smart auto-detection for common cases while maintaining explicit control when needed.
 
-**Last Updated**: 2025-01-14  
+**Last Updated**: 2025-01-15  
 **Total Estimated Duration**: 16-24 hours  
-**Status**: Planning
+**Status**: Design Complete - Ready for Implementation  
+**Next Plan**: [Gateway CLI Enhancement](../gateway-cli-enhancement/) - Builds on gateway command
 
 ## Goals
 
@@ -78,14 +79,14 @@ Ensure quality and user experience
 
 ## Progress Tracking
 
-### Week 1 (Jan 14-21)
+### Week 1 (Jan 15-22)
 - [ ] A.0: Current CLI Analysis
 - [ ] A.1: User Experience Research
 - [ ] A.2: Design Proposal
 - [ ] A.3: Implementation Plan
 - [ ] B.1: Refactor CLI Module Structure
 
-### Week 2 (Jan 21-28)
+### Week 2 (Jan 22-29)
 - [ ] B.2: Implement Smart Detection
 - [ ] B.3: Add Forward/Gateway Commands
 - [ ] B.4: Update Help System
@@ -250,6 +251,53 @@ If context window becomes limited:
 - "Gateway" is much more intuitive than "reverse proxy" for most developers
 - Smart detection should be simple and predictable, not overly clever
 - Consider how this will work with future transport types (WebSocket, etc.)
+
+## Coordination with Gateway CLI Enhancement
+
+### Foundations This Plan Establishes
+
+This plan creates the foundation that the [Gateway CLI Enhancement](../gateway-cli-enhancement/) will build upon:
+
+1. **Gateway Command Structure**: Renames `reverse` to `gateway` - all future enhancements use this name
+2. **Positional Argument Pattern**: `shadowcat gateway <upstream>` becomes the base pattern
+3. **Auto-Detection for URLs**: URLs starting with http:// or https:// trigger gateway mode
+4. **Help Text Structure**: Establishes pattern for documenting complex options
+5. **Error Message Format**: Creates template for suggesting corrections
+
+### Design Patterns for Extension
+
+The following patterns established here will be extended in the next plan:
+
+1. **Multiple Upstreams**: Extend positional pattern to accept multiple URLs
+   ```bash
+   # This plan establishes:
+   shadowcat gateway http://server
+   
+   # Next plan extends to:
+   shadowcat gateway http://server1 http://server2 http://server3
+   ```
+
+2. **Configuration Files**: This plan mentions `--config`, next plan implements it fully
+3. **Progressive Disclosure**: Basic usage stays simple, advanced features are optional flags
+
+### Handoff Checklist
+
+Before starting Gateway CLI Enhancement, ensure:
+
+- [ ] `gateway` command is fully functional as renamed `reverse`
+- [ ] Positional upstream argument works: `shadowcat gateway http://server`
+- [ ] Auto-detection properly routes to gateway mode
+- [ ] Help text uses new terminology throughout
+- [ ] Tests updated to use `gateway` instead of `reverse`
+- [ ] Documentation updated with new command name
+- [ ] CLI structure is ready for additional flags (auth, circuit breaker, etc.)
+
+### Implementation Dependencies
+
+1. **Phase B.3** must rename `reverse` to `gateway` first
+2. **Phase B.2** implements smart detection including gateway patterns
+3. **Phase B.4** updates all help text with gateway terminology
+4. These changes create the foundation for the enhancement plan
 
 ---
 

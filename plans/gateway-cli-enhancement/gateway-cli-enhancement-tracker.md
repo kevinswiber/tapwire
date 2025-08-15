@@ -1,28 +1,29 @@
-# Reverse Proxy CLI Enhancement Tracker
+# Gateway CLI Enhancement Tracker
 
 ## Overview
 
-This tracker coordinates the enhancement of the Shadowcat reverse proxy CLI to expose the full capabilities of the reverse proxy module that are currently only accessible via configuration files or are hardcoded.
+This tracker coordinates the enhancement of the Shadowcat gateway CLI to expose the full capabilities of the gateway (reverse proxy) module that are currently only accessible via configuration files or are hardcoded.
 
+**Prerequisites**: Complete [Better CLI Interface](../better-cli-interface/) plan first  
 **Last Updated**: 2025-08-15  
 **Total Estimated Duration**: 20-30 hours  
-**Status**: Design Complete - Ready for Implementation
+**Status**: Design Complete - Awaiting Better CLI Interface completion
 
 ## Goals
 
-1. **Feature Parity** - Expose all reverse proxy capabilities through CLI arguments
+1. **Feature Parity** - Expose all gateway capabilities through CLI arguments
 2. **Production Readiness** - Add essential features for production deployments (auth, circuit breakers, multiple upstreams)
-3. **Developer Experience** - Maintain backward compatibility while providing advanced options
+3. **Developer Experience** - Build on the improved UX from Better CLI Interface plan
 4. **Documentation** - Comprehensive help and examples for all new options
 
 ## Architecture Vision
 
 ```
-CLI Layer (src/cli/reverse.rs)
+CLI Layer (src/cli/gateway.rs) ← renamed from reverse.rs
     ↓
 Configuration Builder
     ↓
-ReverseProxyConfig {
+GatewayConfig {
     - Authentication (OAuth 2.1, JWT)
     - Multiple Upstreams + Load Balancing
     - Circuit Breakers
@@ -32,8 +33,35 @@ ReverseProxyConfig {
     - Audit Logging
 }
     ↓
-ReverseProxyServer
+GatewayServer (ReverseProxyServer internally)
 ```
+
+## Dependencies from Better CLI Interface
+
+This plan builds upon foundations established by the Better CLI Interface plan:
+
+### Prerequisites Provided
+1. **Gateway Command**: The `reverse` command is renamed to `gateway`
+2. **Basic Positional Arguments**: `shadowcat gateway http://server` pattern works
+3. **Auto-Detection**: URLs trigger gateway mode automatically
+4. **Improved Help Structure**: Consistent help text patterns
+5. **Error Message Templates**: User-friendly error suggestions
+
+### Patterns to Extend
+1. **Positional Arguments**: Extend from single to multiple upstreams
+   ```bash
+   # Better CLI provides:
+   shadowcat gateway http://server
+   
+   # This plan extends to:
+   shadowcat gateway http://server1 http://server2 http://server3
+   ```
+
+2. **Progressive Disclosure**: Keep basic usage simple while adding advanced features
+3. **Configuration Files**: Implement the `--config` pattern mentioned but not implemented
+
+### Design Alignment
+All examples and documentation in this plan use `gateway` command (not `reverse`) to maintain consistency with the renamed command from Better CLI Interface.
 
 ## Work Phases
 

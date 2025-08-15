@@ -5,7 +5,7 @@
 **Dependencies**: A.0 (Complete)
 
 ## Objective
-Design a comprehensive CLI interface for the reverse proxy that exposes all module capabilities while maintaining backward compatibility and ease of use.
+Design a comprehensive CLI interface for the gateway that exposes all module capabilities while maintaining backward compatibility and ease of use.
 
 ## Key Questions to Answer
 1. How should complex configurations be passed (CLI args vs config files)?

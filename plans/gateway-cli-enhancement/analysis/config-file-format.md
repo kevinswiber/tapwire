@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document specifies the configuration file format for the Shadowcat reverse proxy, supporting both YAML and JSON formats. The configuration system follows a hierarchical structure with sensible defaults and comprehensive validation.
+This document specifies the configuration file format for the Shadowcat gateway (reverse proxy), supporting both YAML and JSON formats. The configuration system follows a hierarchical structure with sensible defaults and comprehensive validation.
 
 ## File Format Support
 
@@ -28,7 +28,7 @@ This document specifies the configuration file format for the Shadowcat reverse 
 version: "1.0"  # Configuration format version
 
 # Core settings
-bind_address: "127.0.0.1:8080"  # Address to bind the reverse proxy
+bind_address: "127.0.0.1:8080"  # Address to bind the gateway
 
 # Upstream servers configuration
 upstreams:
@@ -273,7 +273,7 @@ tls:
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Shadowcat Reverse Proxy Configuration",
+  "title": "Shadowcat Gateway Configuration",
   "type": "object",
   "properties": {
     "version": {
@@ -617,7 +617,7 @@ When multiple configuration sources are present:
 
 ### Multiple Configuration Files
 ```bash
-shadowcat reverse --config base.yaml --config overrides.yaml
+shadowcat gateway --config base.yaml --config overrides.yaml
 ```
 
 Files are merged left-to-right:
@@ -663,7 +663,7 @@ Configuration Error at rate_limiting.global.requests_per_minute:
 
 Current CLI:
 ```bash
-shadowcat reverse \
+shadowcat gateway \
   --bind 127.0.0.1:8080 \
   --upstream http://server \
   --enable-rate-limit \
@@ -768,10 +768,10 @@ observability:
 ### Validation Tool
 ```bash
 # Validate configuration file
-shadowcat config validate reverse-proxy.yaml
+shadowcat config validate gateway.yaml
 
 # Generate example configuration
-shadowcat config generate --type reverse-proxy > example.yaml
+shadowcat config generate --type gateway > example.yaml
 
 # Convert between formats
 shadowcat config convert config.yaml --output config.json
@@ -789,8 +789,8 @@ shadowcat config schema --format yaml > schema.yaml
 ### Configuration Testing
 ```bash
 # Dry run with configuration
-shadowcat reverse --config test.yaml --dry-run
+shadowcat gateway --config test.yaml --dry-run
 
 # Test configuration loading
-shadowcat reverse --config test.yaml --validate-only
+shadowcat gateway --config test.yaml --validate-only
 ```

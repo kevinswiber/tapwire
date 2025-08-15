@@ -8,11 +8,11 @@
 
 ## Objective
 
-Implement CLI support for session recording configuration in the reverse proxy, enabling capture of MCP sessions for debugging, auditing, and replay purposes.
+Implement CLI support for session recording configuration in the gateway, enabling capture of MCP sessions for debugging, auditing, and replay purposes.
 
 ## Background
 
-The reverse proxy module has built-in recording capabilities via the `TapeRecorder` but these are not exposed through CLI. Recording is essential for debugging MCP interactions, creating test fixtures, and audit compliance.
+The gateway module has built-in recording capabilities via the `TapeRecorder` but these are not exposed through CLI. Recording is essential for debugging MCP interactions, creating test fixtures, and audit compliance.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ The reverse proxy module has built-in recording capabilities via the `TapeRecord
 
 ### Step 1: Extend CLI Arguments (20 min)
 ```rust
-// In src/cli/reverse.rs
+// In src/cli/gateway.rs
 #[derive(Debug, Args)]
 pub struct ReverseCommand {
     // ... existing fields ...
@@ -203,7 +203,7 @@ impl ReverseCommand {
 
 ### Step 4: Integrate with Proxy Server (20 min)
 ```rust
-// In reverse proxy server initialization
+// In gateway server initialization
 pub async fn start_with_recording(&self) -> Result<()> {
     let recorder = if self.config.enable_recording {
         let recorder = TapeRecorder::new(

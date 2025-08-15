@@ -1,15 +1,15 @@
-# Current State Analysis: Reverse Proxy CLI
+# Current State Analysis: Gateway CLI
 
 **Date**: 2025-08-15  
 **Status**: Complete
 
 ## Executive Summary
 
-The Shadowcat reverse proxy has extensive capabilities implemented in the codebase but only exposes a minimal subset through the CLI. This analysis documents the gap between implemented functionality and CLI accessibility.
+The Shadowcat gateway (reverse proxy) has extensive capabilities implemented in the codebase but only exposes a minimal subset through the CLI. This analysis documents the gap between implemented functionality and CLI accessibility.
 
 ## Current CLI Options
 
-The reverse proxy CLI (`shadowcat reverse`) currently exposes:
+The gateway CLI (currently `shadowcat reverse`, to be renamed `shadowcat gateway` by Better CLI Interface plan) exposes:
 
 ### Basic Options
 - `--bind`: Address and port to bind to (default: "127.0.0.1:8080")
@@ -130,7 +130,7 @@ pub health_check: Option<ReverseUpstreamHealthCheckConfig>
 ### Current Pattern
 The CLI directly builds configuration in the command handler:
 ```rust
-// Direct configuration in run_reverse_proxy
+// Direct configuration in run_gateway (currently run_reverse_proxy)
 let upstream_config = if upstream.starts_with("http://") {
     ReverseUpstreamConfig::http("default", &upstream)
 } else {
@@ -172,14 +172,14 @@ let upstream_config = if upstream.starts_with("http://") {
 
 ### Option Grouping
 ```bash
-# Basic operation
-shadowcat reverse --bind 127.0.0.1:8080 --upstream http://server
+# Basic operation (after Better CLI Interface rename)
+shadowcat gateway --bind 127.0.0.1:8080 --upstream http://server
 
 # With config file
-shadowcat reverse --config reverse-proxy.yaml
+shadowcat gateway --config gateway.yaml
 
 # Mixed (CLI overrides config)
-shadowcat reverse --config base.yaml --enable-recording
+shadowcat gateway --config base.yaml --enable-recording
 ```
 
 ### Complex Configuration via File
@@ -207,4 +207,4 @@ circuit_breaker:
 
 ## Conclusion
 
-The reverse proxy module is feature-complete but the CLI severely limits its usability. Exposing these capabilities would make Shadowcat production-ready for enterprise deployments. Priority should be on features that enable high availability, security, and observability.
+The gateway module is feature-complete but the CLI severely limits its usability. Exposing these capabilities would make Shadowcat production-ready for enterprise deployments. Priority should be on features that enable high availability, security, and observability.

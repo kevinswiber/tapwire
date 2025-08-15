@@ -1,7 +1,7 @@
-# Next Session: Reverse Proxy CLI Enhancement - Implementation Phase 1
+# Next Session: Gateway CLI Enhancement - Implementation Phase 1
 
 ## Context
-The design phase for the Shadowcat reverse proxy CLI enhancement has been completed. All design documents and initial task files have been created:
+The design phase for the Shadowcat gateway CLI enhancement has been completed. All design documents and initial task files have been created:
 - ✅ CLI Design Proposal (`analysis/cli-design-proposal.md`)
 - ✅ Configuration File Format (`analysis/config-file-format.md`)
 - ✅ Load Balancing Task (`tasks/B.2-load-balancing.md`)
@@ -26,16 +26,16 @@ Implement task B.1 - Multiple Upstreams:
 
 ### Secondary Task: Load Balancing Implementation (3 hours)
 If time permits, begin task B.2 - Load Balancing:
-- Expose `ReverseLoadBalancingStrategy` enum via CLI
+- Expose `GatewayLoadBalancingStrategy` enum via CLI
 - Implement `--load-balancing` flag with strategy selection
 - Add weight parsing for weighted strategies
 - Implement connection tracking for least-connections
 - Add basic sticky session support
 
 ## Key References
-- **Tracker**: `plans/reverse-proxy-cli-enhancement/reverse-proxy-cli-enhancement-tracker.md`
-- **Current State**: `plans/reverse-proxy-cli-enhancement/analysis/current-state.md`
-- **Reverse Proxy Module**: `shadowcat/src/proxy/reverse.rs`
+- **Tracker**: `plans/gateway-cli-enhancement/gateway-cli-enhancement-tracker.md`
+- **Current State**: `plans/gateway-cli-enhancement/analysis/current-state.md`
+- **Gateway Module**: `shadowcat/src/proxy/reverse.rs` (internal reverse proxy implementation)
 - **CLI Module**: `shadowcat/src/cli/reverse.rs`
 
 ## Important Constraints
@@ -51,8 +51,8 @@ If time permits, begin task B.2 - Load Balancing:
 4. **Testability**: Design with testing in mind
 
 ## Key Files to Modify
-- `shadowcat/src/cli/reverse.rs` - CLI argument parsing
-- `shadowcat/src/proxy/reverse.rs` - Reverse proxy configuration
+- `shadowcat/src/cli/gateway.rs` - CLI argument parsing (to be renamed from reverse.rs)
+- `shadowcat/src/proxy/reverse.rs` - Gateway configuration (internal reverse proxy)
 - `shadowcat/src/cli/mod.rs` - CLI module exports
 - `shadowcat/Cargo.toml` - Dependencies if needed
 
@@ -81,7 +81,7 @@ If time permits, begin task B.2 - Load Balancing:
 - Includes comprehensive examples
 
 ## Notes from Previous Session
-- Current CLI only exposes ~20% of reverse proxy capabilities
+- Current CLI only exposes ~20% of gateway capabilities
 - Priority features: multiple upstreams, load balancing, authentication, circuit breakers
 - Consider using structured config files for complex setups
 - Module already has all features implemented, just need CLI exposure

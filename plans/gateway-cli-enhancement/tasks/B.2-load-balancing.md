@@ -8,11 +8,11 @@
 
 ## Objective
 
-Implement CLI support for all load balancing strategies available in the reverse proxy module, enabling users to distribute traffic across multiple upstream servers with various algorithms.
+Implement CLI support for all load balancing strategies available in the gateway module, enabling users to distribute traffic across multiple upstream servers with various algorithms.
 
 ## Background
 
-The reverse proxy module already implements multiple load balancing strategies in the `ReverseLoadBalancingStrategy` enum, but these are not accessible via CLI. This task will expose all strategies through command-line arguments and configuration files.
+The gateway module already implements multiple load balancing strategies in the `ReverseLoadBalancingStrategy` enum, but these are not accessible via CLI. This task will expose all strategies through command-line arguments and configuration files.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ The reverse proxy module already implements multiple load balancing strategies i
 
 ### Step 1: Extend CLI Arguments (30 min)
 ```rust
-// In src/cli/reverse.rs
+// In src/cli/gateway.rs
 #[derive(Debug, Args)]
 pub struct ReverseCommand {
     // ... existing fields ...

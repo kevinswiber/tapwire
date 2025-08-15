@@ -1,13 +1,13 @@
-# Reverse Proxy CLI Enhancement - Analysis & Design Documents
+# Gateway CLI Enhancement - Analysis & Design Documents
 
-This directory contains analysis outputs and design documents for the reverse proxy CLI enhancement project.
+This directory contains analysis outputs and design documents for the gateway CLI enhancement project.
 
 ## Documents
 
 ### Completed
 - **[current-state.md](current-state.md)** - Analysis of current CLI capabilities vs module features
   - Status: ✅ Complete
-  - Key Finding: CLI exposes only ~20% of reverse proxy capabilities
+  - Key Finding: CLI exposes only ~20% of gateway capabilities
 
 ### Pending
 - **cli-design-proposal.md** - Comprehensive CLI interface design
@@ -21,7 +21,7 @@ This directory contains analysis outputs and design documents for the reverse pr
 ## Key Findings
 
 ### Gap Analysis
-The reverse proxy module has extensive capabilities that are not accessible via CLI:
+The gateway module has extensive capabilities that are not accessible via CLI:
 - **Authentication**: OAuth 2.1, JWT validation
 - **High Availability**: Multiple upstreams, load balancing
 - **Resilience**: Circuit breakers, retry policies

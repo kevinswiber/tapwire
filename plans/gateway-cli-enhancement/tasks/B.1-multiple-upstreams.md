@@ -5,7 +5,7 @@
 **Dependencies**: A.2 (Configuration File Format Design)
 
 ## Objective
-Implement support for multiple upstream servers in the reverse proxy CLI, enabling high availability and load distribution scenarios.
+Implement support for multiple upstream servers in the gateway CLI, enabling high availability and load distribution scenarios.
 
 ## Deliverables
 1. **Enhanced CLI Arguments**
@@ -14,7 +14,7 @@ Implement support for multiple upstream servers in the reverse proxy CLI, enabli
    - Maintain backward compatibility with single upstream
 
 2. **Code Changes**
-   - Update `src/cli/reverse.rs` to parse multiple upstreams
+   - Update `src/cli/gateway.rs` to parse multiple upstreams
    - Modify configuration building logic
    - Add validation for upstream configurations
 
@@ -48,7 +48,7 @@ pub struct ReverseCommand {
 - Handle both stdio and HTTP upstreams
 
 ### Step 3: Update Configuration Building (1 hour)
-- Modify `run_reverse_proxy` to handle multiple upstreams
+- Modify `run_gateway` to handle multiple upstreams
 - Update `ReverseProxyConfig` builder calls
 - Ensure proper error handling
 
@@ -97,9 +97,9 @@ upstreams:
 ```
 
 ## Code Locations
-- **CLI Definition**: `src/cli/reverse.rs`
+- **CLI Definition**: `src/cli/gateway.rs`
 - **Configuration Types**: `src/proxy/reverse.rs`
-- **Tests**: `src/cli/reverse.rs` (unit), `tests/integration_reverse_proxy.rs`
+- **Tests**: `src/cli/gateway.rs` (unit), `tests/integration_gateway.rs`
 
 ## Validation Rules
 1. At least one upstream must be specified

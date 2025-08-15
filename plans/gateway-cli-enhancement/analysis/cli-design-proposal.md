@@ -1,4 +1,4 @@
-# Reverse Proxy CLI Design Proposal
+# Gateway CLI Design Proposal
 
 **Date**: 2025-08-15  
 **Status**: Draft  
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This proposal outlines a comprehensive design of the Shadowcat reverse proxy CLI to expose the full capabilities of the reverse proxy module with a clean, intuitive interface unconstrained by legacy requirements.
+This proposal outlines a comprehensive design of the Shadowcat gateway CLI to expose the full capabilities of the gateway (reverse proxy) module with a clean, intuitive interface that builds upon the Better CLI Interface foundation.
 
 ## Design Principles
 
@@ -21,39 +21,39 @@ This proposal outlines a comprehensive design of the Shadowcat reverse proxy CLI
 
 ### Basic Usage (Simplified)
 ```bash
-# Simple single upstream
-shadowcat reverse http://server
-shadowcat reverse stdio "echo test"
+# Simple single upstream (builds on Better CLI Interface)
+shadowcat gateway http://server
+shadowcat gateway stdio "echo test"
 
 # With custom bind address
-shadowcat reverse --bind 127.0.0.1:8080 http://server
+shadowcat gateway --bind 127.0.0.1:8080 http://server
 ```
 
 ### Configuration File Support
 ```bash
 # Primary configuration via file
-shadowcat reverse --config reverse-proxy.yaml
+shadowcat gateway --config gateway.yaml
 
 # Override specific settings
-shadowcat reverse --config base.yaml --bind 0.0.0.0:9000
+shadowcat gateway --config base.yaml --bind 0.0.0.0:9000
 
 # Multiple config files with merging
-shadowcat reverse --config base.yaml --config overrides.yaml
+shadowcat gateway --config base.yaml --config overrides.yaml
 ```
 
 ### Multiple Upstreams
 ```bash
-# Multiple upstreams as positional arguments
-shadowcat reverse http://server1:8080 http://server2:8080
+# Multiple upstreams as positional arguments (extends Better CLI pattern)
+shadowcat gateway http://server1:8080 http://server2:8080
 
 # With load balancing strategy
-shadowcat reverse \
+shadowcat gateway \
   --load-balancing weighted-round-robin \
   "http://server1:8080,weight=2" \
   "http://server2:8080,weight=1"
 
 # Named upstreams for better tracking
-shadowcat reverse \
+shadowcat gateway \
   "primary=http://server1:8080" \
   "secondary=http://server2:8080"
 ```
@@ -61,33 +61,33 @@ shadowcat reverse \
 ### Authentication Configuration
 ```bash
 # OAuth 2.1 gateway with inline configuration
-shadowcat reverse \
+shadowcat gateway \
   --auth-type oauth \
   --auth-issuer https://auth.example.com \
   --auth-audience api.example.com \
   --auth-jwks-url https://auth.example.com/.well-known/jwks.json
 
 # JWT validation
-shadowcat reverse \
+shadowcat gateway \
   --auth-type jwt \
   --auth-secret-file /path/to/secret.key \
   --auth-algorithm RS256
 
 # Auth configuration file
-shadowcat reverse --auth-config auth.yaml
+shadowcat gateway --auth-config auth.yaml
 ```
 
 ### Circuit Breaker
 ```bash
 # Basic circuit breaker
-shadowcat reverse \
+shadowcat gateway \
   --upstream http://server \
   --circuit-breaker \
   --circuit-threshold 5 \
   --circuit-timeout 30
 
 # Per-upstream circuit breakers
-shadowcat reverse \
+shadowcat gateway \
   --upstream "primary=http://server1,circuit=5/30" \
   --upstream "secondary=http://server2,circuit=10/60"
 ```
@@ -95,15 +95,15 @@ shadowcat reverse \
 ### Recording and Replay
 ```bash
 # Enable recording with default directory
-shadowcat reverse --upstream http://server --enable-recording
+shadowcat gateway --upstream http://server --enable-recording
 
 # Custom recording directory
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --enable-recording \
   --recording-dir ./tapes
 
 # Recording with session filtering
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --enable-recording \
   --recording-filter "method=tools/*"
 ```
@@ -111,11 +111,11 @@ shadowcat reverse --upstream http://server \
 ### Interceptors
 ```bash
 # Load interceptor rules from file
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --interceptor-rules rules.yaml
 
 # Inline interceptor for simple cases
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --intercept-block "method=dangerous/*" \
   --intercept-log "method=tools/*"
 ```
@@ -123,13 +123,13 @@ shadowcat reverse --upstream http://server \
 ### Advanced Options
 ```bash
 # Connection pooling
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --pool-max-connections 50 \
   --pool-min-idle 5 \
   --pool-idle-timeout 300
 
 # Health checks
-shadowcat reverse \
+shadowcat gateway \
   --upstream http://server \
   --health-check \
   --health-interval 30 \
@@ -137,12 +137,12 @@ shadowcat reverse \
   --health-path /health
 
 # Body size and CORS
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --max-body-size 10MB \
   --cors-disable
 
 # Audit logging
-shadowcat reverse --upstream http://server \
+shadowcat gateway --upstream http://server \
   --audit-log ./audit.log \
   --audit-level detailed
 ```
@@ -288,14 +288,14 @@ Hint: Use --circuit-threshold <N> with N > 0
 
 ### Simple Development Setup
 ```bash
-# Basic reverse proxy (positional argument)
-shadowcat reverse http://localhost:3000
+# Basic gateway (positional argument, leverages Better CLI auto-detection)
+shadowcat gateway http://localhost:3000
 ```
 
 ### Production Setup with HA
 ```bash
 # High availability with load balancing
-shadowcat reverse \
+shadowcat gateway \
   --load-balancing weighted-round-robin \
   --circuit-breaker \
   --health-check \
@@ -307,7 +307,7 @@ shadowcat reverse \
 ### Secure API Gateway
 ```bash
 # OAuth-protected API gateway
-shadowcat reverse \
+shadowcat gateway \
   --config production.yaml \
   --auth-type oauth \
   --auth-issuer https://auth.company.com \
@@ -318,7 +318,7 @@ shadowcat reverse \
 ### Development with Debugging
 ```bash
 # Development setup with interceptors
-shadowcat reverse \
+shadowcat gateway \
   --interceptor-rules debug-rules.yaml \
   --enable-recording \
   --recording-dir ./debug-sessions \
@@ -330,7 +330,7 @@ shadowcat reverse \
 When `--config` is specified, load from YAML/JSON:
 
 ```yaml
-# reverse-proxy.yaml
+# gateway.yaml
 bind_address: "0.0.0.0:8080"
 
 upstreams:
@@ -378,10 +378,10 @@ audit:
 ## Help Text Structure
 
 ```
-shadowcat reverse - Run a reverse proxy server for MCP
+shadowcat gateway - Run an API gateway for MCP
 
 USAGE:
-    shadowcat reverse [OPTIONS] <UPSTREAMS>...
+    shadowcat gateway [OPTIONS] <UPSTREAMS>...
 
 ARGS:
     <UPSTREAMS>...    One or more upstream servers (URLs or stdio commands)
@@ -425,27 +425,27 @@ OPTIONS:
         --audit-log <FILE>         Enable audit logging
 
 EXAMPLES:
-    # Basic reverse proxy
-    shadowcat reverse http://localhost:3000
+    # Basic gateway
+    shadowcat gateway http://localhost:3000
     
     # Multiple upstreams with load balancing
-    shadowcat reverse \
+    shadowcat gateway \
         --load-balancing round-robin \
         http://server1:8080 \
         http://server2:8080
     
     # With configuration file
-    shadowcat reverse --config reverse-proxy.yaml
+    shadowcat gateway --config gateway.yaml
     
     # Secure API gateway
-    shadowcat reverse \
+    shadowcat gateway \
         --auth-type oauth \
         --auth-issuer https://auth.example.com \
         --enable-rate-limit \
         http://api-server:8080
 
 For more examples and detailed documentation, see:
-https://github.com/shadowcat/docs/reverse-proxy
+https://github.com/shadowcat/docs/gateway
 ```
 
 ## Testing Strategy
@@ -490,8 +490,8 @@ fn test_config_precedence() {
 
 ### Code Structure
 ```rust
-// src/cli/reverse.rs
-pub struct ReverseCommand {
+// src/cli/gateway.rs
+pub struct GatewayCommand {
     // Core
     #[arg(long)]
     pub bind: Option<String>,
@@ -509,12 +509,12 @@ pub struct ReverseCommand {
     // ... other options
 }
 
-impl ReverseCommand {
-    pub fn build_config(&self) -> Result<ReverseProxyConfig> {
+impl GatewayCommand {
+    pub fn build_config(&self) -> Result<GatewayConfig> {
         let mut config = if let Some(file) = &self.config {
             load_config_file(file)?
         } else {
-            ReverseProxyConfig::default()
+            GatewayConfig::default()
         };
         
         // Apply CLI overrides
@@ -530,15 +530,15 @@ impl ReverseCommand {
 
 ### Configuration Builder Pattern
 ```rust
-pub struct ReverseProxyConfigBuilder {
-    config: ReverseProxyConfig,
+pub struct GatewayConfigBuilder {
+    config: GatewayConfig,
 }
 
-impl ReverseProxyConfigBuilder {
+impl GatewayConfigBuilder {
     pub fn from_file(path: &Path) -> Result<Self> { ... }
-    pub fn from_cli(args: &ReverseCommand) -> Result<Self> { ... }
-    pub fn merge(self, other: ReverseProxyConfig) -> Self { ... }
-    pub fn validate(self) -> Result<ReverseProxyConfig> { ... }
+    pub fn from_cli(args: &GatewayCommand) -> Result<Self> { ... }
+    pub fn merge(self, other: GatewayConfig) -> Self { ... }
+    pub fn validate(self) -> Result<GatewayConfig> { ... }
 }
 ```
 
@@ -561,4 +561,4 @@ impl ReverseProxyConfigBuilder {
 
 ## Conclusion
 
-This design enables full access to reverse proxy capabilities while maintaining simplicity for basic use cases. The progressive disclosure approach ensures new users aren't overwhelmed while power users can access all features. Configuration file support enables complex enterprise deployments while CLI arguments provide quick overrides and simple setups.
+This design enables full access to gateway capabilities while maintaining simplicity for basic use cases, building naturally upon the foundation established by the Better CLI Interface plan. The progressive disclosure approach ensures new users aren't overwhelmed while power users can access all features. Configuration file support enables complex enterprise deployments while CLI arguments provide quick overrides and simple setups.
