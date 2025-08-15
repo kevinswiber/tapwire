@@ -1,139 +1,138 @@
-# Next Session: Phase D - Modularize the Reverse Proxy
+# Next Session: Phase C.5.1 - Replace Reqwest with Hyper for SSE Streaming
 
-## Context
-We've successfully completed Phase C of the reverse proxy refactor. The SSE duplicate request bug has been **completely fixed**! The proxy now efficiently routes responses based on content type without unnecessary buffering or duplicate requests.
+## Critical Issue
+Client cannot establish successful SSE connections through the proxy. The issue is not with the upstream server but with how the proxy handles SSE streaming. Reqwest's abstraction layer is preventing proper SSE handling.
 
 ## Current Status
-- **Phase A**: ✅ COMPLETE (5 hours) - Full analysis completed
-- **Phase B**: ✅ COMPLETE (4 hours) - SessionStore abstraction implemented  
-- **Phase C**: ✅ COMPLETE (6 hours) - SSE bug fixed, no more duplicate requests!
-- **Phase D**: ⬜ Ready to start - Modularization (8-10 hours)
-- **Phase E**: ⬜ Blocked on D - Integration & testing (4 hours)
+- **Phase A**: ✅ COMPLETE - Full analysis
+- **Phase B**: ✅ COMPLETE - SessionStore abstraction  
+- **Phase C**: ✅ COMPLETE - SSE routing fixed, but streaming broken
+- **Phase C.5**: 🚧 IN PROGRESS - Fix SSE streaming with hyper
+- **Phase D**: ⬜ Blocked - Modularization
+- **Phase E**: ⬜ Blocked - Integration & testing
 
-## Key Architectural Achievements from Phase C
+## Your Task: Replace Reqwest with Hyper
 
-### 1. UpstreamResponse Pattern
-Created `src/proxy/reverse/upstream_response.rs` that allows inspecting response headers WITHOUT consuming the body. This enables smart routing based on content type.
+### Why This Is Necessary
+1. **Reqwest limitations discovered**:
+   - Cannot access raw hyper::Body
+   - `bytes_stream()` completes prematurely
+   - No control over chunk handling
+   - Abstraction prevents proper SSE streaming
 
-### 2. Content-Type Based Routing
-The new `process_via_http_new()` function returns `UpstreamResponse` which routes to:
-- **SSE**: `sse_streaming.rs` - Streams without buffering using existing `SseStream`
-- **JSON**: `json_processing.rs` - Smart buffering based on Content-Length
-- **202 Accepted**: Passthrough streaming without buffering
-- **Unknown**: Attempts JSON parse with proper error handling
+2. **What hyper gives us**:
+   - Direct access to Body stream
+   - Full control via `poll_data(cx)`
+   - Proper chunked transfer encoding
+   - Ability to keep connection alive
 
-### 3. Module Structure Started
+### Implementation Plan
+
+#### Step 1: Create Hyper HTTP Client Module (2 hours)
+Create `src/proxy/reverse/hyper_client.rs`:
+```rust
+use hyper::{Body, Client, Request, Response};
+use hyper::client::HttpConnector;
+
+pub struct HyperHttpClient {
+    client: Client<HttpConnector>,
+}
+
+impl HyperHttpClient {
+    pub async fn send_request(
+        &self,
+        method: Method,
+        url: &str,
+        headers: HeaderMap,
+        body: Vec<u8>,
+    ) -> Result<Response<Body>> {
+        // Build hyper request
+        // Send and return raw response
+    }
+}
 ```
-src/proxy/reverse/
-├── mod.rs                    # Module coordinator with refactoring documentation
-├── legacy.rs                 # The old 3,465-line file (to be eliminated)
-├── upstream_response.rs      # ✅ Response wrapper for routing
-├── sse_streaming.rs          # ✅ SSE streaming with interceptors
-└── json_processing.rs        # ✅ JSON processing with smart buffering
+
+#### Step 2: Create New process_via_http_hyper (2 hours)
+Replace `process_via_http_new` with hyper-based version:
+1. Use hyper::Client instead of reqwest::Client
+2. Build Request<Body> directly
+3. Return Response<Body> without wrapping
+4. Let caller handle body streaming
+
+#### Step 3: Update SSE Streaming (2 hours)
+Modify `sse_streaming.rs` to work with hyper::Body:
+1. Use `poll_data(cx)` to read chunks
+2. Keep polling until None (connection closed)
+3. Parse SSE events from chunks as they arrive
+4. No more EOF issues from reqwest
+
+#### Step 4: Integration & Testing (2 hours)
+1. Update handle_mcp_request to use new hyper client
+2. Test with MCP Inspector
+3. Verify client can connect successfully
+4. Confirm SSE events are received
+
+### Files to Create/Modify
+- NEW: `src/proxy/reverse/hyper_client.rs` - Hyper-based HTTP client
+- NEW: `src/proxy/reverse/hyper_streaming.rs` - Body stream handling
+- UPDATE: `src/proxy/reverse/legacy.rs` - Use hyper instead of reqwest
+- UPDATE: `src/proxy/reverse/sse_streaming.rs` - Work with hyper::Body
+- UPDATE: `Cargo.toml` - Ensure hyper dependencies are correct
+
+### Success Criteria
+- [ ] Client can establish connection through proxy
+- [ ] SSE events are received properly
+- [ ] No premature stream termination
+- [ ] Connection stays open as long as upstream keeps it open
+- [ ] MCP Inspector shows successful communication
+
+### Key Code Pattern from eventsource-client
+```rust
+// This is how eventsource-client polls hyper::Body
+match ready!(body.poll_data(cx)) {
+    Some(Ok(chunk)) => {
+        // Process chunk
+        continue;
+    }
+    Some(Err(e)) => {
+        // Handle error
+    }
+    None => {
+        // Stream ended
+    }
+}
 ```
 
-## Important Discovery: Upstream SSE Behavior
-During testing with MCP Inspector, we discovered the upstream server closes the SSE connection after sending a single event. This is **not a proxy bug** but an upstream configuration issue. The proxy correctly handles SSE streaming when the upstream keeps the connection open.
+### Testing Commands
+```bash
+# Build
+cargo build --release
 
-## Your Task: Phase D - Modularization
+# Run proxy with debug
+RUST_LOG=debug ./target/release/shadowcat reverse \
+  --bind 127.0.0.1:8081 \
+  --upstream http://localhost:3001/mcp
 
-### Goal
-Break up the 3,465-line `legacy.rs` file into manageable modules, each under 500 lines with single responsibility.
-
-### Phase D Implementation Steps
-
-#### D.0: Create Module Structure (2 hours)
-1. Review the current `legacy.rs` structure
-2. Create subdirectories for logical groupings:
-   - `admin/` - Admin interface (876 lines to extract!)
-   - `handlers/` - Request handlers
-   - `upstream/` - Upstream management
-3. Plan the extraction order to minimize disruption
-
-#### D.1: Extract Admin Interface (3 hours)
-**This is the biggest win - 876 lines!**
-
-Create `admin/mod.rs` with:
-- `handle_admin_request()` function
-- HTML templates (currently inline strings)
-- Admin-specific types and helpers
-- Session management UI components
-
-Files to create:
-- `admin/mod.rs` - Main admin handler
-- `admin/templates.rs` - HTML templates
-- `admin/session_ui.rs` - Session management UI
-- `admin/metrics_ui.rs` - Metrics display
-
-#### D.2: Extract Request Handlers (2 hours)
-Move core request handling logic:
-- `handlers/mcp.rs` - Main MCP request handler (567 lines)
-- `handlers/health.rs` - Health check endpoint
-- `handlers/metrics.rs` - Metrics endpoint
-
-#### D.3: Extract Upstream Management (2 hours)
-Centralize upstream logic:
-- `upstream/selection.rs` - Load balancing and selection
-- `upstream/connection.rs` - Connection management
-- `upstream/pool.rs` - Connection pooling
-
-#### D.4: Extract Interceptor Integration (1 hour)
-Move interceptor-specific code:
-- `interceptors/integration.rs` - Chain integration
-- `interceptors/context.rs` - Context creation
-
-### Success Criteria for Phase D
-- [ ] `legacy.rs` reduced to < 500 lines (or eliminated)
-- [ ] Each new module < 500 lines
-- [ ] Clear single responsibility per module
-- [ ] All tests still passing
-- [ ] No circular dependencies
-
-### Testing Strategy
-After each extraction:
-1. Run `cargo build --release`
-2. Run `cargo clippy --all-targets -- -D warnings`
-3. Run `cargo test`
-4. Test with a simple HTTP client to ensure functionality
-
-### Key Files to Reference
-- **Main tracker**: `plans/reverse-proxy-refactor/tracker.md`
-- **Implementation guide**: `plans/reverse-proxy-refactor/analysis/unified-plan.md`
-- **Current structure**: `src/proxy/reverse/legacy.rs` (3,465 lines)
-- **New modules**: `src/proxy/reverse/*.rs`
+# Test with MCP Inspector
+# Connect to http://127.0.0.1:8081
+# Should successfully initialize and receive responses
+```
 
 ### Important Notes
-1. The refactoring uses an incremental approach - `legacy.rs` will shrink as we extract code
-2. All exports currently come from `legacy.rs` via `mod.rs` re-exports
-3. As we create new modules, we'll switch the exports in `mod.rs`
-4. When `legacy.rs` has no more exports, we delete it
-
-### Commands to Run
-```bash
-# Build and check
-cargo build --release
-cargo clippy --all-targets -- -D warnings
-
-# Test
-cargo test
-
-# Run the proxy
-./target/release/shadowcat reverse \
-  --bind 127.0.0.1:8080 \
-  --upstream http://localhost:3000
-```
-
-### Next Phase Preview (Phase E)
-After Phase D is complete, Phase E will:
-- Run comprehensive integration tests
-- Benchmark performance improvements
-- Update documentation
-- Clean up any remaining technical debt
+1. Hyper is already a dependency (via reqwest), so no new deps needed
+2. This gives us the low-level control needed for proper SSE
+3. We can reuse much of the existing code structure
+4. Focus on getting basic HTTP working first, then SSE
 
 ### Time Estimate
-- Phase D: 8-10 hours
-- Remaining work: 12-14 hours (D + E)
-- Total project: ~27-29 hours (15 complete, 12-14 remaining)
+- Phase C.5.1: 6-8 hours
+- This unblocks proper SSE streaming functionality
 
-## Questions?
-The modularization strategy is clear and all architectural decisions have been made. Start with D.1 (Extract Admin Interface) as it provides the biggest immediate win by removing 876 lines from `legacy.rs`.
+## Why This Will Work
+Hyper gives us direct access to the response body stream, allowing us to:
+- Poll for chunks continuously
+- Handle chunked transfer encoding properly
+- Keep connections alive as long as data is being sent
+- Have full control over the streaming behavior
+
+This is exactly what eventsource-client does successfully, and we can apply the same pattern.
