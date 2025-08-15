@@ -10,6 +10,17 @@
 ## Context
 The reverse proxy in `src/proxy/reverse.rs` has grown to 3,482 lines and has architectural issues with SSE streaming. This refactor will modularize the code, fix SSE handling, and implement proper session mapping.
 
+## Related Plans (Critical Dependencies)
+- **[Redis Session Storage](../redis-session-storage/)**: Session storage abstraction for distributed deployments
+- **[Reverse Proxy Session Mapping](../reverse-proxy-session-mapping/)**: Dual session ID tracking for proxy scenarios
+
+These plans are CRITICAL because the proxy must:
+1. Support distributed session storage (not just in-memory)
+2. Maintain separate proxy and upstream session IDs
+3. Route requests to correct persistent sessions
+4. Handle SSE reconnection with event replay
+5. Support connection pooling and upstream failover
+
 ## Key Findings from Analysis
 
 ### Critical Bug Identified
