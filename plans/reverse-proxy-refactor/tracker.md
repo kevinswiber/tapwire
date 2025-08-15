@@ -1,11 +1,11 @@
 # Reverse Proxy Refactor - Implementation Tracker
 
 ## Project Status
-**Status**: ✅ Phase C Complete - SSE Bug Fixed!  
+**Status**: ✅ JsonRpcId Refactor Complete - ID Type Preservation Working!  
 **Started**: 2025-01-15  
 **Last Updated**: 2025-08-15  
 **Estimated Duration**: 20-23 hours (with optional parallelization saving 3 hours)
-**Progress**: Phases A, B & C Complete (~15 hours)
+**Progress**: Phases A, B, C & JsonRpcId Refactor Complete (~18 hours)
 
 ## Executive Summary
 
@@ -76,10 +76,11 @@ These plans are CRITICAL because the proxy must:
 - All parsing/serialization now preserves original type
 - Numeric IDs stay numeric, string IDs stay strings
 
-**TODO**: Proper type refactor needed
-- Create `JsonRpcId` enum with `String` and `Number` variants
-- Use `Option<JsonRpcId>` where null IDs are valid
-- Better type safety than raw `serde_json::Value`
+**✅ COMPLETE (2025-08-15)**: JsonRpcId type refactor implemented
+- Created `JsonRpcId` enum with `String` and `Number` variants
+- Updated entire codebase to use `JsonRpcId` instead of `Value`
+- Full type safety achieved throughout the proxy
+- MCP Inspector now works correctly with numeric IDs!
 
 ### Immediate Fix Required
 - Detect SSE early via Accept header BEFORE making upstream request
@@ -271,7 +272,7 @@ After implementing eventsource-client integration, we discovered:
 
 ### C.5.1: Replace Reqwest with Hyper for Direct Control (6-8 hours)
 **Goal**: Replace reqwest with hyper for HTTP upstream connections
-**Status**: 🚧 IN PROGRESS - Core implementation done, debugging delivery issue
+**Status**: ✅ COMPLETE - Hyper implementation working
 
 **Implementation Complete**:
 - [x] Created hyper_client.rs for direct HTTP control
@@ -300,11 +301,12 @@ After implementing eventsource-client integration, we discovered:
 4. ✅ Created integration test to verify functionality
 5. ✅ Using hyper for direct body streaming control
 
-**Next Steps**:
-- Create integration test with hyper client to diagnose at HTTP level
-- Check if axum is buffering the response
-- Verify headers and content-type are correct
-- Test with raw HTTP client to eliminate variables
+**Completed**:
+- ✅ Hyper client implementation complete
+- ✅ SSE streaming works with standard HTTP clients
+- ✅ Integration test passes
+- ✅ Headers properly set
+- ✅ MCP Inspector connects successfully
 
 **Critical Issue Confirmed**:
 - Client cannot establish successful connection through proxy

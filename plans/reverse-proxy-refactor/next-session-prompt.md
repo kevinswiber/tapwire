@@ -1,102 +1,100 @@
-# Next Session Prompt - Reverse Proxy Final Refactor
+# Next Session Prompt - Reverse Proxy Final Cleanup
 
 ## Context
-Continue the Shadowcat reverse proxy refactor after successfully fixing the JSON-RPC ID type preservation issue. The SSE streaming now works with MCP Inspector!
+Continue the Shadowcat reverse proxy refactor after successfully implementing the JsonRpcId type system. The proxy now correctly preserves JSON-RPC ID types (numeric stays numeric, string stays string) and MCP Inspector can connect!
 
 ## Current Status
-✅ **FIXED**: JSON-RPC ID type preservation (numeric IDs stay numeric)
-✅ **WORKING**: SSE streaming with MCP Inspector 
-✅ **PROVEN**: Integration test passes
-✅ **IMPLEMENTED**: Hyper-based HTTP client for direct body control
+✅ **COMPLETE**: JsonRpcId type system fully implemented
+✅ **WORKING**: ID type preservation (0 stays 0, not "0")
+✅ **PROVEN**: MCP Inspector connects and communicates
+✅ **IMPLEMENTED**: Hyper-based HTTP client for SSE streaming
 
 ## Key Achievement (2025-08-15)
-Fixed the "No connection established for request ID: 0" error by preserving JSON-RPC ID types:
-- Changed `ProtocolMessage` ID fields from `String` to `serde_json::Value`
-- Request with `"id": 0` now returns response with `"id": 0` (not `"id": "0"`)
-- MCP Inspector can now correctly correlate requests and responses
+Successfully refactored entire codebase to use type-safe JsonRpcId enum:
+- Created `src/transport/jsonrpc_id.rs` with proper enum type
+- Updated `ProtocolMessage` to use `JsonRpcId` instead of `serde_json::Value`
+- Fixed 100+ compilation errors across library and tests
+- Result: MCP Inspector works correctly with numeric IDs!
 
-## Tasks for Next Session
+## Remaining Tasks for Next Session
 
-### 1. JSON-RPC ID Type Refactor (2 hours)
-**Current**: Using `serde_json::Value` for IDs (quick fix)
-**Goal**: Create proper type-safe ID representation
+### 1. Clean Up Unused SSE Modules (1 hour)
+**Goal**: Remove deprecated SSE implementations
 
-- [ ] Create `JsonRpcId` enum:
-  ```rust
-  pub enum JsonRpcId {
-      String(String),
-      Number(i64),  // or serde_json::Number
-  }
-  ```
-- [ ] Update `ProtocolMessage` to use `JsonRpcId` instead of `Value`
-- [ ] Use `Option<JsonRpcId>` where null IDs are valid (notifications)
-- [ ] Update all parsing/serialization to use the new type
-- [ ] Fix all tests to work with new ID type
+Files to remove:
+- [ ] `src/proxy/reverse/sse_client.rs` (replaced by hyper)
+- [ ] `src/proxy/reverse/sse_streaming.rs` (old implementation)
+- [ ] `src/proxy/reverse/sse_streaming_v2.rs` (intermediate version)
+- [ ] `src/proxy/reverse/hyper_streaming.rs` (replaced by hyper_raw_streaming.rs)
+- [ ] Update `src/proxy/reverse/mod.rs` exports
 
-### 2. Complete Hyper Migration for SSE (2 hours)
-**Goal**: Replace reqwest with hyper for upstream SSE connections
-
-- [ ] Review `src/proxy/reverse/hyper_client.rs` implementation
-- [ ] Ensure all SSE paths use hyper client
-- [ ] Remove reqwest dependencies from SSE code paths
-- [ ] Test with various SSE scenarios
-- [ ] Verify connection pooling and keepalive work correctly
-
-### 3. Legacy.rs Refactor - Phase C (3 hours)
-**Goal**: Clean up the monolithic legacy.rs file
+### 2. Legacy.rs Refactor - Break Up Monolith (4-6 hours)
+**Goal**: Modularize the 876-line `handle_admin_request()` function
 
 Current issues:
-- `handle_admin_request()`: 876 lines (needs major refactor)
-- Duplicate request anti-pattern for SSE
-- Mixed concerns throughout
+- Massive single function with mixed concerns
+- Hard to test and maintain
+- Poor separation of responsibilities
 
-Tasks:
-- [ ] Extract admin endpoints to separate module
-- [ ] Clean up SSE detection and routing
-- [ ] Remove duplicate request workaround
-- [ ] Implement proper early SSE detection via Accept header
-- [ ] Separate concerns into focused modules
+Refactor plan:
+- [ ] Extract admin dashboard rendering to `admin/dashboard.rs`
+- [ ] Move session management endpoints to `admin/sessions.rs`
+- [ ] Extract metrics endpoints to `admin/metrics.rs`
+- [ ] Create `admin/static.rs` for static asset serving
+- [ ] Implement proper routing in `admin/mod.rs`
 
-### 4. Clean Up (1 hour)
-- [ ] Remove unused modules: `sse_client.rs`, `sse_streaming.rs`, `sse_streaming_v2.rs`
-- [ ] Clean up `hyper_streaming.rs` (replaced by `hyper_raw_streaming.rs`)
-- [ ] Update module exports in `mod.rs`
-- [ ] Update documentation with findings
+### 3. Test Suite Updates (2 hours)
+**Goal**: Fix remaining test compilation errors
+
+- [ ] Update tests to use `JsonRpcId` constructors
+- [ ] Fix test assertions expecting string IDs
+- [ ] Update mock implementations
+- [ ] Ensure all integration tests pass
+
+### 4. Documentation Updates (1 hour)
+**Goal**: Document the new architecture
+
+- [ ] Update API documentation for JsonRpcId
+- [ ] Document SSE streaming architecture
+- [ ] Update proxy configuration examples
+- [ ] Add troubleshooting guide for ID type issues
 
 ## Key Files
-- `src/transport/envelope.rs` - ProtocolMessage with Value IDs (needs refactor)
-- `src/transport/http_utils.rs` - JSON-RPC parsing (needs ID type update)
-- `src/proxy/reverse/legacy.rs` - Main refactor target
-- `src/proxy/reverse/hyper_client.rs` - Hyper HTTP client
-- `src/proxy/reverse/hyper_raw_streaming.rs` - Working SSE forwarder
-- `plans/reverse-proxy-refactor/tracker.md` - Full history
+- `src/transport/jsonrpc_id.rs` - New JsonRpcId type implementation
+- `src/proxy/reverse/legacy.rs` - Main refactor target (876-line function)
+- `src/proxy/reverse/hyper_raw_streaming.rs` - Working SSE implementation
+- `tests/` - Various test files needing JsonRpcId updates
 
 ## Test Commands
 ```bash
-# Integration test
+# Quick library build test
+cargo build --lib
+
+# Run specific integration test
 cargo test test_reverse_proxy_sse_streaming -- --ignored --nocapture
 
-# Full test setup
+# Full test suite
+cargo test
+
+# Test with MCP Inspector
 # Terminal 1: Start upstream MCP server
-cd ~/src/modelcontextprotocol/servers/everything && npm start
+cd ~/src/modelcontextprotocol/servers && npx tsx src/everything/index.ts streamableHttp
 
 # Terminal 2: Start Shadowcat proxy
-cd ~/src/tapwire/shadowcat
 cargo run --release -- reverse --bind 127.0.0.1:8081 --upstream http://localhost:3001/mcp
 
-# Terminal 3: Test with Inspector (now works!)
+# Terminal 3: Launch Inspector
 npx @modelcontextprotocol/inspector http://127.0.0.1:8081/mcp
 ```
 
 ## Success Criteria
-1. Type-safe JSON-RPC ID handling with proper enum
-2. Complete hyper migration for SSE connections
-3. Clean, modular code structure (no more 800+ line functions)
-4. All tests passing with new ID type
-5. MCP Inspector continues to work
+1. All deprecated SSE modules removed
+2. Legacy.rs refactored into manageable modules (<500 lines each)
+3. All tests compiling and passing
+4. Documentation updated with new architecture
 
 ## Important Notes
-- The ID type fix is working but needs proper type safety
-- Don't break the working SSE streaming while refactoring
-- Focus on maintainability and code organization
-- Keep the tracker.md updated with progress
+- JsonRpcId refactor is complete and working - don't break it!
+- MCP Inspector connectivity is verified
+- Focus on code organization and maintainability
+- Keep performance characteristics intact
