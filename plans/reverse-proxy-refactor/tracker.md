@@ -64,6 +64,23 @@ These plans are CRITICAL because the proxy must:
 - Makes duplicate requests as workaround (wasteful)
 - Root cause: Function signatures expect `ProtocolMessage`, incompatible with streaming
 
+### JSON-RPC ID Type Preservation Issue (FIXED 2025-08-15)
+**Problem**: Proxy was converting all JSON-RPC IDs to strings
+- Request: `{"id": 0, ...}` → Response: `{"id": "0", ...}` 
+- MCP Inspector SDK stores mappings by original ID type (numeric 0)
+- Response lookup fails because SDK receives string "0" back
+- Error: "No connection established for request ID: 0"
+
+**Solution**: Changed `ProtocolMessage` to preserve original JSON type
+- Changed ID fields from `String` to `serde_json::Value`
+- All parsing/serialization now preserves original type
+- Numeric IDs stay numeric, string IDs stay strings
+
+**TODO**: Proper type refactor needed
+- Create `JsonRpcId` enum with `String` and `Number` variants
+- Use `Option<JsonRpcId>` where null IDs are valid
+- Better type safety than raw `serde_json::Value`
+
 ### Immediate Fix Required
 - Detect SSE early via Accept header BEFORE making upstream request
 - Branch to separate streaming path that doesn't attempt buffering
