@@ -49,6 +49,14 @@ src/proxy/
 4. **Event Buffering**: Buffer last N events for SSE reconnection support
 5. **Reuse SSE Infrastructure**: Integrate with existing `transport/sse/` modules
 
+## Getting Started
+
+To begin working on this refactor, start with:
+1. Review this README for context
+2. Check `tracker.md` for detailed task breakdown
+3. Use `next-session-prompt.md` to start the next work session
+4. Follow individual task files in `tasks/` directory
+
 ## Approach
 
 ### Phase 1: Analysis and Design
