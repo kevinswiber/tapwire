@@ -1,11 +1,11 @@
 # Reverse Proxy Refactor - Implementation Tracker
 
 ## Project Status
-**Status**: ✅ Analysis Complete - Ready for Implementation  
+**Status**: 🚀 Phase B Complete - SSE Fix Next  
 **Started**: 2025-01-15  
 **Last Updated**: 2025-01-15  
 **Estimated Duration**: 20-23 hours (with optional parallelization saving 3 hours)
-**Progress**: Phase A Complete (~5 hours)
+**Progress**: Phases A & B Complete (~9 hours)
 
 ## Executive Summary
 
@@ -115,47 +115,55 @@ These plans are CRITICAL because the proxy must:
 - ✅ `analysis/implementation-requirements.md` - Detailed requirements and questions
 - ✅ Updated tracker with clear sequential phases
 
-## Phase B: SessionStore Abstraction (4-5 hours) - PREREQUISITE
+## Phase B: SessionStore Abstraction (4-5 hours) - ✅ COMPLETE
 
-**Must be completed first to unblock everything else**
+**Successfully abstracted storage to enable distributed sessions**
 
 ### B.0: Design SessionStore Trait (1 hour)
 **Goal**: Create storage abstraction with distributed systems in mind  
-**Status**: ⬜ Not Started
+**Status**: ✅ **COMPLETE**
 
-**Tasks**:
-- [ ] Define SessionStore trait with core session methods
-- [ ] Add SSE-specific methods (Last-Event-Id, event buffering)
-- [ ] Design for async/await and connection pooling
-- [ ] Document trait contract and Redis considerations
+**Key Architectural Decision**: Discovered that frames/MessageEnvelopes were conflated
+- Frames belong in recording/tape domain
+- MessageEnvelopes are live transport messages
+- Removed frame storage from SessionStore entirely
+- Created `analysis/frame-vs-envelope-decision.md` documenting this
 
-**Key Design Decisions**:
-- Methods must be async for network backends
-- Include batch operations for efficiency
-- Support TTL/expiry for session cleanup
-- Consider pagination for large result sets
+**Completed Tasks**:
+- ✅ Defined SessionStore trait with core session methods only
+- ✅ Added SSE-specific methods (Last-Event-Id only, NO frame storage)
+- ✅ Designed for async/await and connection pooling
+- ✅ Documented decision to separate frames from session management
 
 ### B.1: Refactor InMemoryStore (2 hours)
 **Goal**: Implement trait for existing store  
-**Status**: ⬜ Not Started
+**Status**: ✅ **COMPLETE**
 
-**Tasks**:
-- [ ] Extract interface from InMemorySessionStore
-- [ ] Implement SessionStore trait for InMemoryStore
-- [ ] Update SessionManager to use trait instead of concrete type
-- [ ] Ensure all existing tests pass
+**Completed Tasks**:
+- ✅ Moved InMemorySessionStore to `src/session/memory.rs`
+- ✅ Implemented SessionStore trait for InMemoryStore
+- ✅ Updated SessionManager to use `Arc<dyn SessionStore>`
+- ✅ All 57 session tests passing
 
-### B.2: Session Mapping Design (1-2 hours)
-**Goal**: Design dual session ID architecture  
-**Status**: ⬜ Not Started
+### B.2: Fix Compilation & Tests (2 hours)
+**Goal**: Update all affected code  
+**Status**: ✅ **COMPLETE**
 
-**Tasks**:
-- [ ] Design ProxySessionMapping structure
-- [ ] Add methods for proxy↔upstream mapping
-- [ ] Plan session lifecycle with distributed store
-- [ ] Document reconnection scenarios
+**Completed Tasks**:
+- ✅ Removed frame recording from reverse proxy
+- ✅ Updated CLI to remove frame display
+- ✅ Fixed all compilation errors
+- ✅ Updated tests to not use frame methods
 
-**Note**: Redis implementation deferred to later phase
+### B.3: Message Recording Abstraction (TODO)
+**Goal**: Design proper recording abstraction  
+**Status**: 📝 **TODO** - Deferred to Phase D
+
+**Future Work**:
+- [ ] Design MessageEventReceiver trait for recording
+- [ ] Proxy shouldn't know about tape format or "frames"
+- [ ] Enable injection of recording implementation
+- [ ] Keep recording concerns separate from proxying
 
 ## Phase C: Fix SSE Bug Properly (4-6 hours)
 
@@ -232,6 +240,16 @@ These plans are CRITICAL because the proxy must:
 - [ ] Extract admin handlers (876 lines!)
 - [ ] Separate HTML templates
 - [ ] Add admin tests
+
+### D.4: Message Recording Abstraction (2 hours)
+**Goal**: Implement proper recording abstraction  
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Design MessageEventReceiver trait for recording
+- [ ] Implement for TapeRecorder
+- [ ] Update proxy to use abstraction (not know about tapes/frames)
+- [ ] Enable dependency injection of recorder
 
 ## Phase E: Integration & Testing (6-8 hours)
 

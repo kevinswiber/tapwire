@@ -1,131 +1,124 @@
-# Next Session: Implement Phase B - SessionStore Abstraction
+# Next Session: Implement Phase C - Fix SSE Bug
 
 ## Context
-We've completed Phase A (Analysis) of the reverse proxy refactor. The proxy has a critical SSE bug (makes duplicate requests) and lacks storage abstraction (directly coupled to InMemorySessionStore). We need to fix both issues through a careful refactoring.
+We've completed Phase B (SessionStore Abstraction) of the reverse proxy refactor. A critical architectural discovery was made: frames and MessageEnvelopes were conflated. We've separated these concerns - frames belong in the recording domain, not session management.
 
 ## Current Status
-- **Phase A**: ✅ COMPLETE (5 hours) - All analysis done, decisions made
-- **Phase B**: ⬜ Ready to start - SessionStore abstraction (4-5 hours)
-- **Phase C**: ⬜ Blocked on B - Fix SSE bug properly (5-6 hours)
-- **Phase D**: ⬜ Blocked on C - Modularization (8 hours)
+- **Phase A**: ✅ COMPLETE (5 hours) - All analysis done
+- **Phase B**: ✅ COMPLETE (4 hours) - SessionStore abstraction implemented
+  - Created SessionStore trait (WITHOUT frame storage)
+  - Moved InMemorySessionStore to memory.rs
+  - Updated SessionManager to use trait
+  - Fixed all compilation issues
+  - All 57 tests passing
+- **Phase C**: ⬜ Ready to start - Fix SSE bug (5-6 hours)
+- **Phase D**: ⬜ Blocked on C - Modularization (10 hours)
 - **Phase E**: ⬜ Final - Integration & testing (4 hours)
 
-## Your Task: Implement Phase B - SessionStore Abstraction
+## Key Architectural Decisions from Phase B
+1. **Frames vs MessageEnvelopes**: Separated recording concerns from session management
+2. **SessionStore has NO frame storage**: Frames belong in tape/recording domain
+3. **MessageEventReceiver abstraction needed**: Proxy shouldn't know about tapes/frames (TODO in Phase D)
+
+## Your Task: Implement Phase C - Fix SSE Bug Properly
 
 ### Key Documents to Read First
 1. **Main Tracker**: `plans/reverse-proxy-refactor/tracker.md`
 2. **Implementation Guide**: `plans/reverse-proxy-refactor/analysis/unified-plan.md`
-3. **All Decisions**: `plans/reverse-proxy-refactor/analysis/final-decisions.md`
+3. **SSE Solution**: `plans/reverse-proxy-refactor/analysis/corrected-sse-solution.md`
+4. **Frame Decision**: `plans/reverse-proxy-refactor/analysis/frame-vs-envelope-decision.md`
 
-### Critical Decisions Already Made
-- SessionManager **references** store via `Arc<dyn SessionStore>` (not owns)
-- Store can be **injected** via Shadowcat API for library consumers
-- **No backwards compatibility** needed - Shadowcat unreleased
-- Connection pooling is **implementation-specific**
-- Use **async-trait** for the trait definition
+### The SSE Bug
+- Proxy makes **duplicate HTTP requests** for SSE streams
+- Root cause: Function signature returns ProtocolMessage, can't stream Response
+- Current workaround uses error as control flow (SseStreamingRequired)
+- This causes Response to be dropped, requiring duplicate request
 
-### Phase B Implementation Steps
+### Phase C Implementation Steps
 
-#### B.1: Create SessionStore Trait (1 hour)
-**File**: `src/session/store.rs`
+#### C.1: Create UpstreamResponse Wrapper (1.5 hours)
+**File**: `src/proxy/reverse/upstream_response.rs`
 
 ```rust
-use async_trait::async_trait;
-
-#[async_trait]
-pub trait SessionStore: Send + Sync {
-    // Core session operations
-    async fn create_session(&self, session: Session) -> SessionResult<()>;
-    async fn get_session(&self, id: &SessionId) -> SessionResult<Session>;
-    async fn update_session(&self, session: Session) -> SessionResult<()>;
-    async fn delete_session(&self, id: &SessionId) -> SessionResult<()>;
-    async fn count_sessions(&self) -> SessionResult<usize>;
-    async fn list_sessions(&self) -> SessionResult<Vec<Session>>;
-    
-    // Frame operations
-    async fn add_frame(&self, frame: MessageEnvelope) -> SessionResult<()>;
-    async fn get_frames(&self, session_id: &SessionId) -> SessionResult<Vec<MessageEnvelope>>;
-    async fn delete_frames(&self, session_id: &SessionId) -> SessionResult<()>;
-    
-    // SSE-specific (for Phase C)
-    async fn store_last_event_id(&self, session_id: &SessionId, event_id: String) -> SessionResult<()>;
-    async fn get_last_event_id(&self, session_id: &SessionId) -> SessionResult<Option<String>>;
-    
-    // Batch operations (for future Redis)
-    async fn get_sessions_batch(&self, ids: &[SessionId]) -> SessionResult<Vec<Session>>;
-    async fn update_sessions_batch(&self, sessions: Vec<Session>) -> SessionResult<()>;
+pub struct UpstreamResponse {
+    pub response: Response,
+    pub content_type: Option<Mime>,
+    pub is_sse: bool,
+    pub is_json: bool,
+    pub session_id: SessionId,
 }
 ```
 
-#### B.2: Refactor InMemoryStore (2 hours)
-1. Move current `InMemorySessionStore` from `src/session/store.rs` to `src/session/memory.rs`
-2. Add new field for SSE support:
-   ```rust
-   last_event_ids: Arc<RwLock<HashMap<SessionId, String>>>,
-   ```
-3. Implement all trait methods
+Modify `process_via_http()` to return `Result<UpstreamResponse>` instead of `Result<ProtocolMessage>`.
 
-#### B.3: Update SessionManager (1-2 hours)
-**File**: `src/session/manager.rs`
-- Change `store: Arc<InMemorySessionStore>` to `store: Arc<dyn SessionStore>`
-- Update builder to accept trait
-- Enable library consumer injection
+#### C.2: Early Content-Type Detection (1 hour)
+- Parse Content-Type header immediately after getting Response
+- Determine routing path (JSON vs SSE vs other) early
+- Remove the duplicate request pattern
 
-#### B.4: Fix Compilation (1 hour)
-Update these 13 files that reference SessionManager or InMemorySessionStore:
-- `src/proxy/reverse.rs`
-- `src/proxy/forward.rs`
-- `src/main.rs`
-- `src/session/builder.rs`
-- (and 9 others - use `grep -r "InMemorySessionStore"`)
+#### C.3: Implement SSE Streaming Path (2 hours)
+- Use existing SseParser from transport layer
+- Stream events without buffering entire response
+- Process each SSE event through interceptors incrementally
+- Use backpressure to control upstream reading pace
 
-### Success Criteria for Phase B
-- [ ] SessionStore trait defined with all methods
-- [ ] InMemoryStore implements the trait
-- [ ] SessionManager uses trait reference
-- [ ] All existing tests pass
-- [ ] Can swap implementations at runtime
+#### C.4: Handle Last-Event-Id (1 hour)
+- Use SessionStore's SSE methods (added in Phase B)
+- Store Last-Event-Id for reconnection support
+- Include Last-Event-Id header in reconnection requests
+
+#### C.5: Test and Validate (0.5 hours)
+- Test with MCP Inspector
+- Verify no duplicate requests
+- Check SSE streaming works without timeouts
+- Confirm Last-Event-Id reconnection
+
+### Success Criteria for Phase C
+- [ ] No duplicate HTTP requests for SSE streams
+- [ ] SSE streams without buffering/timeouts
+- [ ] UpstreamResponse wrapper implemented
+- [ ] Content-Type routing works correctly
+- [ ] Last-Event-Id stored via SessionStore
+- [ ] Tests pass with MCP Inspector
 
 ### Testing Commands
 ```bash
-# After creating trait
-cargo check
-
-# After implementing for InMemoryStore
-cargo test --lib session::
-
-# After updating SessionManager
-cargo test
-
-# Full validation
+# Build and check
+cargo build --release
 cargo clippy --all-targets -- -D warnings
+
+# Test SSE specifically
+cargo test --test integration_sse
+
+# Run with Inspector (manual test)
+./target/release/shadowcat reverse \
+  --bind 127.0.0.1:8080 \
+  --upstream http://localhost:3000
 ```
 
-### What NOT to Do in Phase B
-- Don't implement Redis backend yet (future phase)
-- Don't fix the SSE bug yet (Phase C)
-- Don't modularize reverse.rs yet (Phase D)
-- Focus ONLY on the storage abstraction
+### What NOT to Do in Phase C
+- Don't modularize the code yet (Phase D)
+- Don't implement recording abstraction yet (Phase D.4)
+- Don't add Redis support yet (future)
+- Focus ONLY on fixing the SSE bug
 
-### Blockers/Issues to Watch For
-1. **Trait object safety** - All methods must be object-safe
-2. **Lifetime issues** - Use Arc for shared ownership
-3. **Breaking changes** - Update all 13 files that use the store
+### Important Notes
+1. The `SseStreamingRequired` error should be completely removed
+2. Use `bytes_stream()` on Response for streaming
+3. The SessionStore now has Last-Event-Id methods (use them!)
+4. Recording is handled by TapeRecorder, not SessionManager
 
-### Next Phase Preview (Phase C)
-After Phase B is complete, Phase C will:
-- Implement UpstreamResponse wrapper
-- Fix SSE duplicate request bug
-- Add backpressure for streaming
-- Use the new SessionStore trait for Last-Event-Id
+### Next Phase Preview (Phase D)
+After Phase C is complete, Phase D will:
+- Break up the 3,482-line file into modules
+- Extract admin interface (876 lines)
+- Implement MessageEventReceiver abstraction
+- Create clean module boundaries
 
 ### Time Estimate
-- Phase B: 4-5 hours
-- Remaining work: 17-19 hours
-- Total project: 22-24 hours
-
-## Important Context
-The reverse proxy currently makes duplicate HTTP requests when it detects SSE streams. This is because the function signature can't return the Response object for streaming, so it uses an error as control flow, causing the Response to be dropped. We'll fix this in Phase C with the UpstreamResponse wrapper, but first we need the SessionStore abstraction to properly track Last-Event-Id for SSE reconnections.
+- Phase C: 5-6 hours
+- Remaining work: 14 hours
+- Total project: ~23 hours (9 complete, 14 remaining)
 
 ## Questions?
-All design decisions have been made and documented in `analysis/final-decisions.md`. The implementation path is clear. Begin with B.1: Create SessionStore trait.
+All design decisions have been made and documented. The SSE fix approach is clear in `analysis/corrected-sse-solution.md`. Begin with C.1: Create UpstreamResponse wrapper.

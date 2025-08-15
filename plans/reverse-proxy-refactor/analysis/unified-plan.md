@@ -46,7 +46,7 @@ Phase E: Integration & Testing (4 hours)
 
 ```rust
 use async_trait::async_trait;
-use crate::session::{Session, SessionId, SessionResult, MessageEnvelope};
+use crate::session::{Session, SessionId, SessionResult};
 
 #[async_trait]
 pub trait SessionStore: Send + Sync {
@@ -58,10 +58,9 @@ pub trait SessionStore: Send + Sync {
     async fn count_sessions(&self) -> SessionResult<usize>;
     async fn list_sessions(&self) -> SessionResult<Vec<Session>>;
     
-    // Frame operations
-    async fn add_frame(&self, frame: MessageEnvelope) -> SessionResult<()>;
-    async fn get_frames(&self, session_id: &SessionId) -> SessionResult<Vec<MessageEnvelope>>;
-    async fn delete_frames(&self, session_id: &SessionId) -> SessionResult<()>;
+    // REMOVED: Frame operations don't belong in session management
+    // Frames are for recording/playback, not live proxy operations
+    // Recording module should handle its own frame storage
     
     // SSE-specific operations (for Phase C)
     async fn store_last_event_id(&self, session_id: &SessionId, event_id: String) -> SessionResult<()>;
@@ -79,11 +78,11 @@ pub trait SessionStore: Send + Sync {
 
 1. Move current `InMemorySessionStore` from `store.rs` to `memory.rs`
 2. Implement `SessionStore` trait for `InMemorySessionStore`
-3. Add SSE-specific fields:
+3. Update fields (REMOVE frame storage, ADD SSE support):
    ```rust
    pub struct InMemorySessionStore {
        sessions: Arc<RwLock<HashMap<SessionId, Session>>>,
-       frames: Arc<RwLock<HashMap<SessionId, Vec<MessageEnvelope>>>>,
+       // REMOVED: frames field - doesn't belong in session management
        // New for SSE support
        last_event_ids: Arc<RwLock<HashMap<SessionId, String>>>,
    }
