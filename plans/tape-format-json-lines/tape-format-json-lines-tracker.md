@@ -4,9 +4,9 @@
 
 This tracker coordinates the migration of Shadowcat's tape recording format from monolithic JSON files to a streaming-friendly JSON Lines format. This change will enable better memory efficiency, streaming capabilities, and resilience for long-running MCP session recordings.
 
-**Last Updated**: 2025-08-14  
+**Last Updated**: 2025-08-15  
 **Total Estimated Duration**: 16-24 hours  
-**Status**: Planning
+**Status**: Phase 2 In Progress - Core Implementation (60% complete)
 
 ## IMPORTANT: Git Worktree Configuration
 
@@ -27,7 +27,7 @@ git worktree list
 git branch --show-current  # Should show: feat/tape-format-json-lines
 ```
 
-**Note for NEXT_SESSION_PROMPT.md**: Always include a reminder that work must be done in the `shadowcat-tape-format-json-lines` worktree directory, NOT in the main shadowcat directory.
+**Note for next-session-prompt.md**: Always include a reminder that work must be done in the `shadowcat-tape-format-json-lines` worktree directory, NOT in the main shadowcat directory.
 
 ## Goals
 
@@ -63,10 +63,10 @@ Define the new format specification and migration strategy
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| 1.1 | **Format Specification** | 2h | None | ⬜ Not Started | | [Details](tasks/1.1-format-specification.md) |
-| 1.2 | **Performance Analysis** | 3h | None | ⬜ Not Started | | [Details](tasks/1.2-performance-analysis.md) |
-| 1.3 | **Migration Strategy** | 2h | 1.1 | ⬜ Not Started | | [Details](tasks/1.3-migration-strategy.md) |
-| 1.4 | **API Design** | 2h | 1.1 | ⬜ Not Started | | [Details](tasks/1.4-api-design.md) |
+| 1.1 | **Format Specification** | 2h | None | ✅ Complete | | [Spec](analysis/format-specification.md) |
+| 1.2 | **Performance Analysis** | 3h | None | ✅ Complete | | [Analysis](analysis/performance-analysis.md) |
+| 1.3 | **Migration Strategy** | 2h | 1.1 | ✅ Complete | | [Strategy](analysis/migration-strategy.md) |
+| 1.4 | **API Design** | 2h | 1.1 | ✅ Complete | | [API](analysis/api-design.md) |
 
 **Phase 1 Total**: 9 hours
 
@@ -75,12 +75,12 @@ Implement the JSON Lines tape format with streaming capabilities
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| 2.1 | **Streaming Writer** | 4h | 1.1, 1.4 | ⬜ Not Started | | [Details](tasks/2.1-streaming-writer.md) |
-| 2.2 | **Streaming Reader** | 4h | 1.1, 1.4 | ⬜ Not Started | | [Details](tasks/2.2-streaming-reader.md) |
+| 2.1 | **Streaming Writer** | 4h | 1.1, 1.4 | ✅ Complete | | Implemented StreamingTapeWriter with O(1) append |
+| 2.2 | **Streaming Reader** | 4h | 1.1, 1.4 | ✅ Complete | | Implemented StreamingTapeReader with line-by-line parsing |
 | 2.3 | **Index Enhancement** | 3h | 2.1 | ⬜ Not Started | | [Details](tasks/2.3-index-enhancement.md) |
 | 2.4 | **Seek Capability** | 2h | 2.2, 2.3 | ⬜ Not Started | | [Details](tasks/2.4-seek-capability.md) |
 
-**Phase 2 Total**: 13 hours
+**Phase 2 Total**: 13 hours (8h complete, 5h remaining)
 
 ### Phase 3: Migration & Compatibility (Week 2)
 Ensure smooth transition from existing format
@@ -102,16 +102,15 @@ Ensure smooth transition from existing format
 
 ## Progress Tracking
 
-### Week 1 (TBD)
-- [ ] 1.1: Format Specification
-- [ ] 1.2: Performance Analysis
-- [ ] 1.3: Migration Strategy
-- [ ] 1.4: API Design
-- [ ] 2.1: Streaming Writer (start)
+### Week 1 (2025-08-14 to 2025-08-15)
+- [x] 1.1: Format Specification ✅
+- [x] 1.2: Performance Analysis ✅
+- [x] 1.3: Migration Strategy ✅
+- [x] 1.4: API Design ✅
+- [x] 2.1: Streaming Writer ✅
+- [x] 2.2: Streaming Reader ✅
 
 ### Week 2 (TBD)
-- [ ] 2.1: Streaming Writer (complete)
-- [ ] 2.2: Streaming Reader
 - [ ] 2.3: Index Enhancement
 - [ ] 2.4: Seek Capability
 - [ ] 3.1: Migration Tool
@@ -155,12 +154,14 @@ Ensure smooth transition from existing format
 ### JSON Lines Format Specification
 
 ```jsonl
-{"type": "header", "version": "2.0", "tape_id": "...", "session_id": "...", "created_at": "...", "protocol_version": "..."}
-{"type": "frame", "sequence": 0, "timestamp": 0, "envelope": {...}, "metadata": {...}}
-{"type": "frame", "sequence": 1, "timestamp": 100, "envelope": {...}, "metadata": {...}}
+{"type": "init", "version": "2.0", "tape_id": "...", "session_id": "...", "created_at": "...", "protocol_version": "..."}
+{"type": "frame", "seq": 0, "ts": 0, "message": {...}, "direction": "client_to_server", "session_id": "..."}
+{"type": "frame", "seq": 1, "ts": 100, "message": {...}, "direction": "server_to_client", "session_id": "..."}
 {"type": "correlation", "id": "...", "request_seq": 0, "response_seq": 1, "rtt_ms": 100}
-{"type": "footer", "stats": {...}, "finalized_at": "...", "frame_count": 2, "duration_ms": 100}
+{"type": "checkpoint", "checkpoint_at": "...", "seq": 2, "stats": {...}}
 ```
+
+Note: Separate `.meta.json` file contains tape metadata to avoid lock contention during concurrent read/write.
 
 ### File Structure
 
@@ -189,7 +190,7 @@ storage/
 2. **Implementation** (2-3 hours): Complete the task deliverables
 3. **Testing** (30 min): Run tests, benchmarks
 4. **Documentation** (15 min): Update tracker, API docs
-5. **Handoff** (10 min): Update NEXT_SESSION_PROMPT.md if needed
+5. **Handoff** (10 min): Update next-session-prompt.md if needed
 
 ### Task Completion Criteria
 - [ ] All deliverables checked off
@@ -217,9 +218,9 @@ storage/
 
 ## Next Actions
 
-1. **Create format specification document** - Define exact JSON Lines schema
-2. **Benchmark current implementation** - Establish performance baseline
-3. **Design streaming API** - Define new TapeWriter/TapeReader interfaces
+1. **Index Enhancement** - Implement seeking and indexing capabilities (Task 2.3)
+2. **Migration Tool** - Create tool to convert existing JSON tapes to JSON Lines format (Task 3.1)
+3. **Integration** - Update recorder module to use new streaming implementation
 
 ## Notes
 
@@ -231,9 +232,9 @@ storage/
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Created**: 2025-08-13  
-**Last Modified**: 2025-08-13  
+**Last Modified**: 2025-08-15  
 **Author**: Shadowcat Team
 
 ## Revision History
@@ -241,3 +242,4 @@ storage/
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-08-13 | 1.0 | Initial tracker creation | Shadowcat Team |
+| 2025-08-15 | 1.1 | Phase 2 progress: Completed streaming writer and reader implementation | Shadowcat Team |

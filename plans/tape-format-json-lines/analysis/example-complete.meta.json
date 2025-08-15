@@ -1,0 +1,41 @@
+{
+  "tape_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "Complete Example Recording",
+  "description": "Full tape demonstrating all record types with streaming format",
+  "tags": ["example", "test", "documentation"],
+  "created_at": "2025-08-14T10:30:00.000Z",
+  "updated_at": "2025-08-14T10:30:00.400Z",
+  "finalized_at": "2025-08-14T10:30:00.400Z",
+  "status": "finalized",
+  "transport": {
+    "type": "stdio",
+    "command": "mcp-server",
+    "args": ["--debug"],
+    "process_id": 12345
+  },
+  "environment": {
+    "platform": "darwin",
+    "shadowcat_version": "0.1.0",
+    "hostname": "dev-machine",
+    "user": "developer"
+  },
+  "stats": {
+    "frame_count": 5,
+    "duration_ms": 200,
+    "file_size_bytes": 2819,
+    "last_sequence": 4,
+    "message_counts": {
+      "client_to_server": 3,
+      "server_to_client": 2
+    },
+    "error_count": 0,
+    "correlation_count": 2,
+    "checkpoint_count": 1
+  },
+  "performance": {
+    "avg_rtt_ms": 35,
+    "max_rtt_ms": 50,
+    "min_rtt_ms": 20,
+    "messages_per_second": 25
+  }
+}

@@ -1,4 +1,4 @@
-# Next Session: Phase 1 - Design & Analysis
+# Next Session: Phase 2-3 - Integration and Migration
 
 ## Project Context
 
@@ -6,7 +6,7 @@ This project migrates Shadowcat's tape recording format from monolithic JSON fil
 
 **Project**: Tape Format JSON Lines Migration
 **Tracker**: `plans/tape-format-json-lines/tape-format-json-lines-tracker.md`
-**Status**: Phase 1 - Design & Analysis (0% Complete)
+**Status**: Phase 1 Complete ✅ | Phase 2 - Core Implementation (60% Complete)
 
 ## IMPORTANT: Git Worktree Setup
 
@@ -29,54 +29,84 @@ git worktree list
 ## Current Status
 
 ### What Has Been Completed
-- **Initial Assessment** (✅ Completed 2025-08-13)
-  - Identified memory efficiency issues with current JSON format
-  - Analyzed JSON Lines benefits for streaming
-  - Created tracker and task structure
+- **Phase 1: Design & Analysis** (✅ Completed 2025-08-14)
+  - Format specification with streaming-first design
+  - Performance analysis showing 100-1000x improvements
+  - Migration strategy (clean slate, no backward compatibility needed)
+  - API design for streaming writer/reader interfaces
+
+- **Phase 2: Core Implementation** (60% Complete 2025-08-15)
+  - ✅ Task 2.1: StreamingTapeWriter implemented with O(1) append
+  - ✅ Task 2.2: StreamingTapeReader implemented with line-by-line parsing
+  - ⬜ Task 2.3: Index Enhancement (not started)
+  - ⬜ Task 2.4: Seek Capability (not started)
 
 ### What's In Progress
-- **Phase 1: Design & Analysis** (Not Started)
-  - Duration: 9 hours total
-  - Dependencies: None
+- **Phase 2 Remaining**: Index and seek capabilities (5 hours)
+- **Phase 3**: Migration and integration (8 hours)
 
 ## Your Mission
 
-Complete the initial design and analysis phase for the JSON Lines tape format migration. This session focuses on defining the exact format specification, analyzing performance implications, and designing the migration strategy.
+Complete the remaining Phase 2 tasks and begin Phase 3 migration and integration work.
 
-### Priority 1: Format Specification & Performance Analysis (5 hours)
+### Priority 1: Index and Seek Support (5 hours remaining)
 
-1. **Task 1.1: Format Specification** (2h)
-   - Define exact JSON Lines schema for tape recordings
-   - Document header, frame, correlation, and footer formats
-   - Create example files showing the new format
-   
-2. **Task 1.2: Performance Analysis** (3h)
-   - Benchmark current JSON implementation
-   - Estimate memory savings with JSON Lines
-   - Measure append performance improvements
+**Task 2.3: Index Enhancement**
+- Design index format for fast seeking
+- Implement index generation during write
+- Add index loading to reader
+- Test index performance
 
-### Priority 2: Migration Strategy & API Design (4 hours)
+**Task 2.4: Seek Capability**
+- Add seek support to reader using index
+- Implement frame lookup by sequence number
+- Support time-based seeking
+- Test seek performance
 
-1. **Task 1.3: Migration Strategy** (2h)
-   - Design backward compatibility approach
-   - Plan incremental migration path
-   - Define rollback procedures
-   
-2. **Task 1.4: API Design** (2h)
-   - Design new TapeWriter/TapeReader interfaces
-   - Plan streaming API methods
-   - Document breaking changes
+### Priority 2: Migration Tool (3 hours)
+
+**Task 3.1: Migration Tool**
+- Create CLI command for tape migration
+- Implement streaming conversion from JSON to JSON Lines
+- Add progress reporting
+- Handle large files efficiently
+- Test with various tape sizes
+
+### Priority 3: Integration (5 hours)
+
+**Task 3.2: Recorder Integration**
+- Update recorder module to use StreamingTapeWriter
+- Update replay module to use StreamingTapeReader
+- Ensure backward compatibility layer works
+- Test end-to-end recording and playback
+
+**Task 3.3: Testing & Validation**
+- Comprehensive integration tests
+- Performance benchmarks
+- Stress testing with large tapes
+- Documentation updates
 
 ## Essential Context Files to Read
 
-1. **Primary Tracker**: `plans/tape-format-json-lines/tape-format-json-lines-tracker.md` - Full project context
-2. **Task Details**: 
-   - `plans/tape-format-json-lines/tasks/1.1-format-specification.md`
-   - `plans/tape-format-json-lines/tasks/1.2-performance-analysis.md`
-3. **Current Implementation**: 
+1. **Phase 1 Deliverables** (MUST READ):
+   - `plans/tape-format-json-lines/analysis/format-specification.md` - JSON Lines format spec
+   - `plans/tape-format-json-lines/analysis/api-design.md` - Streaming API interfaces
+   - `plans/tape-format-json-lines/analysis/performance-analysis.md` - Performance targets
+   - `plans/tape-format-json-lines/analysis/migration-strategy.md` - Implementation approach
+
+2. **Phase 2 Implementation** (REVIEW):
+   - `shadowcat-tape-format-json-lines/src/recorder/streaming/writer.rs` - StreamingTapeWriter
+   - `shadowcat-tape-format-json-lines/src/recorder/streaming/reader.rs` - StreamingTapeReader
+   - `shadowcat-tape-format-json-lines/src/recorder/streaming/types.rs` - Type definitions
+   - `shadowcat-tape-format-json-lines/src/recorder/streaming/mod.rs` - Module exports
+
+3. **Current Implementation** (Reference):
    - `shadowcat-tape-format-json-lines/src/recorder/tape.rs` - Existing tape structure
    - `shadowcat-tape-format-json-lines/src/recorder/storage.rs` - Storage implementation
-4. **Assessment**: `plans/tape-format-json-lines/analysis/assessment.md` - Initial findings
+
+4. **Examples** (Reference):
+   - `plans/tape-format-json-lines/analysis/example-complete.jsonl` - Sample tape file
+   - `plans/tape-format-json-lines/analysis/example-complete.meta.json` - Sample metadata
 
 ## Working Directory
 
@@ -108,44 +138,52 @@ cargo clippy --all-targets -- -D warnings
 
 ## Implementation Strategy
 
-### Phase 1: Setup & Review (30 min)
+### Phase 1: Index and Seek Implementation (5 hours)
 1. Navigate to worktree directory
-2. Review current tape.rs and storage.rs implementations
-3. Understand existing tape format structure
-4. Set up benchmark framework
+2. Review existing StreamingTapeWriter and StreamingTapeReader
+3. Design index format (byte offsets for every Nth frame)
+4. Implement index generation in writer
+5. Implement seek support in reader
+6. Add time-based seeking
+7. Test and benchmark
 
-### Phase 2: Format Specification (2 hours)
-1. Design JSON Lines schema for all record types
-2. Create example tape files in new format
-3. Document format in `analysis/format-specification.md`
-4. Define validation rules
+### Phase 2: Migration Tool (3 hours)
+1. Create new CLI subcommand for migration
+2. Implement streaming JSON parser
+3. Stream conversion to JSON Lines format
+4. Add progress reporting
+5. Test with various tape sizes
 
-### Phase 3: Performance Analysis (3 hours)
-1. Create benchmarks for current implementation
-2. Simulate JSON Lines performance
-3. Measure memory usage patterns
-4. Document findings in `analysis/performance-analysis.md`
-
-### Phase 4: Strategy & Design (3 hours)
-1. Design migration tool approach
-2. Define backward compatibility layer
-3. Create API design document
-4. Update tracker with findings
-
-### Phase 5: Cleanup & Documentation (30 min)
-1. Run formatters and linters
-2. Update tracker with completion status
-3. Update this NEXT_SESSION_PROMPT.md for next phase
+### Phase 3: Integration (5 hours)
+1. Update recorder module to use new streaming implementation
+2. Update replay module for streaming reader
+3. Add backward compatibility layer
+4. Integration tests
+5. Performance benchmarks
+6. Documentation updates
 
 ## Success Criteria Checklist
 
-- [ ] Format specification document created with complete schema
-- [ ] Performance benchmarks completed and documented
-- [ ] Migration strategy defined with clear steps
-- [ ] API design document with interface definitions
-- [ ] All analysis documents in `analysis/` directory
-- [ ] Tracker updated with Phase 1 completion
-- [ ] No clippy warnings in any new code
+### Phase 2 Completion
+- [x] `StreamingTapeWriter` fully implemented
+- [x] `StreamingTapeReader` fully implemented
+- [x] Metadata file management working
+- [x] Concurrent read/write tests passing
+- [ ] Index and seek capabilities
+- [ ] Performance benchmarks meeting targets:
+  - [x] Constant memory usage (< 100KB)
+  - [x] O(1) append time (< 1ms)
+  - [x] Instant read start (< 5ms)
+  - [ ] Seek performance (< 10ms)
+
+### Phase 3 Migration
+- [ ] Migration tool implemented
+- [ ] Progress reporting working
+- [ ] Large file handling tested
+- [ ] Integration with recorder module
+- [ ] Integration with replay module
+- [ ] All tests passing
+- [ ] No clippy warnings
 
 ## Key Commands
 
@@ -175,13 +213,13 @@ cargo clippy --all-targets -- -D warnings
 - **Test incrementally** as you design
 - **Update tracker** when tasks are complete
 
-## Key Design Considerations
+## Key Design Decisions (From Phase 1)
 
-1. **Streaming Efficiency**: Must support reading/writing without loading entire file
-2. **Backward Compatibility**: Must provide migration path from existing JSON tapes
-3. **Corruption Resilience**: Partial corruption should only affect damaged lines
-4. **Performance**: Target < 10MB memory for 1M+ frame tapes
-5. **Atomicity**: Each line must be written atomically
+1. **No Backward Compatibility Needed**: Shadowcat is pre-release, clean slate
+2. **Streaming-First**: Never buffer entire tape, true O(1) operations
+3. **Separate Metadata Files**: Avoid lock contention, enable concurrent access
+4. **Init Instead of Header**: Minimal first line for immediate streaming
+5. **Checkpoints Instead of Footer**: Optional progress markers, no finalization required
 
 ## Performance/Quality Targets
 
@@ -197,27 +235,28 @@ cargo clippy --all-targets -- -D warnings
 - **API Breaking Changes**: Design compatibility layer carefully
 - **Performance Regression**: Benchmark small files to ensure no regression
 
-## Next Steps After This Task
+## Next Steps After This Session
 
-Once Phase 1 is complete:
-- **Task 2.1**: Streaming Writer Implementation (4 hours, depends on 1.1, 1.4)
-- **Task 2.2**: Streaming Reader Implementation (4 hours, depends on 1.1, 1.4)
+Once Phase 2 Core Implementation is complete:
+- **Phase 3 - Migration & Testing**:
+  - Task 3.1: Migration Tool (3 hours)
+  - Task 3.2: CLI Integration (2 hours)
+  - Task 3.3: Testing & Validation (3 hours)
 
-After completing Phase 2:
-- Move to Phase 3 - Migration & Compatibility
+The implementation can then be merged to main branch!
 
 ## Model Usage Guidelines
 
-- **IMPORTANT**: Be mindful of model capabilities. When context window has less than 15% availability, suggest creating a new session and save prompt to NEXT_SESSION_PROMPT.md
+- **IMPORTANT**: Be mindful of model capabilities. When context window has less than 15% availability, suggest creating a new session and save prompt to next-session-prompt.md
 
 ## Session Time Management
 
-**Estimated Session Duration**: 8-9 hours
-- Setup & Context: 30 min
-- Format Specification: 2 hours
-- Performance Analysis: 3 hours
-- Strategy & Design: 3 hours
-- Documentation: 30 min
+**Estimated Session Duration**: 10-12 hours
+- Setup & Module Creation: 30 min
+- Streaming Writer: 4 hours
+- Streaming Reader: 4 hours
+- Integration & Testing: 2 hours
+- Documentation & Cleanup: 30 min
 
 ## Related Context
 
@@ -227,10 +266,10 @@ After completing Phase 2:
 
 ---
 
-**Session Goal**: Complete Phase 1 design and analysis with comprehensive documentation of the JSON Lines format specification and migration strategy.
+**Session Goal**: Complete the remaining Phase 2 tasks (index/seek) and implement Phase 3 migration tool and integration to make the JSON Lines tape format production-ready.
 
-**Last Updated**: 2025-08-14
-**Next Review**: After Phase 1 completion
+**Last Updated**: 2025-08-15
+**Next Review**: After Phase 2-3 completion
 
 ## Worktree Reminder
 
