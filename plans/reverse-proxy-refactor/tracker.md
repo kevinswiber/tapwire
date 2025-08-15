@@ -1,11 +1,46 @@
 # Reverse Proxy Refactor - Implementation Tracker
 
 ## Project Status
-**Status**: 🟡 In Progress (Phase A Complete)  
+**Status**: ✅ Analysis Complete - Ready for Implementation  
 **Started**: 2025-01-15  
 **Last Updated**: 2025-01-15  
-**Estimated Duration**: 20-30 hours
-**Progress**: Phase A.0 Complete (2 hours)
+**Estimated Duration**: 20-23 hours (with optional parallelization saving 3 hours)
+**Progress**: Phase A Complete (~5 hours)
+
+## Executive Summary
+
+### Critical Discoveries from Analysis
+1. **SSE Bug**: Proxy makes duplicate requests for SSE streams (wasteful, causes timeouts)
+2. **No SessionStore Trait**: Direct coupling to InMemorySessionStore blocks distributed sessions
+3. **Module Size**: 3,482 lines in single file (admin handler alone is 876 lines)
+
+### Execution Strategy - Foundation First
+
+**Build the Right Architecture from the Start:**
+
+1. **Phase B (First)**: SessionStore Abstraction (4-5 hours)
+   - Extract trait with distributed sessions in mind
+   - Refactor InMemoryStore to implement trait
+   - Design for Redis but don't implement yet
+   - This unblocks everything else
+
+2. **Phase C (Second)**: Fix SSE Bug Properly (4-6 hours)
+   - Implement full UpstreamResponse wrapper solution
+   - No quick hacks - align with target architecture
+   - Integrate with new SessionStore trait
+
+3. **Phase D**: Modularization (8-10 hours)
+   - Break up the 3,482-line monolith
+   - Extract admin interface (876 lines)
+   - Create clean module boundaries
+
+4. **Phase E**: Integration & Testing (4-6 hours)
+
+### Why This Approach?
+- **Avoids technical debt**: No quick patches that need rework
+- **Foundation first**: SessionStore enables everything else
+- **Aligned implementation**: SSE fix uses proper abstractions
+- **Redis-ready**: Can add Redis backend later without refactoring
 
 ## Context
 The reverse proxy in `src/proxy/reverse.rs` has grown to 3,482 lines and has architectural issues with SSE streaming. This refactor will modularize the code, fix SSE handling, and implement proper session mapping.
@@ -39,17 +74,11 @@ These plans are CRITICAL because the proxy must:
 - `handle_mcp_request()`: 567 lines (should be split)
 - Total file: 3,482 lines (target: ~500 lines per module)
 
-## Phase A: Analysis & Architecture (4-6 hours)
+## Phase A: Analysis & Architecture (6-8 hours)
 
 ### A.0: Code Analysis (2 hours)
 **Goal**: Complete understanding of current implementation  
 **Status**: ✅ **COMPLETE** (2025-01-15)
-
-**Tasks**:
-- [x] Map all functions in `reverse.rs` and their dependencies
-- [x] Document all external interfaces and API contracts
-- [x] Identify shared state and synchronization points
-- [x] List all error paths and error handling patterns
 
 **Deliverables**:
 - ✅ `analysis/current-architecture.md` - Complete code map with 3,482 line analysis
@@ -59,211 +88,182 @@ These plans are CRITICAL because the proxy must:
 - ✅ `analysis/findings-summary.md` - Executive summary with recommendations
 
 ### A.1: SSE Infrastructure Review (1.5 hours)
-**Goal**: Understand existing SSE modules and reference implementations  
+**Goal**: Understand existing SSE modules for distributed session support  
+**Status**: ✅ **COMPLETE** (2025-01-15)
+
+**Key Findings**:
+- ✅ SseParser and SseStream are directly reusable
+- ❌ No SessionStore trait exists - direct coupling to InMemorySessionStore
+- ❌ Session management not abstracted for distributed backends
+- ⚠️ SSE reconnection logic needs distributed Last-Event-Id support
+
+**Deliverables**:
+- ✅ `analysis/sse-infrastructure.md` - Critical gaps identified for distributed sessions
+- ✅ `analysis/corrected-sse-solution.md` - Proper SSE handling with UpstreamResponse wrapper
+
+### A.2: Reconciled Architecture Plan (2-3 hours)
+**Goal**: Create unified plan addressing all discovered issues  
+**Status**: ✅ **COMPLETE** (2025-01-15)
+
+**Critical Decisions Made**:
+1. **SessionStore Priority**: Prerequisite - must be done first
+2. **Fix Approach**: Full UpstreamResponse implementation
+3. **Distributed Sessions**: Design for it, implement later
+
+**Deliverables**:
+- ✅ `analysis/unified-plan.md` - Single source of truth for implementation
+- ✅ `analysis/implementation-requirements.md` - Detailed requirements and questions
+- ✅ Updated tracker with clear sequential phases
+
+## Phase B: SessionStore Abstraction (4-5 hours) - PREREQUISITE
+
+**Must be completed first to unblock everything else**
+
+### B.0: Design SessionStore Trait (1 hour)
+**Goal**: Create storage abstraction with distributed systems in mind  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Review `src/transport/sse/` module structure
-- [ ] Document `SseConnectionManager` capabilities
-- [ ] Analyze `SseStream` and `SseParser` interfaces
-- [ ] Review MCP Inspector SSE implementation
-- [ ] Review TypeScript SDK SSE transport
-- [ ] Identify integration points with reverse proxy
+- [ ] Define SessionStore trait with core session methods
+- [ ] Add SSE-specific methods (Last-Event-Id, event buffering)
+- [ ] Design for async/await and connection pooling
+- [ ] Document trait contract and Redis considerations
 
-**Deliverables**:
-- `analysis/sse-infrastructure.md` - SSE module capabilities and integration points
+**Key Design Decisions**:
+- Methods must be async for network backends
+- Include batch operations for efficiency
+- Support TTL/expiry for session cleanup
+- Consider pagination for large result sets
 
-**Reference Implementations**:
-- `~/src/modelcontextprotocol/inspector/src/client/sse.ts`
-- `~/src/modelcontextprotocol/typescript-sdk/src/transports/sse.ts`
-- `~/src/modelcontextprotocol/servers/everything/`
-
-### A.2: Design New Architecture (2 hours)
-**Goal**: Design modular architecture with clear boundaries  
+### B.1: Refactor InMemoryStore (2 hours)
+**Goal**: Implement trait for existing store  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Define module boundaries and responsibilities
-- [ ] Design interfaces between modules
-- [ ] Plan data flow for JSON vs SSE requests
-- [ ] Design session mapping architecture
+- [ ] Extract interface from InMemorySessionStore
+- [ ] Implement SessionStore trait for InMemoryStore
+- [ ] Update SessionManager to use trait instead of concrete type
+- [ ] Ensure all existing tests pass
 
-**Deliverables**:
-- `analysis/proposed-architecture.md` - New module structure and interfaces
-- `analysis/data-flow.md` - Request/response flow diagrams
-
-### A.3: Migration Strategy (1 hour)
-**Goal**: Plan incremental migration without breaking changes  
+### B.2: Session Mapping Design (1-2 hours)
+**Goal**: Design dual session ID architecture  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Define migration phases
-- [ ] Identify potential breaking changes
-- [ ] Plan backward compatibility approach
-- [ ] Create rollback strategy
+- [ ] Design ProxySessionMapping structure
+- [ ] Add methods for proxy↔upstream mapping
+- [ ] Plan session lifecycle with distributed store
+- [ ] Document reconnection scenarios
 
-**Deliverables**:
-- `analysis/migration-plan.md` - Step-by-step migration strategy
+**Note**: Redis implementation deferred to later phase
 
-## Phase B: Modularization (6-8 hours)
+## Phase C: Fix SSE Bug Properly (4-6 hours)
 
-### B.0: Create Module Structure (1 hour)
-**Goal**: Set up new module organization  
+**With SessionStore abstraction in place, we can fix the bug properly**
+
+### C.0: Implement UpstreamResponse Wrapper (2 hours)
+**Goal**: Fix the duplicate request bug with proper architecture  
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Create `UpstreamResponse` struct with Response + metadata
+- [ ] Modify `process_via_http()` to return UpstreamResponse
+- [ ] Update callers to branch based on content-type
+- [ ] Remove `SseStreamingRequired` error hack
+
+### C.1: SSE Stream Processing (2 hours)
+**Goal**: Stream SSE without buffering  
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Integrate SseParser with bytes_stream()
+- [ ] Implement streaming path for SSE
+- [ ] Process events through interceptors incrementally
+- [ ] Stream to client without accumulation
+
+### C.2: Session Integration for SSE (2 hours)
+**Goal**: Proper session tracking using SessionStore  
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Track Last-Event-Id via SessionStore trait
+- [ ] Handle SSE reconnection with proper abstractions
+- [ ] Map proxy session to upstream session
+- [ ] Test with MCP Inspector
+
+## Phase D: Modularization (8-10 hours)
+
+### D.0: Create Module Structure (2 hours)
+**Goal**: Set up modular organization  
 **Status**: ⬜ Not Started
 
 **Tasks**:
 - [ ] Create `src/proxy/reverse/` directory structure
-- [ ] Set up `mod.rs` files with exports
-- [ ] Move type definitions to appropriate modules
-- [ ] Update imports in existing code
+- [ ] Extract configuration to `config.rs`
+- [ ] Extract metrics to `metrics.rs`
+- [ ] Update imports
 
-### B.1: Extract Configuration (1 hour)
-**Goal**: Isolate configuration logic  
+### D.1: Extract Handlers (3 hours)
+**Goal**: Separate request handling logic  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Move config structs to `reverse/config.rs`
-- [ ] Extract validation logic
-- [ ] Add configuration tests
-- [ ] Document configuration options
-
-### B.2: Extract Handlers (2 hours)
-**Goal**: Separate HTTP handler logic  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Move handler functions to `reverse/handlers.rs`
+- [ ] Create `handlers/json.rs` for JSON processing
+- [ ] Create `handlers/sse.rs` for SSE streaming
 - [ ] Extract routing logic
-- [ ] Separate middleware setup
 - [ ] Add handler tests
 
-### B.3: Extract JSON Processing (2 hours)
-**Goal**: Isolate JSON request/response handling  
+### D.2: Extract Upstream Management (2 hours)
+**Goal**: Centralize upstream logic  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Move JSON processing to `reverse/json.rs`
-- [ ] Extract JSON-RPC parsing logic
-- [ ] Separate interceptor integration for JSON
-- [ ] Add JSON processing tests
+- [ ] Create `upstream.rs` module
+- [ ] Implement connection pooling
+- [ ] Add load balancing support
+- [ ] Create upstream tests
 
-### B.4: Extract Upstream Management (2 hours)
-**Goal**: Centralize upstream connection logic  
+### D.3: Admin Interface Separation (3 hours)
+**Goal**: Move admin UI to separate module  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Move upstream logic to `reverse/upstream.rs`
-- [ ] Extract connection pooling
-- [ ] Implement load balancing
-- [ ] Add upstream management tests
+- [ ] Create `admin/` subdirectory
+- [ ] Extract admin handlers (876 lines!)
+- [ ] Separate HTML templates
+- [ ] Add admin tests
 
-## Phase C: SSE Implementation (6-8 hours)
+## Phase E: Integration & Testing (6-8 hours)
 
-### C.0: Create SSE Module (2 hours)
-**Goal**: Implement proper SSE streaming  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Create `reverse/sse.rs` module
-- [ ] Integrate with `transport/sse/` infrastructure
-- [ ] Implement stream proxying without buffering
-- [ ] Add SSE streaming tests
-
-### C.1: SSE Event Processing (2 hours)
-**Goal**: Parse and process SSE events  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Implement event parser for interceptors
-- [ ] Add event buffering for reconnection
-- [ ] Support event ID correlation
-- [ ] Add event processing tests
-
-### C.2: SSE Interceptor Support (2 hours)
-**Goal**: Enable interceptors for SSE events  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Design interceptor interface for streams
-- [ ] Implement per-event interception
-- [ ] Handle event modification
-- [ ] Add interceptor tests
-
-### C.3: SSE Error Handling (2 hours)
-**Goal**: Robust error handling for streams  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Handle upstream disconnections
-- [ ] Implement reconnection logic
-- [ ] Add timeout handling
-- [ ] Add error recovery tests
-
-## Phase D: Session Mapping (4-6 hours)
-
-### D.0: Session Mapping Core (2 hours)
-**Goal**: Implement session ID mapping  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Create `reverse/session.rs` module
-- [ ] Implement bidirectional mapping table
-- [ ] Add session lifecycle management
-- [ ] Add session mapping tests
-
-**Reference**: [Session Mapping Plan](../reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)
-
-### D.1: SSE Session Integration (2 hours)
-**Goal**: Map sessions in SSE events  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Parse session IDs from SSE events
-- [ ] Translate IDs in event data
-- [ ] Handle session expiration
-- [ ] Add SSE session tests
-
-### D.2: Multi-Client Support (2 hours)
-**Goal**: Support multiple clients per upstream  
-**Status**: ⬜ Not Started
-
-**Tasks**:
-- [ ] Implement fan-out for notifications
-- [ ] Handle client-specific filtering
-- [ ] Add connection tracking
-- [ ] Add multi-client tests
-
-## Phase E: Testing & Documentation (4-6 hours)
-
-### E.0: Integration Tests (2 hours)
+### E.0: Integration Tests (3 hours)
 **Goal**: Comprehensive integration testing  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Test JSON request/response flow
-- [ ] Test SSE streaming flow
-- [ ] Test session mapping
-- [ ] Test error scenarios
+- [ ] Test fixed SSE streaming without duplicate requests
+- [ ] Test distributed session management with Redis
+- [ ] Test session mapping and Last-Event-Id
+- [ ] Test with MCP Inspector
 
 ### E.1: Performance Testing (2 hours)
 **Goal**: Verify performance targets  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Benchmark latency overhead
-- [ ] Test concurrent connections
-- [ ] Measure memory usage
-- [ ] Verify < 5% p95 overhead
+- [ ] Benchmark SSE streaming latency
+- [ ] Test session storage performance
+- [ ] Measure memory usage with streaming
+- [ ] Verify < 5% p95 overhead maintained
 
-### E.2: Documentation (2 hours)
-**Goal**: Complete documentation  
+### E.2: Full Integration (3 hours)
+**Goal**: Merge parallel tracks  
 **Status**: ⬜ Not Started
 
 **Tasks**:
-- [ ] Update architecture documentation
-- [ ] Document new module interfaces
-- [ ] Add usage examples
-- [ ] Update troubleshooting guide
+- [ ] Integrate SessionStore with SSE streaming
+- [ ] Complete session mapping implementation
+- [ ] Test failover scenarios
+- [ ] Update documentation
 
 ## Risk Assessment
 
@@ -282,13 +282,38 @@ These plans are CRITICAL because the proxy must:
 - **Documentation gaps**: Mitigate with continuous updates
 
 ## Success Metrics
+
+### Phase B (SessionStore Foundation)
+- [ ] SessionStore trait defined with async methods
+- [ ] InMemoryStore implements trait
+- [ ] SessionManager uses trait (not concrete type)
 - [ ] All existing tests pass
-- [ ] SSE streaming works without timeouts
-- [ ] `reverse.rs` < 500 lines
-- [ ] Latency overhead < 5% p95
-- [ ] Zero breaking changes for existing users
-- [ ] Session mapping functional for JSON and SSE
-- [ ] 90%+ code coverage for new modules
+- [ ] Redis-ready design (but not implemented)
+
+### Phase C (SSE Fix)
+- [ ] No duplicate requests for SSE streams
+- [ ] SSE streaming without buffering/timeouts
+- [ ] UpstreamResponse wrapper implemented
+- [ ] Integrates with SessionStore trait
+- [ ] Tested with MCP Inspector
+
+### Phase D (Modularization)
+- [ ] `reverse.rs` < 500 lines per module
+- [ ] Admin interface extracted (876 lines → separate module)
+- [ ] Clear module boundaries
+- [ ] No circular dependencies
+
+### Phase E (Integration)
+- [ ] All refactored code integrated
+- [ ] Performance maintained (< 5% p95 overhead)
+- [ ] 90%+ code coverage for new code
+- [ ] Documentation complete
+
+### Future (Post-Refactor)
+- [ ] Redis backend implementation
+- [ ] Distributed session support
+- [ ] Connection pooling
+- [ ] Upstream failover
 
 ## Dependencies
 - Existing SSE transport infrastructure (`src/transport/sse/`)
@@ -296,8 +321,31 @@ These plans are CRITICAL because the proxy must:
 - Interceptor framework (`src/interceptor/`)
 - MCP protocol implementation (`rmcp` crate)
 
+## Next Steps
+
+### Ready to Implement - All Decisions Made ✅
+
+**Start Phase B immediately with these files:**
+1. Create `src/session/store.rs` with SessionStore trait
+2. Move InMemorySessionStore to `src/session/memory.rs`
+3. Update SessionManager to reference store via Arc<dyn SessionStore>
+4. Enable store injection through Shadowcat API
+
+### Key Implementation Decisions
+- SessionManager **references** store (enables injection)
+- Connection pooling is **implementation-specific** 
+- Parse MIME types **eagerly**
+- Stream non-JSON/SSE with **backpressure**
+- **No backwards compatibility** needed (refactor freely)
+
+### Complete Documentation Available
+- `analysis/unified-plan.md` - Step-by-step implementation guide
+- `analysis/implementation-requirements.md` - All questions answered
+- `analysis/final-decisions.md` - Summary of all decisions
+
 ## Notes
 - Current SSE implementation makes duplicate requests (temporary workaround)
-- `ReverseProxyError::SseStreamingRequired` should be removed after refactor
+- `ReverseProxyError::SseStreamingRequired` should be removed after Phase C
 - Focus on streaming-first architecture for SSE
-- Consider using existing `SseConnectionManager` for connection tracking
+- Redis implementation deferred but design must support it
+- Consider using existing `SseParser` and `SseStream` from transport layer

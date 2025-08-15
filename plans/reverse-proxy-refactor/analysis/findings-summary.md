@@ -80,6 +80,16 @@ match upstream.content_type {
 
 ## Proposed Module Structure
 
+### Phase 0: SessionStore Abstraction (PREREQUISITE - 8-10 hours)
+**CRITICAL**: Must be completed before SSE refactoring can support distributed sessions
+```
+src/session/
+├── store.rs            # SessionStore trait definition
+├── memory.rs           # Refactored InMemoryStore implementing trait
+├── redis.rs            # Redis backend implementing trait
+└── manager.rs          # Updated to use trait instead of concrete type
+```
+
 ### Phase 1: Core Extraction (6-8 hours)
 ```
 src/proxy/reverse/
@@ -91,7 +101,8 @@ src/proxy/reverse/
 │   ├── mod.rs         # Handler traits
 │   ├── json.rs        # JSON request handling (~400 lines)
 │   └── sse.rs         # SSE streaming (~500 lines)
-└── upstream.rs         # Upstream selection & routing (~200 lines)
+├── upstream.rs         # Upstream selection & routing (~200 lines)
+└── session_mapping.rs  # Proxy-to-upstream session mapping (~300 lines)
 ```
 
 ### Phase 2: Admin Separation (4-6 hours)
@@ -109,7 +120,7 @@ src/proxy/reverse/transport/
 ├── mod.rs              # Transport trait
 ├── http.rs            # HTTP transport
 ├── stdio.rs           # Stdio transport  
-└── sse.rs             # SSE streaming transport
+└── sse.rs             # SSE streaming transport with distributed session support
 ```
 
 ## State Management Issues
@@ -149,16 +160,20 @@ Request → Check Accept header → Branch:
 ## Existing Assets to Leverage
 
 ### SSE Infrastructure (`src/transport/sse/`)
-- `SseParser`: Parse events from byte streams
-- `SseStream`: Buffered stream reader
-- `SseEvent`: Proper event structure
-- `ReconnectingStream`: Auto-reconnection
-- `SessionAwareSseManager`: Session tracking
+- `SseParser`: Parse events from byte streams ✅ Directly reusable
+- `SseStream`: Buffered stream reader ✅ Directly reusable
+- `SseEvent`: Proper event structure ✅ Directly reusable
+- `ReconnectingStream`: Auto-reconnection ⚠️ Needs distributed Last-Event-Id support
+- `SessionAwareSseManager`: Session tracking ❌ Tightly coupled to in-memory storage
+
+### Critical Limitation Discovered
+**No SessionStore trait exists** - The codebase has direct coupling between `SessionManager` and `InMemorySessionStore`. This blocks distributed session support and must be fixed first.
 
 ### Why Not Currently Used
 - Designed for client connections, not proxying
 - Incompatible with current request/response pattern
 - Interceptors expect complete messages
+- **NEW**: Session management not abstracted for distributed backends
 
 ## Risk Assessment
 
@@ -179,6 +194,15 @@ Request → Check Accept header → Branch:
 ✅ Code analysis and architecture review
 ✅ Identify issues and dependencies
 ✅ Design new module structure
+✅ SSE infrastructure analysis for distributed sessions
+
+### Phase B0: SessionStore Abstraction (PREREQUISITE - 8-10 hours)
+**MUST BE COMPLETED FIRST**
+1. Extract SessionStore trait from current implementation
+2. Refactor InMemorySessionStore to implement trait
+3. Update SessionManager to use trait instead of concrete type
+4. Add SSE-specific methods (Last-Event-Id, event buffering)
+5. Implement Redis backend with trait
 
 ### Phase B: Fix Critical Bug (2-3 hours)
 1. Implement early SSE detection
@@ -190,11 +214,13 @@ Request → Check Accept header → Branch:
 2. Extract metrics implementation
 3. Extract server setup
 4. Create handler modules
+5. Add session_mapping module for dual IDs
 
 ### Phase D: SSE Integration (4-6 hours)
-1. Integrate existing SSE modules
+1. Integrate existing SSE modules (SseParser, SseStream)
 2. Implement streaming interceptors
-3. Add session mapping for SSE
+3. Add distributed session mapping for SSE
+4. Implement minimal event buffering (Last-Event-Id only)
 
 ### Phase E: Testing & Validation (4-6 hours)
 1. Unit tests for new modules
@@ -240,4 +266,4 @@ The proposed refactoring will:
 - Enable reuse of existing SSE infrastructure
 - Set foundation for future enhancements
 
-Total estimated time: 24-33 hours across 5 phases.
+Total estimated time: 32-43 hours across 6 phases (including prerequisite SessionStore work).

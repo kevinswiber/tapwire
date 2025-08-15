@@ -1,188 +1,131 @@
-# Next Session: Phase A - Analysis & Architecture
+# Next Session: Implement Phase B - SessionStore Abstraction
 
-## Project Context
-
-The Shadowcat reverse proxy has grown to 3400+ lines in a single file and has critical issues with SSE streaming that cause client timeouts. This refactor will modularize the code, fix SSE handling, and implement proper session mapping for production readiness.
-
-**Project**: Reverse Proxy Refactor
-**Tracker**: `plans/reverse-proxy-refactor/tracker.md`
-**Status**: Phase A - Analysis & Architecture (0% Complete)
+## Context
+We've completed Phase A (Analysis) of the reverse proxy refactor. The proxy has a critical SSE bug (makes duplicate requests) and lacks storage abstraction (directly coupled to InMemorySessionStore). We need to fix both issues through a careful refactoring.
 
 ## Current Status
+- **Phase A**: ✅ COMPLETE (5 hours) - All analysis done, decisions made
+- **Phase B**: ⬜ Ready to start - SessionStore abstraction (4-5 hours)
+- **Phase C**: ⬜ Blocked on B - Fix SSE bug properly (5-6 hours)
+- **Phase D**: ⬜ Blocked on C - Modularization (8 hours)
+- **Phase E**: ⬜ Final - Integration & testing (4 hours)
 
-### What Has Been Completed
-- **Planning**: Comprehensive refactor plan created (✅ Completed 2025-01-15)
-  - 5-phase implementation strategy defined
-  - Task breakdown with time estimates
-  - Reference implementations identified
+## Your Task: Implement Phase B - SessionStore Abstraction
 
-### What's In Progress
-- **A.0: Code Analysis** (Not Started)
-  - Duration: 2 hours
-  - Dependencies: None
+### Key Documents to Read First
+1. **Main Tracker**: `plans/reverse-proxy-refactor/tracker.md`
+2. **Implementation Guide**: `plans/reverse-proxy-refactor/analysis/unified-plan.md`
+3. **All Decisions**: `plans/reverse-proxy-refactor/analysis/final-decisions.md`
 
-## Your Mission
+### Critical Decisions Already Made
+- SessionManager **references** store via `Arc<dyn SessionStore>` (not owns)
+- Store can be **injected** via Shadowcat API for library consumers
+- **No backwards compatibility** needed - Shadowcat unreleased
+- Connection pooling is **implementation-specific**
+- Use **async-trait** for the trait definition
 
-Perform deep analysis of the current reverse proxy implementation to understand its structure, dependencies, and pain points. This analysis will inform the refactoring strategy and ensure we don't break existing functionality.
+### Phase B Implementation Steps
 
-### Priority 1: Code Analysis (2 hours)
+#### B.1: Create SessionStore Trait (1 hour)
+**File**: `src/session/store.rs`
 
-1. **Function and Structure Mapping** (45 min)
-   - Map all functions in `src/proxy/reverse.rs`
-   - Document function dependencies
-   - Identify logical sections and boundaries
-   
-2. **State and Concurrency Analysis** (30 min)
-   - Document shared state (AppState, SessionManager)
-   - Map synchronization points
-   - Identify potential race conditions
-   
-3. **SSE Flow Analysis** (30 min)
-   - Trace SSE request/response flow
-   - Identify buffering points causing timeouts
-   - Compare with reference implementations
+```rust
+use async_trait::async_trait;
 
-4. **Problem Documentation** (15 min)
-   - List all TODO/FIXME comments
-   - Document known bugs
-   - Identify code smells and duplication
-
-### Priority 2: SSE Infrastructure Review (1.5 hours if time permits)
-Review existing SSE modules and reference implementations to identify reusable components.
-
-## Essential Context Files to Read
-
-1. **Primary Tracker**: `plans/reverse-proxy-refactor/tracker.md` - Full project context
-2. **Task Details**: `plans/reverse-proxy-refactor/tasks/A.0-code-analysis.md` - Analysis specifications
-3. **Implementation**: `shadowcat/src/proxy/reverse.rs` - The 3400+ line file to analyze
-4. **SSE Modules**: `shadowcat/src/transport/sse/` - Existing SSE infrastructure
-5. **Current Issues**: `shadowcat/SSE_STATUS.md` - Known problems and attempted fixes
-
-## Working Directory
-
-```bash
-cd ~/src/tapwire/shadowcat
+#[async_trait]
+pub trait SessionStore: Send + Sync {
+    // Core session operations
+    async fn create_session(&self, session: Session) -> SessionResult<()>;
+    async fn get_session(&self, id: &SessionId) -> SessionResult<Session>;
+    async fn update_session(&self, session: Session) -> SessionResult<()>;
+    async fn delete_session(&self, id: &SessionId) -> SessionResult<()>;
+    async fn count_sessions(&self) -> SessionResult<usize>;
+    async fn list_sessions(&self) -> SessionResult<Vec<Session>>;
+    
+    // Frame operations
+    async fn add_frame(&self, frame: MessageEnvelope) -> SessionResult<()>;
+    async fn get_frames(&self, session_id: &SessionId) -> SessionResult<Vec<MessageEnvelope>>;
+    async fn delete_frames(&self, session_id: &SessionId) -> SessionResult<()>;
+    
+    // SSE-specific (for Phase C)
+    async fn store_last_event_id(&self, session_id: &SessionId, event_id: String) -> SessionResult<()>;
+    async fn get_last_event_id(&self, session_id: &SessionId) -> SessionResult<Option<String>>;
+    
+    // Batch operations (for future Redis)
+    async fn get_sessions_batch(&self, ids: &[SessionId]) -> SessionResult<Vec<Session>>;
+    async fn update_sessions_batch(&self, sessions: Vec<Session>) -> SessionResult<()>;
+}
 ```
 
-## Commands to Run First
+#### B.2: Refactor InMemoryStore (2 hours)
+1. Move current `InMemorySessionStore` from `src/session/store.rs` to `src/session/memory.rs`
+2. Add new field for SSE support:
+   ```rust
+   last_event_ids: Arc<RwLock<HashMap<SessionId, String>>>,
+   ```
+3. Implement all trait methods
 
+#### B.3: Update SessionManager (1-2 hours)
+**File**: `src/session/manager.rs`
+- Change `store: Arc<InMemorySessionStore>` to `store: Arc<dyn SessionStore>`
+- Update builder to accept trait
+- Enable library consumer injection
+
+#### B.4: Fix Compilation (1 hour)
+Update these 13 files that reference SessionManager or InMemorySessionStore:
+- `src/proxy/reverse.rs`
+- `src/proxy/forward.rs`
+- `src/main.rs`
+- `src/session/builder.rs`
+- (and 9 others - use `grep -r "InMemorySessionStore"`)
+
+### Success Criteria for Phase B
+- [ ] SessionStore trait defined with all methods
+- [ ] InMemoryStore implements the trait
+- [ ] SessionManager uses trait reference
+- [ ] All existing tests pass
+- [ ] Can swap implementations at runtime
+
+### Testing Commands
 ```bash
-# Check current file size and structure
-wc -l src/proxy/reverse.rs
-grep -n "^pub fn\|^async fn\|^fn " src/proxy/reverse.rs | head -20
+# After creating trait
+cargo check
 
-# Find SSE-related code
-rg "SSE|event-stream|EventSource" src/proxy/reverse.rs
+# After implementing for InMemoryStore
+cargo test --lib session::
 
-# Check for TODOs
-rg "TODO|FIXME|HACK" src/proxy/reverse.rs
+# After updating SessionManager
+cargo test
 
-# Look for large functions
-awk '/^(async )?fn / {name=$0; count=0} {count++} /^}$/ {if(count>50) print name " - " count " lines"}' src/proxy/reverse.rs
+# Full validation
+cargo clippy --all-targets -- -D warnings
 ```
 
-## Implementation Strategy
+### What NOT to Do in Phase B
+- Don't implement Redis backend yet (future phase)
+- Don't fix the SSE bug yet (Phase C)
+- Don't modularize reverse.rs yet (Phase D)
+- Focus ONLY on the storage abstraction
 
-### Phase 1: Setup & Initial Review (15 min)
-1. Open `src/proxy/reverse.rs` and get familiar with structure
-2. Create `analysis/` directory for findings
-3. Set up analysis document templates
+### Blockers/Issues to Watch For
+1. **Trait object safety** - All methods must be object-safe
+2. **Lifetime issues** - Use Arc for shared ownership
+3. **Breaking changes** - Update all 13 files that use the store
 
-### Phase 2: Deep Analysis (1.5 hours)
-1. Map all public functions and their responsibilities
-2. Trace request flow for both JSON and SSE
-3. Document shared state and synchronization
-4. Identify module boundaries for refactoring
+### Next Phase Preview (Phase C)
+After Phase B is complete, Phase C will:
+- Implement UpstreamResponse wrapper
+- Fix SSE duplicate request bug
+- Add backpressure for streaming
+- Use the new SessionStore trait for Last-Event-Id
 
-### Phase 3: Reference Comparison (30 min)
-1. Review Inspector SSE implementation at `~/src/modelcontextprotocol/inspector/src/client/sse.ts`
-2. Check TypeScript SDK at `~/src/modelcontextprotocol/typescript-sdk/src/transports/sse.ts`
-3. Note patterns we should adopt
+### Time Estimate
+- Phase B: 4-5 hours
+- Remaining work: 17-19 hours
+- Total project: 22-24 hours
 
-### Phase 4: Documentation (15 min)
-1. Write findings to `analysis/current-architecture.md`
-2. Document dependencies in `analysis/dependencies.md`
-3. Update tracker with completion status
+## Important Context
+The reverse proxy currently makes duplicate HTTP requests when it detects SSE streams. This is because the function signature can't return the Response object for streaming, so it uses an error as control flow, causing the Response to be dropped. We'll fix this in Phase C with the UpstreamResponse wrapper, but first we need the SessionStore abstraction to properly track Last-Event-Id for SSE reconnections.
 
-## Success Criteria Checklist
-
-- [ ] Complete function map with call graph
-- [ ] SSE flow documented with bottlenecks identified
-- [ ] Shared state and synchronization documented
-- [ ] Module boundaries proposed
-- [ ] Reference implementation patterns noted
-- [ ] Analysis documents created in `analysis/` directory
-- [ ] Tracker updated with findings
-
-## Key Commands
-
-```bash
-# Analysis commands
-rg "^(pub |async |fn )" src/proxy/reverse.rs
-rg "struct|enum" src/proxy/reverse.rs
-rg "Arc<|Mutex<|RwLock<" src/proxy/reverse.rs
-
-# Check existing SSE modules
-ls -la src/transport/sse/
-rg "pub struct|pub trait" src/transport/sse/
-
-# Reference implementations
-cat ~/src/modelcontextprotocol/inspector/src/client/sse.ts
-cat ~/src/modelcontextprotocol/typescript-sdk/src/transports/sse.ts
-```
-
-## Important Notes
-
-- **Focus on understanding, not judging** - Document what exists objectively
-- **Pay special attention to SSE handling** - This is the critical bug to fix
-- **Note integration points** - We need to maintain compatibility
-- **Look for reusable patterns** - Existing SSE modules might solve our problems
-- **Document assumptions** - Implicit behaviors that aren't obvious
-
-## Key Design Considerations
-
-1. **Streaming vs Buffering**: Current code tries to buffer SSE streams, which is fundamentally wrong
-2. **Session Mapping**: Need to support proxy-managed sessions separate from upstream
-3. **Module Size**: 3400 lines is too large - need logical boundaries for ~500 line modules
-
-## Risk Factors & Blockers
-
-- **Breaking Changes**: Must maintain backward compatibility
-- **Performance**: Can't exceed 5% latency overhead requirement
-- **Complexity**: SSE streaming with interceptors is non-trivial
-
-## Next Steps After This Task
-
-Once analysis is complete:
-- **A.1**: SSE Infrastructure Review (1.5 hours)
-- **A.2**: Design New Architecture (2 hours)
-- **A.3**: Migration Strategy (1 hour)
-
-After Phase A completion:
-- Move to Phase B - Modularization (6-8 hours of refactoring)
-
-## Model Usage Guidelines
-
-- **IMPORTANT**: This is primarily an analysis task - avoid making code changes
-- When context window has less than 15% availability, save findings and create new session
-
-## Session Time Management
-
-**Estimated Session Duration**: 2-3.5 hours
-- Setup & Context: 15 min
-- Analysis: 2 hours
-- Documentation: 30 min
-- Optional SSE Review: 1.5 hours
-
-## Related Context
-
-- **Integration Points**: Session manager, interceptor chain, transport layer
-- **Downstream Dependencies**: CLI commands, integration tests
-- **Parallel Work**: Session mapping plan in `plans/reverse-proxy-session-mapping/`
-
----
-
-**Session Goal**: Complete thorough analysis of `reverse.rs` to understand current architecture and identify refactoring boundaries
-
-**Last Updated**: 2025-01-15
-**Next Review**: After A.0 completion
+## Questions?
+All design decisions have been made and documented in `analysis/final-decisions.md`. The implementation path is clear. Begin with B.1: Create SessionStore trait.
