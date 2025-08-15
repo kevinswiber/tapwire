@@ -46,29 +46,30 @@ git worktree list
 
 ## Your Mission
 
-Begin Phase 3 migration and integration work to make the JSON Lines format production-ready.
+Complete Phase 3 integration work to replace the old JSON format with JSON Lines.
 
-### Priority 1: Migration Tool (3 hours)
+### Priority 1: Direct Integration (3 hours)
 
-**Task 3.1: Migration Tool**
-- Create CLI command for tape migration
-- Implement streaming conversion from JSON to JSON Lines
-- Add progress reporting
-- Handle large files efficiently
-- Test with various tape sizes
+**Task 3.1: Replace Old Implementation**
+- Update `recorder/tape.rs` to use `StreamingTapeWriter`
+- Update `recorder/storage.rs` to use new tape format
+- Update replay module to use `StreamingTapeReader`
+- Remove old JSON-based tape code
 
-### Priority 2: Integration (5 hours)
+### Priority 2: CLI Integration (2 hours)
 
-**Task 3.2: Recorder Integration**
-- Update recorder module to use StreamingTapeWriter
-- Update replay module to use StreamingTapeReader
-- Ensure backward compatibility layer works
+**Task 3.2: Update CLI Commands**
+- Update `record` command to use new format
+- Update `replay` command to use streaming reader
+- Update `list` and other tape commands
 - Test end-to-end recording and playback
+
+### Priority 3: Testing & Cleanup (2 hours)
 
 **Task 3.3: Testing & Validation**
 - Comprehensive integration tests
 - Performance benchmarks
-- Stress testing with large tapes
+- Remove old tape format code
 - Documentation updates
 
 ## Essential Context Files to Read
@@ -123,20 +124,24 @@ cargo clippy --all-targets -- -D warnings
 
 ## Implementation Strategy
 
-### Phase 1: Migration Tool (3 hours)
-1. Create new CLI subcommand for migration
-2. Implement streaming JSON parser
-3. Stream conversion to JSON Lines format
-4. Add progress reporting
-5. Test with various tape sizes
+### Phase 1: Direct Replacement (3 hours)
+1. Navigate to worktree directory
+2. Replace tape.rs implementation with streaming version
+3. Update storage.rs to handle JSON Lines format
+4. Update replay module for streaming
+5. Remove old JSON serialization code
 
-### Phase 2: Integration (5 hours)
-1. Update recorder module to use new streaming implementation
-2. Update replay module for streaming reader
-3. Add backward compatibility layer
-4. Integration tests
-5. Performance benchmarks
-6. Documentation updates
+### Phase 2: CLI Updates (2 hours)
+1. Update record command
+2. Update replay command  
+3. Update list/delete commands
+4. End-to-end testing
+
+### Phase 3: Cleanup (2 hours)
+1. Remove all old tape format code
+2. Update documentation
+3. Performance benchmarks
+4. Final testing
 
 ## Success Criteria Checklist
 
@@ -152,12 +157,12 @@ cargo clippy --all-targets -- -D warnings
   - [x] Instant read start (< 5ms)
   - [x] Seek performance (< 10ms with index)
 
-### Phase 3 Migration
-- [ ] Migration tool implemented
-- [ ] Progress reporting working
-- [ ] Large file handling tested
-- [ ] Integration with recorder module
-- [ ] Integration with replay module
+### Phase 3 Integration (No Backward Compatibility Needed!)
+- [ ] Old tape.rs replaced with streaming implementation
+- [ ] Storage.rs updated for JSON Lines
+- [ ] Replay module using StreamingTapeReader
+- [ ] CLI commands updated
+- [ ] Old JSON format code removed
 - [ ] All tests passing
 - [ ] No clippy warnings
 
@@ -189,13 +194,13 @@ cargo clippy --all-targets -- -D warnings
 - **Test incrementally** as you design
 - **Update tracker** when tasks are complete
 
-## Key Design Decisions (From Phase 1)
+## Key Design Decisions
 
-1. **No Backward Compatibility Needed**: Shadowcat is pre-release, clean slate
+1. **NO BACKWARD COMPATIBILITY NEEDED**: Shadowcat is pre-release - direct replacement!
 2. **Streaming-First**: Never buffer entire tape, true O(1) operations
 3. **Separate Metadata Files**: Avoid lock contention, enable concurrent access
-4. **Init Instead of Header**: Minimal first line for immediate streaming
-5. **Checkpoints Instead of Footer**: Optional progress markers, no finalization required
+4. **Index for Seeking**: BTreeMap-based index for O(log n) seeks
+5. **Clean Replacement**: Remove all old JSON code, no migration tool needed
 
 ## Performance/Quality Targets
 

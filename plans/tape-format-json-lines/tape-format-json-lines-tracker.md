@@ -82,16 +82,16 @@ Implement the JSON Lines tape format with streaming capabilities
 
 **Phase 2 Total**: 13 hours ✅ Complete
 
-### Phase 3: Migration & Compatibility (Week 2)
-Ensure smooth transition from existing format
+### Phase 3: Direct Integration (Week 2)
+Replace old format entirely (no backward compatibility needed - pre-release!)
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| 3.1 | **Migration Tool** | 3h | 2.1, 2.2 | ⬜ Not Started | | [Details](tasks/3.1-migration-tool.md) |
-| 3.2 | **Backward Compatibility** | 2h | 3.1 | ⬜ Not Started | | [Details](tasks/3.2-backward-compatibility.md) |
-| 3.3 | **Testing & Validation** | 3h | All Phase 2 | ⬜ Not Started | | [Details](tasks/3.3-testing-validation.md) |
+| 3.1 | **Replace Implementation** | 3h | 2.1, 2.2 | ⬜ Not Started | | Direct replacement in tape.rs/storage.rs |
+| 3.2 | **CLI Integration** | 2h | 3.1 | ⬜ Not Started | | Update record/replay/list commands |
+| 3.3 | **Testing & Cleanup** | 2h | 3.2 | ⬜ Not Started | | Remove old code, final tests |
 
-**Phase 3 Total**: 8 hours
+**Phase 3 Total**: 7 hours (simplified - no migration needed!)
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun

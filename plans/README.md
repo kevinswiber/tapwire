@@ -8,6 +8,13 @@
 
 The following plans are currently being worked on or are ready for implementation:
 
+#### 🔥 **TOP PRIORITY** - Critical Proxy Infrastructure
+| Plan | Status | Estimated Duration | Description |
+|------|--------|-------------------|-------------|
+| **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | 🔴 **TOP PRIORITY** | 8-12 hours | Dual session ID tracking for SSE reconnection and failover |
+| **[Multi-Session Forward Proxy](multi-session-forward-proxy/multi-session-forward-proxy-tracker.md)** | 🔴 **TOP PRIORITY** | 11-15 hours | Support multiple concurrent client connections |
+
+#### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
 | **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** | Planning | 16-24 hours | Smart transport detection and improved UX |
@@ -20,6 +27,21 @@ The following plans are currently being worked on or are ready for implementatio
 ### 📌 Recommended Execution Order
 
 Based on scope, dependencies, and conflict analysis, here's the optimal approach for tackling these plans:
+
+#### **🔥 IMMEDIATE PRIORITY: Critical Proxy Infrastructure**
+These two plans address fundamental architectural limitations and should be completed first:
+
+1. **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/)** (8-12 hours)
+   - Fixes MCP Inspector compatibility issues
+   - Enables SSE reconnection with Last-Event-Id
+   - Required for proper session lifecycle management
+   - Start with Phase A research tasks
+
+2. **[Multi-Session Forward Proxy](multi-session-forward-proxy/)** (11-15 hours)  
+   - Removes single-connection limitation
+   - Enables production use cases
+   - Can be worked in parallel with reverse proxy changes
+   - Start with Phase A analysis
 
 #### **Phase 1: Quick Win (Week 1, Days 1-2)** ✅ COMPLETE
 **~~Start with: [LLM Help Documentation](llm-help-documentation/llm-help-documentation-tracker.md)~~** (8-10 hours)
@@ -131,9 +153,11 @@ plans/
 │   ├── next-session-prompt.md     # Session setup template
 │   └── task.md                    # Individual task template
 │
+├── reverse-proxy-session-mapping/  # 🔥 TOP PRIORITY - Dual session IDs
+├── multi-session-forward-proxy/    # 🔥 TOP PRIORITY - Concurrent clients
 ├── better-cli-interface/           # 🎯 ACTIVE - Smart transport detection
 ├── full-batch-support/             # 🎯 ACTIVE - MCP batch messages
-├── llm-help-documentation/         # 🎯 ACTIVE - LLM-friendly help
+├── llm-help-documentation/         # ✅ COMPLETE - LLM-friendly help
 ├── redis-session-storage/          # 🎯 ACTIVE - Distributed storage
 ├── tape-format-json-lines/         # 🎯 ACTIVE - JSONL format
 ├── wassette-integration/           # 🎯 ACTIVE - WebAssembly modules
@@ -153,11 +177,17 @@ plans/
 ## Quick Links
 
 ### 🎯 Active Work
+
+#### 🔥 Top Priority - Critical Infrastructure
+- **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** - Dual session IDs for SSE/failover
+- **[Multi-Session Forward Proxy](multi-session-forward-proxy/multi-session-forward-proxy-tracker.md)** - Concurrent client support
+
+#### Other Active Plans
 - **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** - Smart transport detection
 - **[Full Batch Support](full-batch-support/full-batch-support-tracker.md)** - MCP batch messages
-- **[LLM Help Documentation](llm-help-documentation/feature-tracker.md)** - LLM-friendly help
+- **[LLM Help Documentation](llm-help-documentation/llm-help-documentation-tracker.md)** - LLM-friendly help ✅
 - **[Redis Session Storage](redis-session-storage/redis-storage-tracker.md)** - Distributed storage
-- **[Tape Format JSON Lines](tape-format-json-lines/tape-format-tracker.md)** - JSONL format
+- **[Tape Format JSON Lines](tape-format-json-lines/tape-format-json-lines-tracker.md)** - JSONL format
 - **[Wassette Integration](wassette-integration/wassette-tracker.md)** - WebAssembly modules
 
 ### ✅ Completed Work
@@ -293,4 +323,4 @@ ls plans/*/tasks/
 
 ---
 
-*Last Updated: 2025-08-14 - Transport Refactor and Advanced Features Complete, 6 Active Plans Ready*
+*Last Updated: 2025-01-15 - Two Critical Proxy Infrastructure Plans Added as TOP PRIORITY*
