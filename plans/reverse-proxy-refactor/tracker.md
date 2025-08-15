@@ -26,18 +26,25 @@ The reverse proxy in `src/proxy/reverse.rs` has grown to 3400+ lines and has arc
 - `analysis/dependencies.md` - External dependencies and interfaces
 - `analysis/state-management.md` - Shared state documentation
 
-### A.1: SSE Infrastructure Review (1 hour)
-**Goal**: Understand existing SSE modules for reuse  
+### A.1: SSE Infrastructure Review (1.5 hours)
+**Goal**: Understand existing SSE modules and reference implementations  
 **Status**: ⬜ Not Started
 
 **Tasks**:
 - [ ] Review `src/transport/sse/` module structure
 - [ ] Document `SseConnectionManager` capabilities
 - [ ] Analyze `SseStream` and `SseParser` interfaces
+- [ ] Review MCP Inspector SSE implementation
+- [ ] Review TypeScript SDK SSE transport
 - [ ] Identify integration points with reverse proxy
 
 **Deliverables**:
 - `analysis/sse-infrastructure.md` - SSE module capabilities and integration points
+
+**Reference Implementations**:
+- `~/src/modelcontextprotocol/inspector/src/client/sse.ts`
+- `~/src/modelcontextprotocol/typescript-sdk/src/transports/sse.ts`
+- `~/src/modelcontextprotocol/servers/everything/`
 
 ### A.2: Design New Architecture (2 hours)
 **Goal**: Design modular architecture with clear boundaries  

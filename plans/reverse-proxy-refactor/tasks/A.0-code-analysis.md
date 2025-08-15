@@ -155,3 +155,11 @@ Structure:
 - Document both good patterns and problematic ones
 - Pay special attention to SSE handling code
 - Note any undocumented assumptions or invariants
+
+## Reference Implementations
+When analyzing SSE handling, compare with:
+- `~/src/modelcontextprotocol/inspector/src/client/sse.ts` - Inspector's SSE client
+- `~/src/modelcontextprotocol/typescript-sdk/src/transports/sse.ts` - Official SSE transport
+- `~/src/modelcontextprotocol/servers/everything/` - Full-featured test server with SSE
+
+These can help identify correct SSE patterns and potential issues in our implementation.

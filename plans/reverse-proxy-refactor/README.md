@@ -94,6 +94,22 @@ src/proxy/
 - [Session Mapping Plan](../reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)
 - [MCP Specification](https://spec.modelcontextprotocol.io)
 
+## MCP Reference Implementations
+Available in `~/src/modelcontextprotocol/` for validation and testing:
+
+### Core Resources
+- **Specifications** (`modelcontextprotocol/specs/`): Official protocol versions and schemas
+- **Inspector** (`inspector/`): MCP debugging tool with SSE support - excellent for testing our proxy
+- **TypeScript SDK** (`typescript-sdk/`): Most up-to-date reference implementation
+- **Rust SDK** (`rust-sdk/`): Official rmcp crate implementation for comparison
+- **Example Servers** (`servers/`): Test targets including `everything` server with full MCP features
+
+### How to Use for This Refactor
+1. **Validate SSE Behavior**: Compare our SSE handling with Inspector's implementation
+2. **Protocol Compliance**: Check TypeScript SDK for canonical message handling
+3. **Testing Targets**: Use `servers/everything` for comprehensive integration tests
+4. **Edge Cases**: Review how official SDKs handle error conditions and reconnection
+
 ## Open Questions
 1. Should we support HTTP/2 and HTTP/3 for SSE?
 2. How many events should we buffer for reconnection?
