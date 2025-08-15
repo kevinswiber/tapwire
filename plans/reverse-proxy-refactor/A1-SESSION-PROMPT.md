@@ -85,16 +85,23 @@ cat ../plans/reverse-proxy-session-mapping/analysis/transport-layer-analysis.md
 1. **Session Storage Abstraction**: We need a `SessionStore` trait that supports both in-memory and Redis backends
 2. **Dual Session IDs**: Proxy maintains its own session IDs separate from upstream
 3. **Session Mapping**: Map proxy sessions → upstream sessions (many-to-one possible)
-4. **SSE Reconnection**: Buffer events for Last-Event-Id replay
-5. **Distributed State**: Sessions must work across multiple proxy instances
-6. **Connection Pooling**: Reuse upstream connections across client sessions
+4. **Distributed State**: Sessions must work across multiple proxy instances
+5. **Connection Pooling**: Reuse upstream connections across client sessions
+
+**SSE Streaming & Backpressure (Important to Investigate):**
+- **Minimize Buffering**: The proxy should be a thin pipe, not a reservoir
+- **Backpressure Propagation**: Slow client → slow upstream reads, slow upstream → slow client writes
+- **Event Buffering**: Should be a SEPARATE abstraction from session storage (if needed at all)
+- **Investigate**: How much buffering is actually needed for Last-Event-Id replay?
 
 **Questions to Answer:**
 - How does `SessionAwareSseManager` handle distributed sessions?
-- Can SSE event buffering work with Redis storage?
+- Can we propagate backpressure through the proxy naturally?
+- How much event history is needed for SSE reconnection?
+- What's the minimum viable buffer size for SSE events?
+- How do reference implementations handle backpressure?
 - How to maintain session mapping during SSE streaming?
 - What happens to SSE streams during upstream failover?
-- How to route reconnected SSE to correct upstream session?
 
 ## Deliverables
 

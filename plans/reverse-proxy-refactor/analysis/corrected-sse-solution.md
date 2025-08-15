@@ -182,7 +182,10 @@ async fn stream_sse_with_interceptors(
     upstream: UpstreamResponse,
     interceptor_chain: Arc<InterceptorChain>,
 ) -> Result<Response> {
-    let (tx, rx) = mpsc::unbounded_channel();
+    // Use BOUNDED channel for natural backpressure
+    // Small buffer size means upstream slows when client is slow
+    const SSE_BUFFER_SIZE: usize = 10; // Investigate optimal size
+    let (tx, rx) = mpsc::channel(SSE_BUFFER_SIZE);
     
     // Spawn task to process SSE stream
     tokio::spawn(async move {
@@ -203,14 +206,15 @@ async fn stream_sse_with_interceptors(
                         let context = InterceptContext::new(msg, ...);
                         match interceptor_chain.intercept(&context).await {
                             Ok(InterceptAction::Continue) => {
-                                // Forward the event
-                                tx.send(Ok(event))?;
+                                // Forward the event - will block if client is slow
+                                // This provides natural backpressure to upstream
+                                tx.send(Ok(event)).await?;
                             }
                             Ok(InterceptAction::Modify(modified)) => {
-                                // Send modified event
+                                // Send modified event - with backpressure
                                 let modified_event = Event::default()
                                     .data(serde_json::to_string(&modified)?);
-                                tx.send(Ok(modified_event))?;
+                                tx.send(Ok(modified_event)).await?;
                             }
                             Ok(InterceptAction::Block { .. }) => {
                                 // Don't forward this event
@@ -299,36 +303,49 @@ The solution MUST support distributed session management from the start:
    - Multiple proxy sessions can share one upstream session (connection pooling)
    - Mappings must persist across proxy restarts (Redis)
 
-4. **SSE Session Continuity**:
-   - Buffer events in distributed cache for Last-Event-Id replay
-   - Maintain session mapping during streaming
-   - Handle reconnection to correct upstream
-   - Support upstream failover without losing client session
-
-### Example Architecture
+### Example Session Store (NOT for event buffering)
 ```rust
 trait SessionStore {
     async fn get(&self, id: &SessionId) -> Result<Session>;
     async fn set(&self, id: SessionId, session: Session) -> Result<()>;
     async fn get_mapping(&self, proxy_id: &SessionId) -> Result<SessionMapping>;
     async fn set_mapping(&self, mapping: SessionMapping) -> Result<()>;
-    async fn buffer_sse_event(&self, session_id: &SessionId, event: SseEvent) -> Result<()>;
-    async fn get_buffered_events(&self, session_id: &SessionId, since: EventId) -> Result<Vec<SseEvent>>;
 }
+```
 
-// In-memory implementation
-struct InMemoryStore { ... }
+## SSE Streaming & Backpressure Considerations
 
-// Redis implementation  
-struct RedisStore { ... }
+### Event Buffering (Separate Concern)
+**Important**: SSE event buffering should be a SEPARATE abstraction from session storage.
 
-// Factory based on config
-fn create_session_store(config: &Config) -> Arc<dyn SessionStore> {
-    match config.session_backend {
-        Backend::Memory => Arc::new(InMemoryStore::new()),
-        Backend::Redis => Arc::new(RedisStore::new(config.redis)),
-    }
-}
+**Ideal Design**: Minimize buffering by propagating backpressure:
+1. If client is slow → apply backpressure to upstream reads
+2. If upstream is slow → apply backpressure to client writes  
+3. Proxy should be mostly pass-through, not a buffer
+
+**When Buffering Might Be Needed** (to investigate):
+- Last-Event-Id replay for reconnection (how much history?)
+- Interceptor processing delays
+- Brief network hiccups
+- Rate limiting/throttling
+
+**Backpressure Mechanisms**:
+```rust
+// Use bounded channels instead of unbounded
+let (tx, rx) = mpsc::channel(SMALL_BUFFER_SIZE); // e.g., 10 events
+
+// When channel is full, upstream read naturally slows
+// When channel is empty, client write naturally waits
+```
+
+### Questions to Investigate
+1. How much event history do SSE clients expect for Last-Event-Id?
+2. Can we avoid buffering entirely for normal streaming?
+3. How do reference implementations handle backpressure?
+4. What's the minimum viable buffer size?
+
+### Design Principle
+**The proxy should be a thin pipe, not a reservoir.** Backpressure should flow naturally between client and upstream, with minimal buffering in the proxy itself.
 
 ## Testing Considerations
 
