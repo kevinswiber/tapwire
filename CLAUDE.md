@@ -69,9 +69,10 @@
 
 ## Key Documentation
 - **Active Plans**: `plans/README.md` - Main project coordinator (always up-to-date)
-- Vision: `plans/001-initial-prd.md`
-- Architecture: `plans/002-shadowcat-architecture-plan.md`
-- Developer Guide: `plans/003-shadowcat-developer-guide.md`
+- **Architecture Guide**: `docs/architecture.md` - System design and components
+- **Developer Guide**: `docs/developer-guide.md` - Development workflow and patterns
+- **API Reference**: `docs/api-reference.md` - Library APIs and usage
+- **Deployment Guide**: `docs/deployment.md` - Production deployment patterns
 
 ## MCP Reference Repositories
 We maintain local references to official MCP repositories in `~/src/modelcontextprotocol/` for development and testing:
