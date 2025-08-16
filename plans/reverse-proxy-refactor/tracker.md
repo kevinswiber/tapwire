@@ -352,6 +352,50 @@ After implementing eventsource-client integration, we discovered:
 - [ ] Test reconnection on failure
 - [ ] Measure performance impact
 
+## Phase C.6: SSE Module Consolidation (3-4 hours) - 📋 ANALYZED
+
+### Problem Statement
+After implementing hyper-based SSE that works with MCP Inspector, we have 9 SSE-related modules (~75KB) with multiple abandoned approaches (reqwest, eventsource-client, hyper).
+
+### Analysis Complete (2025-08-16)
+See `analysis/sse-module-consolidation.md` for detailed analysis.
+
+**Key Findings**:
+- **Keep**: 3 modules (hyper_client, hyper_raw_streaming, hyper_sse_intercepted)
+- **Remove**: 5-6 modules from abandoned approaches
+- **Potential**: 66% code reduction, cleaner architecture
+
+### C.6.0: Remove eventsource-client modules (1 hour)
+**Goal**: Remove abandoned eventsource-client approach
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Remove call to `stream_sse_with_eventsource` at legacy.rs:1356
+- [ ] Delete `sse_streaming_v2.rs`
+- [ ] Delete `sse_client.rs`
+- [ ] Delete `process_via_http_sse_aware.rs`
+- [ ] Remove eventsource-client from Cargo.toml
+
+### C.6.1: Remove reqwest SSE modules (1 hour)
+**Goal**: Remove obsolete reqwest-based approaches
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Delete `sse_streaming.rs`
+- [ ] Delete `process_via_http_hyper.rs`
+- [ ] Review and likely delete `hyper_streaming.rs`
+- [ ] Extract any needed utilities from `http_processing.rs`
+
+### C.6.2: Consolidate and organize (1-2 hours)
+**Goal**: Clean module structure
+**Status**: ⬜ Not Started
+
+**Tasks**:
+- [ ] Merge HTTP processing functions in legacy.rs
+- [ ] Consider moving to `src/proxy/reverse/sse/` subdirectory
+- [ ] Update all imports and exports
+- [ ] Test with MCP Inspector
+
 ## Phase D: Modularization (8-10 hours)
 
 ### D.0: Create Module Structure (2 hours)
@@ -513,6 +557,7 @@ After implementing eventsource-client integration, we discovered:
 - `analysis/unified-plan.md` - Step-by-step implementation guide
 - `analysis/implementation-requirements.md` - All questions answered
 - `analysis/final-decisions.md` - Summary of all decisions
+- `analysis/sse-module-consolidation.md` - SSE module cleanup and consolidation plan (2025-08-16)
 
 ## Notes
 - Current SSE implementation makes duplicate requests (temporary workaround)
