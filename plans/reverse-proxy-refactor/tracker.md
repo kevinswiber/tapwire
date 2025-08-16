@@ -428,7 +428,7 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 
 ### D.1: Upstream Resilience (3 hours)
 **Goal**: Auto-reconnect to upstream SSE servers  
-**Status**: ⚠️ **PARTIALLY COMPLETE** - Full implementation deferred
+**Status**: ⏸️ **PAUSED** - Blocked by transport architecture refactor
 
 **Completed**:
 - ✅ Analyzed reconnection architecture challenge
@@ -436,11 +436,13 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 - ✅ Documented where reconnection would occur
 - ✅ Created detailed implementation plan
 
-**Deferred** (see `analysis/upstream-reconnection-challenge.md`):
+**Blocked on Transport Architecture Refactor**:
+- 🚧 See [Transport Type Architecture Plan](../transport-type-architecture/transport-type-architecture-tracker.md)
+- 🚧 Issue: `is_sse_session` code smell indicates deeper architectural problems
+- 🚧 Solution: Clean up transport type modeling first
 - ⏸️ Full ReconnectingStream integration
 - ⏸️ Exponential backoff implementation
 - ⏸️ Last-Event-Id resumption
-- **Reason**: Need to fix transport type architecture first
 
 ### D.2: Client Resilience (3 hours)
 **Goal**: Support client SSE reconnections  
@@ -604,13 +606,21 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 
 ## Next Steps
 
-### Ready to Implement - All Decisions Made ✅
+### 🚧 DETOUR: Transport Architecture Refactor Required
 
-**Start Phase B immediately with these files:**
-1. Create `src/session/store.rs` with SessionStore trait
-2. Move InMemorySessionStore to `src/session/memory.rs`
-3. Update SessionManager to reference store via Arc<dyn SessionStore>
-4. Enable store injection through Shadowcat API
+During Phase D.0 implementation, we discovered that the `is_sse_session` boolean is a code smell indicating deeper architectural issues with how we model transport types. Before continuing with SSE reconnection (Phase D.1-D.3), we need to:
+
+1. **Complete Transport Type Architecture Refactor**
+   - See [Transport Type Architecture Plan](../transport-type-architecture/transport-type-architecture-tracker.md)
+   - Eliminate `is_sse_session` boolean
+   - Properly model bidirectional transports
+   - Add explicit ResponseMode tracking
+   - Unify forward and reverse proxy transport handling
+
+2. **Then Resume Phase D.1-D.3**
+   - With clean transport architecture in place
+   - Proper session tracking for SSE
+   - Clear response mode handling
 
 ### Key Implementation Decisions
 - SessionManager **references** store (enables injection)
