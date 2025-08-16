@@ -1,202 +1,154 @@
-# Next Session: Phase B - Quick Fix Implementation
+# Next Session: Implement Phase C - Extract Shared Transport Logic
 
-## Project Context
+## Current Status
+✅ **Phase A Complete**: Comprehensive analysis and design work done (10 hours)
+✅ **Phase B Complete**: ResponseMode enum and ClientCapabilities implemented (4 hours)
+🎯 **Phase C Ready**: Extract shared transport logic (8 hours estimated)
 
-We've completed the comprehensive Phase A analysis and architecture design for the transport type refactor. The analysis revealed that `is_sse_session` is completely dead code (never set), and we've designed a clean architecture using ResponseMode enum and ClientCapabilities bitflags to eliminate duplication and establish proper domain boundaries.
+All 873 tests passing. Working branch: `refactor/transport-type-architecture` (in shadowcat repo).
 
-**Project**: Transport Type Architecture Refactor  
-**Tracker**: `plans/transport-type-architecture/transport-type-architecture-tracker.md`  
-**Status**: Phase A Complete, Phase B Tasks Ready - Ready for Implementation  
-**Branch**: `refactor/transport-type-architecture` (in shadowcat repo)
+## Your Mission: Implement Phase C
 
-## What Has Been Completed
+You need to implement **Phase 2 from the implementation roadmap** (Extract Shared Transport Logic). This is pure refactoring - no new functionality, just cleaning up the architecture.
 
-### Phase A - Deep Analysis (✅ 10 hours completed)
+### Task Sequence
 
-All analysis tasks completed with comprehensive documentation:
+Start with the task files in order:
 
-1. **Transport Usage Audit** - Mapped all 174 TransportType usages, found is_sse_session is dead code
-2. **Directional Transport Analysis** - Analyzed trait architecture opportunities  
-3. **Response Mode Investigation** - Confirmed mark_as_sse_session() is never called
-4. **Architecture Proposal** - Created comprehensive solution with feedback incorporated:
-   - ResponseMode enum (3 variants: Json, SseStream, Passthrough)
-   - ClientCapabilities using bitflags (not enumflags2)
-   - ProxyCore abstraction (not UnifiedProxy)
-   - Distributed session storage considerations
-   - Stream architecture assessment (current impl is optimal)
+1. **[C.0: Create Raw Transport Primitives](tasks/C.0-create-raw-transport-primitives.md)** (2 hours)
+   - Extract low-level I/O operations into `src/transport/raw/` module
+   - Create StdioCore, HttpCore, SseCore - just bytes, no MCP knowledge
+   - Reference: `analysis/implementation-roadmap.md` lines 207-251
 
-### Key Decisions Made (with Rationale)
+2. **[C.1: Refactor Directional Transports](tasks/C.1-refactor-directional-transports.md)** (2 hours)
+   - Make IncomingTransport/OutgoingTransport use the raw primitives
+   - Eliminate duplicate I/O code through delegation
+   - Reference: `analysis/implementation-roadmap.md` lines 253-282
 
-1. **ResponseMode Enum**: Simplified to 3 variants (no Unknown, Binary, WebSocket)
-2. **ClientCapabilities**: Using bitflags for const support and serde integration
-3. **No Backward Compatibility**: Shadowcat is unreleased - do it right
-4. **Module Structure**: raw/ for low-level I/O, directional/ for protocol layer
-5. **Distributed Storage**: SessionStore trait must support async operations
-6. **Keep Current StdioCore**: tokio::io already optimal, Stream trait adds complexity
+3. **[C.2: Create Unified Factory](tasks/C.2-create-unified-factory.md)** (2 hours)
+   - Implement TransportFactory for consistent transport creation
+   - Centralize buffer pools and connection pooling
+   - Reference: `analysis/implementation-roadmap.md` lines 284-332
 
-### Phase B Task Files Created (Comprehensive)
+4. **[C.3: Integration Testing](tasks/C.3-integration-testing.md)** (2 hours)
+   - Validate the refactoring worked
+   - Performance benchmarks must show <5% overhead
+   - Code duplication should be reduced by >50%
 
-All Phase B task files have been created with extensive implementation details:
+## Critical Guidelines
 
-1. **B.0-add-response-mode.md** - Complete ResponseMode and ClientCapabilities implementation
-2. **B.1-update-session-structure.md** - Full Session struct migration guide
-3. **B.2-migrate-usage-sites.md** - Systematic migration of all usage sites
-4. **B.3-test-and-validate.md** - Comprehensive testing and validation plan
+### DO:
+- ✅ **Follow the existing design** - All design work is complete in `analysis/` directory
+- ✅ **Move code, don't rewrite** - Extract existing logic into shared modules
+- ✅ **Preserve optimizations** - Keep buffer pooling, keep performance characteristics
+- ✅ **Test continuously** - Run `cargo test` after each step
+- ✅ **Reference the roadmap** - `analysis/implementation-roadmap.md` has exact code snippets
 
-## Your Mission
+### DON'T:
+- ❌ **Don't reference old code in comments** - No mentions of `is_sse_session` or removed code
+- ❌ **Don't worry about backward compatibility** - Shadowcat is unreleased, we can break things
+- ❌ **Don't redesign** - The design is done, just implement it
+- ❌ **Don't add new features** - This is pure refactoring
+- ❌ **Don't create "transport adapters"** - That was a mistake, stick to the roadmap
 
-Implement Phase B - the quick fix to eliminate the `is_sse_session` code smell using the comprehensive task files provided.
+### If You Hit Design Issues:
+1. **PAUSE** - Don't try to solve on the fly
+2. **Document the issue** clearly
+3. **Check the analysis documents** - The answer might already be there
+4. **Ask for clarification** if needed
 
-### Phase B Tasks (7 hours total - updated estimates)
+## Key Design Decisions Already Made
 
-1. **B.0: Add ResponseMode Enum** (1 hour)
-   - Task file: `tasks/B.0-add-response-mode.md`
-   - Create ResponseMode with MIME parsing
-   - Create ClientCapabilities with bitflags
-   - Full test coverage included in task file
-
-2. **B.1: Update Session Structure** (1 hour)  
-   - Task file: `tasks/B.1-update-session-structure.md`
-   - Remove all old fields/methods
-   - Add new fields with proper types
-   - Complete implementation provided
-
-3. **B.2: Migrate Usage Sites** (1.5 hours)
-   - Task file: `tasks/B.2-migrate-usage-sites.md`
-   - Update forward/reverse proxy logic
-   - Fix all compilation errors
-   - Migration patterns provided
-
-4. **B.3: Test and Validate** (1.75 hours)
-   - Task file: `tasks/B.3-test-and-validate.md`
-   - Comprehensive test suite
-   - Performance benchmarks
-   - Validation scripts included
-
-## Essential Implementation Details
-
-### ResponseMode Implementation (from B.0)
-```rust
-// Use MIME crate for proper parsing
-pub fn from_content_type(content_type: &str) -> Self {
-    match content_type.parse::<Mime>() {
-        Ok(mime) => match (mime.type_(), mime.subtype()) {
-            (mime::APPLICATION, mime::JSON) => Self::Json,
-            (mime::TEXT, subtype) if subtype == "event-stream" => Self::SseStream,
-            _ => Self::Passthrough,
-        },
-        Err(_) => Self::Passthrough,
-    }
-}
-```
-
-### ClientCapabilities Bitflags (from B.0)
-```rust
-bitflags! {
-    pub struct ClientCapabilities: u32 {
-        const ACCEPTS_JSON = 0b00000001;
-        const ACCEPTS_SSE = 0b00000010;
-        const ACCEPTS_BINARY = 0b00000100;
-        // Predefined combinations
-        const STANDARD = Self::ACCEPTS_JSON.bits();
-        const STREAMING = Self::ACCEPTS_JSON.bits() | Self::ACCEPTS_SSE.bits();
-    }
-}
-```
-
-### Session Structure Updates (from B.1)
-```rust
-pub struct Session {
-    // ... existing fields ...
-    // REMOVED: pub is_sse_session: bool,
-    pub response_mode: Option<ResponseMode>,
-    pub client_capabilities: ClientCapabilities,
-    pub upstream_session_id: Option<SessionId>, // For reverse proxy
-}
-```
-
-## Working Directory & Setup
-
-```bash
-cd /Users/kevin/src/tapwire/shadowcat
-git checkout refactor/transport-type-architecture || git checkout -b refactor/transport-type-architecture
-
-# Add bitflags dependency
-# Edit Cargo.toml:
-# bitflags = { version = "2.9", features = ["serde"] }
-```
-
-## Critical Implementation Notes
-
-1. **NO Backward Compatibility** - Remove all old methods completely
-2. **Use MIME Crate** - Don't use string contains for Content-Type
-3. **Bitflags Not Enumflags2** - Better const support, already a dependency
-4. **ProxyCore Not UnifiedProxy** - It's shared logic, not a unified proxy
-5. **Async SessionStore** - For future distributed storage compatibility
-6. **Don't Convert StdioCore to Streams** - Current implementation is optimal
-
-## Files to Reference
-
-### Analysis Documents (Read these for context)
-- `analysis/architecture-proposal.md` - Complete architecture design
-- `analysis/implementation-recommendations.md` - Specific guidance on bitflags
-- `analysis/design-decisions.md` - Rationale for all choices
-- `analysis/stream-architecture-assessment.md` - Why not to use Stream trait
-
-### Task Files (Follow these step-by-step)
-- `tasks/B.0-add-response-mode.md` - Complete implementation with tests
-- `tasks/B.1-update-session-structure.md` - Full migration guide
-- `tasks/B.2-migrate-usage-sites.md` - All usage patterns covered
-- `tasks/B.3-test-and-validate.md` - Comprehensive validation plan
+From `analysis/design-decisions.md`:
+- **ResponseMode is separate from TransportType** (Decision 1)
+- **Use DirectionalTransports everywhere** (Decision 2) 
+- **Generic connection pooling** (Decision 3)
+- **Shared transport implementations in raw module** (Decision 4)
+- **ProxyCore, not UnifiedProxy** (Decision 5)
+- **Keep TransportType name, rename Sse to StreamableHttp** (Decision 8)
 
 ## Success Criteria
 
-- ✅ No instances of `is_sse_session`, `mark_as_sse_session()`, or `is_sse()` remain
-- ✅ ResponseMode enum with exactly 3 variants (Json, SseStream, Passthrough)
-- ✅ ClientCapabilities using bitflags with predefined combinations
-- ✅ All existing tests continue to pass
-- ✅ No clippy warnings (`cargo clippy --all-targets -- -D warnings`)
-- ✅ Performance overhead <5% (benchmarks included in B.3)
-- ✅ Session remains Serialize/Deserialize for distributed storage
+After Phase C:
+- [ ] All 873+ tests still passing
+- [ ] Raw transport primitives extracted
+- [ ] Directional transports use shared logic
+- [ ] Transport factory working
+- [ ] Code duplication reduced >50%
+- [ ] Performance within 5% of baseline
+- [ ] No clippy warnings
 
-## Common Pitfalls to Avoid
+## Code Locations
 
-1. **Don't add is_sse() compatibility method** - Clean break
-2. **Don't use string contains for MIME** - Use mime crate
-3. **Don't forget to update test fixtures** - Many tests create sessions
-4. **Don't skip distributed storage updates** - Call session_store.update()
-5. **Don't mix up module paths** - core/ for types, directional/ for traits
+### You'll be working in:
+- `shadowcat/src/transport/raw/` (new module)
+- `shadowcat/src/transport/directional/` (refactor existing)
+- `shadowcat/src/transport/factory/` (new module)
+- `shadowcat/src/cli/forward.rs` (update to use factory)
+- `shadowcat/src/cli/reverse.rs` (update to use factory)
 
-## Validation Checklist
+### Reference implementations in:
+- `shadowcat/src/transport/stdio.rs` (extract logic from here)
+- `shadowcat/src/transport/http.rs` (extract logic from here)
+- `shadowcat/src/transport/sse/` (extract logic from here)
 
-After implementation, run the validation script from B.3:
+## Testing Commands
+
 ```bash
-# Check for old references
-rg "is_sse_session|mark_as_sse_session|\.is_sse\(\)" src/ tests/ --type rust
-
-# Should return NO results!
-
-# Run all tests
-cargo test
-
-# Check clippy
+# After each step
+cargo test transport::
 cargo clippy --all-targets -- -D warnings
 
-# Run benchmarks
-cargo bench response_mode
+# Performance check
+cargo bench --bench transport_performance
+
+# Final validation
+cargo test  # All 873+ tests must pass
 ```
 
-## Next Steps After Phase B
+## Example Code Pattern
 
-Once B.3 validation is complete:
-1. Commit with message: `refactor(transport): replace is_sse_session with ResponseMode and ClientCapabilities`
-2. Update tracker to show Phase B completion
-3. Create PR for review before Phase C
-4. Phase C will unify transport architecture (8-10 hours)
+The refactoring follows this pattern:
+
+```rust
+// BEFORE (in directional transport)
+impl StdioIncoming {
+    async fn receive_request(&mut self) -> Result<Message> {
+        // Direct I/O implementation here
+        let mut buffer = vec![0; 8192];
+        self.stdin.read(&mut buffer).await?;
+        // Parse protocol...
+    }
+}
+
+// AFTER (delegating to raw primitive)
+impl StdioIncoming {
+    async fn receive_request(&mut self) -> Result<Message> {
+        // Delegate I/O to core
+        let bytes = self.core.receive_bytes().await?;
+        // Handle protocol at this layer
+        protocol::deserialize(&bytes)
+    }
+}
+```
+
+## When Complete
+
+After finishing all Phase C tasks:
+1. Run full test suite: `cargo test`
+2. Check performance: `cargo bench`
+3. Verify no clippy warnings: `cargo clippy --all-targets -- -D warnings`
+4. Update tracker with actual times
+5. Commit with message: `feat: extract shared transport logic (Phase C complete)`
+
+## Remember
+
+This is **Phase 2 from the implementation roadmap**, not Phase 3. We're extracting shared transport logic, not unifying proxy architecture yet. That comes in Phase D.
+
+The design work is DONE. Your job is to implement what's already been designed. The `analysis/` directory has all the answers - use it!
 
 ---
 
-**Session Goal**: Complete Phase B implementation using comprehensive task files  
-**Estimated Duration**: 7 hours (tasks have detailed time breakdowns)  
-**Last Updated**: 2025-08-16  
-**Critical**: Follow task files exactly - they contain complete implementations
+**Start with**: [C.0-create-raw-transport-primitives.md](tasks/C.0-create-raw-transport-primitives.md)
+**Reference**: [implementation-roadmap.md](analysis/implementation-roadmap.md) for exact implementation details
+**Tracker**: [transport-type-architecture-tracker.md](transport-type-architecture-tracker.md) for progress
