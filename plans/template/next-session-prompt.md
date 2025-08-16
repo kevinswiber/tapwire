@@ -84,7 +84,7 @@ cargo clippy --all-targets -- -D warnings  # For Rust projects
 ### Phase 4: {Cleanup/Documentation} ({X} min)
 1. Run formatters and linters
 2. Update tracker with completion status
-3. Create NEXT_SESSION_PROMPT.md if needed
+3. Create next-session-prompt.md if needed
 
 ## Success Criteria Checklist
 
@@ -148,7 +148,7 @@ After completing {current phase}:
 
 ## Model Usage Guidelines
 
-- **IMPORTANT**: Be mindful of model capabilities. When context window has less than 15% availability, suggest creating a new session and save prompt to NEXT_SESSION_PROMPT.md
+- **IMPORTANT**: Be mindful of model capabilities. When context window has less than 15% availability, suggest creating a new session and save prompt to next-session-prompt.md
 
 ## Session Time Management
 

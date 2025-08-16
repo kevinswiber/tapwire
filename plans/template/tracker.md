@@ -119,7 +119,7 @@ For complex Rust implementation tasks, consider using the `rust-code-reviewer` s
 
 ### Context Window Management
 - Each task is designed to require < 50% context window
-- If approaching 70% usage, create NEXT_SESSION_PROMPT.md
+- If approaching 70% usage, create next-session-prompt.md
 - Keep focus on single task to avoid context bloat
 - Reference documentation only when needed
 
@@ -160,7 +160,7 @@ After completing each task, update:
 
 ### Handoff Notes
 If context window becomes limited:
-1. Save progress to NEXT_SESSION_PROMPT.md
+1. Save progress to next-session-prompt.md
 2. Include:
    - Current task status
    - Completed deliverables

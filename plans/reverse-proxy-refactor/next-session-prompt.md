@@ -1,115 +1,79 @@
-# Next Session Prompt - Reverse Proxy Final Cleanup
+# Next Session: SSE Reconnection Integration
 
 ## Context
-Continue the Shadowcat reverse proxy refactor after successfully implementing the JsonRpcId type system. The proxy now correctly preserves JSON-RPC ID types (numeric stays numeric, string stays string) and MCP Inspector can connect!
+We've completed the SSE module consolidation (Phase C.6), achieving a 66% code reduction by removing duplicate implementations. The reverse proxy now uses a single hyper-based approach for SSE streaming with interceptor support.
 
-## Current Status
-✅ **COMPLETE**: JsonRpcId type system fully implemented
-✅ **WORKING**: ID type preservation (0 stays 0, not "0")
-✅ **PROVEN**: MCP Inspector connects and communicates
-✅ **IMPLEMENTED**: Hyper-based HTTP client for SSE streaming
+## Discovery
+We found comprehensive SSE reconnection infrastructure already exists in `src/transport/sse/` but isn't being used by the reverse proxy. This includes:
+- ReconnectionManager with exponential backoff
+- EventTracker for deduplication
+- ReconnectingStream async state machine
+- HealthMonitor for idle detection
 
-## Key Achievements
-### 2025-08-15: JsonRpcId Type System
-Successfully refactored entire codebase to use type-safe JsonRpcId enum:
-- Created `src/transport/jsonrpc_id.rs` with proper enum type
-- Updated `ProtocolMessage` to use `JsonRpcId` instead of `serde_json::Value`
-- Fixed 100+ compilation errors across library and tests
-- Result: MCP Inspector works correctly with numeric IDs!
+## Next Phase: D - SSE Reconnection Integration (12 hours)
 
-### 2025-08-16: SSE Interceptor Support & Analysis
-- Implemented `hyper_sse_intercepted.rs` for SSE with interceptor support
-- Fixed remaining JsonRpcId compilation errors
-- Completed comprehensive SSE module analysis (see `analysis/sse-module-consolidation.md`)
-- Identified 5-6 modules for removal (66% code reduction opportunity)
+### Primary Goals
+1. **Integrate existing reconnection code** - Don't reinvent the wheel
+2. **Add upstream resilience** - Auto-reconnect when upstream drops
+3. **Support client reconnections** - Handle Last-Event-Id properly
+4. **Maintain streaming** - Never buffer entire SSE streams
 
-## Remaining Tasks for Next Session
+### Task Sequence
+Start with **D.0: Foundation Integration** (4 hours):
+- Review `plans/reverse-proxy-refactor/tasks/D.0-foundation-integration.md`
+- Create ReverseProxySseManager wrapping existing components
+- Add Last-Event-Id tracking to sessions
+- Integrate EventTracker for deduplication
 
-### 1. Clean Up Unused SSE Modules (1-2 hours)
-**Goal**: Remove deprecated SSE implementations per analysis
+Then continue with tasks D.1, D.2, and D.3 as documented.
 
-⚠️ **See `analysis/sse-module-consolidation.md` for detailed plan**
-
-Phase 1 - Remove eventsource-client approach:
-- [ ] Remove call to `stream_sse_with_eventsource` at legacy.rs:1356
-- [ ] Delete `src/proxy/reverse/sse_streaming_v2.rs`
-- [ ] Delete `src/proxy/reverse/sse_client.rs`
-- [ ] Delete `src/proxy/reverse/process_via_http_sse_aware.rs`
-- [ ] Remove eventsource-client from Cargo.toml
-
-Phase 2 - Remove reqwest approaches:
-- [ ] Delete `src/proxy/reverse/sse_streaming.rs`
-- [ ] Delete `src/proxy/reverse/process_via_http_hyper.rs`
-- [ ] Review and likely delete `src/proxy/reverse/hyper_streaming.rs`
-- [ ] Update `src/proxy/reverse/mod.rs` exports
-
-### 2. Legacy.rs Refactor - Break Up Monolith (4-6 hours)
-**Goal**: Modularize the 876-line `handle_admin_request()` function
-
-Current issues:
-- Massive single function with mixed concerns
-- Hard to test and maintain
-- Poor separation of responsibilities
-
-Refactor plan:
-- [ ] Extract admin dashboard rendering to `admin/dashboard.rs`
-- [ ] Move session management endpoints to `admin/sessions.rs`
-- [ ] Extract metrics endpoints to `admin/metrics.rs`
-- [ ] Create `admin/static.rs` for static asset serving
-- [ ] Implement proper routing in `admin/mod.rs`
-
-### 3. Test Suite Updates (2 hours)
-**Goal**: Fix remaining test compilation errors
-
-- [ ] Update tests to use `JsonRpcId` constructors
-- [ ] Fix test assertions expecting string IDs
-- [ ] Update mock implementations
-- [ ] Ensure all integration tests pass
-
-### 4. Documentation Updates (1 hour)
-**Goal**: Document the new architecture
-
-- [ ] Update API documentation for JsonRpcId
-- [ ] Document SSE streaming architecture
-- [ ] Update proxy configuration examples
-- [ ] Add troubleshooting guide for ID type issues
-
-## Key Files
-- `src/transport/jsonrpc_id.rs` - New JsonRpcId type implementation
-- `src/proxy/reverse/legacy.rs` - Main refactor target (876-line function)
-- `src/proxy/reverse/hyper_raw_streaming.rs` - Working SSE implementation
-- `tests/` - Various test files needing JsonRpcId updates
-
-## Test Commands
+### Key Files to Review
 ```bash
-# Quick library build test
-cargo build --lib
+# Existing reconnection code to reuse
+src/transport/sse/reconnect.rs      # Core reconnection logic
+src/transport/sse/client.rs         # SSE client with reconnection
+src/transport/sse/event.rs          # Event structure with IDs
 
-# Run specific integration test
-cargo test test_reverse_proxy_sse_streaming -- --ignored --nocapture
+# Current SSE implementation to enhance
+src/proxy/reverse/hyper_sse_intercepted.rs  # Add reconnection here
+src/proxy/reverse/legacy.rs                 # Update SSE endpoint
 
-# Full test suite
-cargo test
-
-# Test with MCP Inspector
-# Terminal 1: Start upstream MCP server
-cd ~/src/modelcontextprotocol/servers && npx tsx src/everything/index.ts streamableHttp
-
-# Terminal 2: Start Shadowcat proxy
-cargo run --release -- reverse --bind 127.0.0.1:8081 --upstream http://localhost:3001/mcp
-
-# Terminal 3: Launch Inspector
-npx @modelcontextprotocol/inspector http://127.0.0.1:8081/mcp
+# Session updates needed
+src/session/mod.rs                  # Add Last-Event-Id tracking
 ```
 
-## Success Criteria
-1. All deprecated SSE modules removed
-2. Legacy.rs refactored into manageable modules (<500 lines each)
-3. All tests compiling and passing
-4. Documentation updated with new architecture
+### Commands to Start
+```bash
+# Review the plan and task files
+cat plans/reverse-proxy-refactor/analysis/sse-reconnection-integration.md
+cat plans/reverse-proxy-refactor/tasks/D.0-foundation-integration.md
 
-## Important Notes
-- JsonRpcId refactor is complete and working - don't break it!
-- MCP Inspector connectivity is verified
-- Focus on code organization and maintainability
-- Keep performance characteristics intact
+# Check existing reconnection code
+grep -n "ReconnectionManager" src/transport/sse/reconnect.rs
+grep -n "EventTracker" src/transport/sse/reconnect.rs
+
+# Start implementation
+code src/proxy/reverse/sse_resilience.rs  # Create new integration module
+```
+
+### Success Metrics
+- Upstream disconnections auto-reconnect
+- Client Last-Event-Id headers honored
+- No duplicate events after reconnections
+- All existing tests still pass
+- Memory usage bounded
+
+### Architecture Reminder
+We're building on proven code:
+- The transport layer has battle-tested reconnection logic
+- We're adapting it for reverse proxy use
+- Focus on integration, not reimplementation
+
+### Testing Approach
+Use MCP Inspector for real-world testing:
+1. Start reverse proxy
+2. Connect Inspector as client
+3. Simulate upstream failures
+4. Verify reconnection and deduplication
+
+Remember: The reconnection code already exists and works. Our job is to integrate it properly with the reverse proxy's SSE handling.
