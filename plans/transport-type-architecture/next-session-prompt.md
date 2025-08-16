@@ -1,169 +1,208 @@
-# Next Session: Phase A - Deep Analysis
+# Next Session: Phase B - Quick Fix Implementation
 
 ## Project Context
 
-We need to refactor the transport type architecture in shadowcat to eliminate the `is_sse_session` code smell and create a unified, clean transport handling system across both forward and reverse proxies.
+We've completed the comprehensive Phase A analysis and architecture design for the transport type refactor. The analysis revealed that `is_sse_session` is completely dead code (never set), and we've designed a clean architecture to eliminate duplication and establish proper domain boundaries.
 
 **Project**: Transport Type Architecture Refactor
 **Tracker**: `plans/transport-type-architecture/transport-type-architecture-tracker.md`
-**Status**: Phase A - Deep Analysis (0% Complete)
+**Status**: Phase A Complete - Ready for Phase B Implementation
 
-## Current Status
+## What Has Been Completed
 
-### What Has Been Completed
-- **Initial Discovery** (✅ Completed 2025-08-16)
-  - Identified `is_sse_session` as a code smell
-  - Discovered duplicate transport architectures between proxies
-  - Created comprehensive plan and tracker
+### Phase A - Deep Analysis (✅ 10 hours completed)
 
-### What's In Progress
-- **Phase A: Deep Analysis** (Not Started)
-  - Duration: 8-10 hours total
-  - Dependencies: None
+All analysis tasks completed with comprehensive documentation:
+
+1. **Transport Usage Audit** - Mapped all 174 TransportType usages
+2. **Directional Transport Analysis** - Analyzed trait architecture opportunities
+3. **Response Mode Investigation** - Discovered is_sse_session is dead code
+4. **Architecture Proposal** - Created comprehensive solution design with:
+   - Clean component architecture
+   - ResponseMode enum design
+   - Unified transport abstractions
+   - Three-phase implementation plan
+   - Complete API designs
+
+### Key Decisions Made
+
+1. **ResponseMode Enum**: Separate from TransportType for orthogonal concerns
+2. **DirectionalTransports**: Adopt for reverse proxy to eliminate duplication
+3. **Phased Approach**: Three phases for incremental, safe migration
+4. **Module Structure**: Organize by technical layer (transport/protocol/proxy)
 
 ## Your Mission
 
-Conduct thorough analysis of the current transport architecture to understand the full scope of changes needed before implementing any fixes. Since shadowcat is unreleased, we can make breaking changes freely.
+Implement Phase B - the quick fix to eliminate the `is_sse_session` code smell and introduce proper response mode tracking.
 
-### Priority 1: Transport Usage Audit (3 hours)
+### Phase B Tasks (4-6 hours total)
 
-Complete **Task A.0** - Create comprehensive audit of transport type usage:
-1. Map all `TransportType` enum usage locations
-2. Document all `is_sse_session` checks and their purposes
-3. Identify transport handling differences between proxies
-4. Document findings in `analysis/transport-usage-audit.md`
+1. **B.0: Add ResponseMode Enum** (1 hour)
+   - Create `src/transport/core/response_mode.rs`
+   - Add detection methods from Content-Type
+   - Export from transport module
+   - Add comprehensive tests
 
-### Priority 2: Parallel Analysis Tasks (4 hours)
+2. **B.1: Update Session Structure** (2 hours)
+   - Remove `is_sse_session` field
+   - Add `response_mode: Option<ResponseMode>`
+   - Update session creation and methods
+   - Update all session tests
 
-If time permits, work on these in parallel:
+3. **B.2: Migrate Usage Sites** (2 hours)
+   - Update hyper_client.rs response detection
+   - Update legacy.rs response routing
+   - Update SSE resilience module
+   - Remove all is_sse_session references
 
-**Task A.1** - Directional Transport Analysis (2h):
-- Understand `IncomingTransport`/`OutgoingTransport` traits
-- Analyze forward proxy usage patterns
-- Identify gaps for reverse proxy adoption
+4. **B.3: Test and Validate** (1 hour)
+   - Run full test suite
+   - Verify no regressions
+   - Check performance impact
+   - Update documentation
 
-**Task A.2** - Response Mode Investigation (2h):
-- Understand what `is_sse_session` actually tracks
-- Design proper `ResponseMode` enum
-- Map response patterns (JSON, SSE, etc.)
+## Essential Files to Reference
 
-## Essential Context Files to Read
+### Design Documents
+- `analysis/architecture-proposal.md` - Complete architecture design
+- `analysis/implementation-roadmap.md` - Detailed step-by-step guide
+- `analysis/design-decisions.md` - Rationale for choices
 
-1. **Primary Tracker**: `plans/transport-type-architecture/transport-type-architecture-tracker.md` - Full project context
-2. **Task Details**: 
-   - `plans/transport-type-architecture/tasks/A.0-transport-usage-audit.md`
-   - `plans/transport-type-architecture/tasks/A.1-directional-transport-analysis.md`
-   - `plans/transport-type-architecture/tasks/A.2-response-mode-investigation.md`
-3. **Initial Analysis**: `plans/reverse-proxy-refactor/analysis/transport-type-architecture.md` - Discovery that led to this plan
+### Task Details
+- `tasks/B.0-add-response-mode.md` - ResponseMode implementation
+- `tasks/B.1-update-session-structure.md` - Session changes
+- `tasks/B.2-migrate-usage-sites.md` - Migration steps
+- `tasks/B.3-test-validate.md` - Validation requirements
 
 ## Working Directory
 
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
+git checkout refactor/transport-type-architecture
 ```
 
-## Commands to Run First
+## Implementation Checklist
 
-```bash
-# Switch to the feature branch
-cd /Users/kevin/src/tapwire/shadowcat
-git checkout feat/transport-type-architecture
+### B.0: ResponseMode Enum
+- [ ] Create response_mode.rs with enum definition
+- [ ] Add from_content_type() detection method
+- [ ] Add is_streaming() helper method
+- [ ] Export from transport/core/mod.rs
+- [ ] Add unit tests for detection logic
 
-# Verify we're on the right branch
-git branch --show-current
+### B.1: Session Updates
+- [ ] Remove is_sse_session field from Session struct
+- [ ] Add response_mode field
+- [ ] Add client_capabilities field (using bitflags)
+- [ ] Remove mark_as_sse_session() method
+- [ ] Remove is_sse() method
+- [ ] Add set_response_mode() method
+- [ ] Add is_streaming() method
+- [ ] Update Session::new() constructor
+- [ ] Add bitflags dependency to Cargo.toml
 
-# Check current state
-cargo check
+### B.2: Usage Migration
+- [ ] Update HyperResponse to use ResponseMode only (no is_sse() compatibility)
+- [ ] Update process_via_http_hyper routing logic
+- [ ] Update SSE resilience checks
+- [ ] Search and remove all is_sse_session references
+- [ ] Remove HyperResponse::is_sse() completely (no backwards compatibility needed)
+- [ ] Update test fixtures
 
-# See scope of TransportType usage
-rg "TransportType::" --type rust --stats
+### B.3: Validation
+- [ ] Run `cargo build` - must compile
+- [ ] Run `cargo test` - all tests must pass
+- [ ] Run `cargo clippy` - no warnings
+- [ ] Run benchmarks - verify <5% overhead
+- [ ] Update CHANGELOG.md
 
-# See scope of is_sse_session usage  
-rg "is_sse_session" --type rust --stats
+## Code Snippets to Use
 
-# Check directional transports
-ls -la src/transport/directional/
+### ResponseMode Enum
+```rust
+use mime::Mime;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ResponseMode {
+    Json,       // Standard JSON-RPC
+    SseStream,  // Server-Sent Events
+    Passthrough,// Any other content type - stream without processing
+}
+
+impl ResponseMode {
+    pub fn from_content_type(content_type: &str) -> Self {
+        match content_type.parse::<Mime>() {
+            Ok(mime) => match (mime.type_(), mime.subtype()) {
+                (mime::APPLICATION, mime::JSON) => Self::Json,
+                (mime::TEXT, subtype) if subtype == "event-stream" => Self::SseStream,
+                _ => Self::Passthrough,
+            },
+            Err(_) => Self::Passthrough,
+        }
+    }
+}
 ```
 
-## Implementation Strategy
-
-### Phase 1: Setup (15 min)
-1. Read the tracker and task files
-2. Set up analysis document structure
-3. Prepare search commands
-
-### Phase 2: Data Collection (2 hours)
-1. Run comprehensive searches for transport usage
-2. Document each usage location with context
-3. Categorize by purpose (config, routing, session, etc.)
-
-### Phase 3: Analysis (1.5 hours)
-1. Identify patterns in usage
-2. Map dependencies between components
-3. Compare forward vs reverse proxy approaches
-
-### Phase 4: Documentation (30 min)
-1. Create comprehensive audit document
-2. Include recommendations
-3. Update tracker with findings
-
-## Success Criteria Checklist
-
-- [ ] All TransportType usage documented
-- [ ] All is_sse_session usage documented
-- [ ] Transport architecture differences mapped
-- [ ] Analysis documents created in `analysis/` directory
-- [ ] Clear recommendations for next steps
-- [ ] Tracker updated with progress
-
-## Key Commands
-
-```bash
-# Find all transport type usage
-rg "TransportType::" --type rust -A 2 -B 2
-
-# Find session field usage
-rg "is_sse_session|mark_as_sse" --type rust -A 3 -B 3
-
-# Check directional transport usage
-rg "IncomingTransport|OutgoingTransport" --type rust
-
-# Find transport creation
-rg "new.*Transport|create.*transport" --type rust -i
+### Session Updates
+```rust
+pub struct Session {
+    pub id: SessionId,
+    pub transport_type: TransportType,
+    pub response_mode: Option<ResponseMode>, // New
+    pub supports_streaming: bool, // New
+    pub upstream_session_id: Option<SessionId>, // For reverse proxy session mapping
+    // Remove: is_sse_session
+}
 ```
+
+### Response Detection
+```rust
+// Use proper MIME parsing
+let response_mode = ResponseMode::from_content_type(
+    hyper_response.content_type().unwrap_or("")
+);
+
+match response_mode {
+    ResponseMode::SseStream => forward_sse_stream(...),
+    ResponseMode::Json => handle_json_response(...),
+    ResponseMode::Passthrough => forward_raw_response(...), // Stream without buffering
+}
+```
+
+## Success Criteria
+
+- ✅ No instances of `is_sse_session` remain in codebase
+- ✅ ResponseMode enum properly tracks response formats
+- ✅ All existing tests continue to pass
+- ✅ No new clippy warnings introduced
+- ✅ Performance overhead <5%
+- ✅ Clean git history with atomic commits
 
 ## Important Notes
 
-- **Use `feat/transport-type-architecture` branch** - All changes go to this branch
-- **No backward compatibility needed** - shadowcat is unreleased
-- **Be thorough** - this analysis drives all subsequent work
-- **Look for patterns** - identify common usage scenarios
-- **Think architecturally** - consider ideal end state
-- **Document everything** - future sessions depend on this analysis
+- This is a quick fix phase - don't over-engineer
+- Keep changes focused on ResponseMode introduction
+- Save larger refactoring for Phase C
+- Test thoroughly - this affects core session handling
+- Use atomic commits for easy rollback if needed
 
-## Key Design Considerations
+## Risks to Watch
 
-1. **Bidirectional Nature**: Proxies have client→proxy and proxy→upstream transports
-2. **Response Modes**: SSE vs JSON is about response format, not transport type
-3. **Code Duplication**: Forward and reverse proxies duplicate transport logic
+1. **Session Storage**: Ensure SQLite schema updates if persisted
+2. **Test Fixtures**: Many tests create sessions - update carefully
+3. **SSE Resilience**: Module depends on session state - test thoroughly
+4. **Performance**: Response mode detection on hot path - optimize
 
-## Risk Factors & Blockers
+## Next Steps After Phase B
 
-- **Incomplete Analysis**: Take time to be thorough - rushing will cause problems later
-- **Hidden Dependencies**: Look for implicit assumptions about transport behavior
-
-## Next Steps After This Task
-
-Once Phase A analysis is complete:
-- **Task A.3**: Architecture Proposal (3 hours, depends on A.0, A.1, A.2)
-- Then move to **Phase B**: Quick Fix Implementation
-
-After Phase B:
-- **Phase C**: Architectural Unification (larger refactor)
+Once B.3 validation is complete:
+1. Tag the commit: `git tag phase-b-complete`
+2. Update tracker to show Phase B completion
+3. Prepare for Phase C (Transport Consolidation)
 
 ---
 
-**Session Goal**: Complete comprehensive analysis of transport architecture to enable clean refactoring
-
+**Session Goal**: Complete Phase B implementation with ResponseMode enum
+**Estimated Duration**: 4-6 hours
 **Last Updated**: 2025-08-16
-**Next Review**: After Phase A completion
+**Critical**: Focus on clean, working implementation - don't expand scope
