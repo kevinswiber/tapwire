@@ -2,11 +2,12 @@
 
 ## Project Context
 
-We've completed the comprehensive Phase A analysis and architecture design for the transport type refactor. The analysis revealed that `is_sse_session` is completely dead code (never set), and we've designed a clean architecture to eliminate duplication and establish proper domain boundaries.
+We've completed the comprehensive Phase A analysis and architecture design for the transport type refactor. The analysis revealed that `is_sse_session` is completely dead code (never set), and we've designed a clean architecture using ResponseMode enum and ClientCapabilities bitflags to eliminate duplication and establish proper domain boundaries.
 
-**Project**: Transport Type Architecture Refactor
-**Tracker**: `plans/transport-type-architecture/transport-type-architecture-tracker.md`
-**Status**: Phase A Complete - Ready for Phase B Implementation
+**Project**: Transport Type Architecture Refactor  
+**Tracker**: `plans/transport-type-architecture/transport-type-architecture-tracker.md`  
+**Status**: Phase A Complete, Phase B Tasks Ready - Ready for Implementation  
+**Branch**: `refactor/transport-type-architecture` (in shadowcat repo)
 
 ## What Has Been Completed
 
@@ -14,195 +15,188 @@ We've completed the comprehensive Phase A analysis and architecture design for t
 
 All analysis tasks completed with comprehensive documentation:
 
-1. **Transport Usage Audit** - Mapped all 174 TransportType usages
-2. **Directional Transport Analysis** - Analyzed trait architecture opportunities
-3. **Response Mode Investigation** - Discovered is_sse_session is dead code
-4. **Architecture Proposal** - Created comprehensive solution design with:
-   - Clean component architecture
-   - ResponseMode enum design
-   - Unified transport abstractions
-   - Three-phase implementation plan
-   - Complete API designs
+1. **Transport Usage Audit** - Mapped all 174 TransportType usages, found is_sse_session is dead code
+2. **Directional Transport Analysis** - Analyzed trait architecture opportunities  
+3. **Response Mode Investigation** - Confirmed mark_as_sse_session() is never called
+4. **Architecture Proposal** - Created comprehensive solution with feedback incorporated:
+   - ResponseMode enum (3 variants: Json, SseStream, Passthrough)
+   - ClientCapabilities using bitflags (not enumflags2)
+   - ProxyCore abstraction (not UnifiedProxy)
+   - Distributed session storage considerations
+   - Stream architecture assessment (current impl is optimal)
 
-### Key Decisions Made
+### Key Decisions Made (with Rationale)
 
-1. **ResponseMode Enum**: Separate from TransportType for orthogonal concerns
-2. **DirectionalTransports**: Adopt for reverse proxy to eliminate duplication
-3. **Phased Approach**: Three phases for incremental, safe migration
-4. **Module Structure**: Organize by technical layer (transport/protocol/proxy)
+1. **ResponseMode Enum**: Simplified to 3 variants (no Unknown, Binary, WebSocket)
+2. **ClientCapabilities**: Using bitflags for const support and serde integration
+3. **No Backward Compatibility**: Shadowcat is unreleased - do it right
+4. **Module Structure**: raw/ for low-level I/O, directional/ for protocol layer
+5. **Distributed Storage**: SessionStore trait must support async operations
+6. **Keep Current StdioCore**: tokio::io already optimal, Stream trait adds complexity
+
+### Phase B Task Files Created (Comprehensive)
+
+All Phase B task files have been created with extensive implementation details:
+
+1. **B.0-add-response-mode.md** - Complete ResponseMode and ClientCapabilities implementation
+2. **B.1-update-session-structure.md** - Full Session struct migration guide
+3. **B.2-migrate-usage-sites.md** - Systematic migration of all usage sites
+4. **B.3-test-and-validate.md** - Comprehensive testing and validation plan
 
 ## Your Mission
 
-Implement Phase B - the quick fix to eliminate the `is_sse_session` code smell and introduce proper response mode tracking.
+Implement Phase B - the quick fix to eliminate the `is_sse_session` code smell using the comprehensive task files provided.
 
-### Phase B Tasks (4-6 hours total)
+### Phase B Tasks (7 hours total - updated estimates)
 
 1. **B.0: Add ResponseMode Enum** (1 hour)
-   - Create `src/transport/core/response_mode.rs`
-   - Add detection methods from Content-Type
-   - Export from transport module
-   - Add comprehensive tests
+   - Task file: `tasks/B.0-add-response-mode.md`
+   - Create ResponseMode with MIME parsing
+   - Create ClientCapabilities with bitflags
+   - Full test coverage included in task file
 
-2. **B.1: Update Session Structure** (2 hours)
-   - Remove `is_sse_session` field
-   - Add `response_mode: Option<ResponseMode>`
-   - Update session creation and methods
-   - Update all session tests
+2. **B.1: Update Session Structure** (1 hour)  
+   - Task file: `tasks/B.1-update-session-structure.md`
+   - Remove all old fields/methods
+   - Add new fields with proper types
+   - Complete implementation provided
 
-3. **B.2: Migrate Usage Sites** (2 hours)
-   - Update hyper_client.rs response detection
-   - Update legacy.rs response routing
-   - Update SSE resilience module
-   - Remove all is_sse_session references
+3. **B.2: Migrate Usage Sites** (1.5 hours)
+   - Task file: `tasks/B.2-migrate-usage-sites.md`
+   - Update forward/reverse proxy logic
+   - Fix all compilation errors
+   - Migration patterns provided
 
-4. **B.3: Test and Validate** (1 hour)
-   - Run full test suite
-   - Verify no regressions
-   - Check performance impact
-   - Update documentation
+4. **B.3: Test and Validate** (1.75 hours)
+   - Task file: `tasks/B.3-test-and-validate.md`
+   - Comprehensive test suite
+   - Performance benchmarks
+   - Validation scripts included
 
-## Essential Files to Reference
+## Essential Implementation Details
 
-### Design Documents
-- `analysis/architecture-proposal.md` - Complete architecture design
-- `analysis/implementation-roadmap.md` - Detailed step-by-step guide
-- `analysis/design-decisions.md` - Rationale for choices
-
-### Task Details
-- `tasks/B.0-add-response-mode.md` - ResponseMode implementation
-- `tasks/B.1-update-session-structure.md` - Session changes
-- `tasks/B.2-migrate-usage-sites.md` - Migration steps
-- `tasks/B.3-test-validate.md` - Validation requirements
-
-## Working Directory
-
-```bash
-cd /Users/kevin/src/tapwire/shadowcat
-git checkout refactor/transport-type-architecture
-```
-
-## Implementation Checklist
-
-### B.0: ResponseMode Enum
-- [ ] Create response_mode.rs with enum definition
-- [ ] Add from_content_type() detection method
-- [ ] Add is_streaming() helper method
-- [ ] Export from transport/core/mod.rs
-- [ ] Add unit tests for detection logic
-
-### B.1: Session Updates
-- [ ] Remove is_sse_session field from Session struct
-- [ ] Add response_mode field
-- [ ] Add client_capabilities field (using bitflags)
-- [ ] Remove mark_as_sse_session() method
-- [ ] Remove is_sse() method
-- [ ] Add set_response_mode() method
-- [ ] Add is_streaming() method
-- [ ] Update Session::new() constructor
-- [ ] Add bitflags dependency to Cargo.toml
-
-### B.2: Usage Migration
-- [ ] Update HyperResponse to use ResponseMode only (no is_sse() compatibility)
-- [ ] Update process_via_http_hyper routing logic
-- [ ] Update SSE resilience checks
-- [ ] Search and remove all is_sse_session references
-- [ ] Remove HyperResponse::is_sse() completely (no backwards compatibility needed)
-- [ ] Update test fixtures
-
-### B.3: Validation
-- [ ] Run `cargo build` - must compile
-- [ ] Run `cargo test` - all tests must pass
-- [ ] Run `cargo clippy` - no warnings
-- [ ] Run benchmarks - verify <5% overhead
-- [ ] Update CHANGELOG.md
-
-## Code Snippets to Use
-
-### ResponseMode Enum
+### ResponseMode Implementation (from B.0)
 ```rust
-use mime::Mime;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ResponseMode {
-    Json,       // Standard JSON-RPC
-    SseStream,  // Server-Sent Events
-    Passthrough,// Any other content type - stream without processing
-}
-
-impl ResponseMode {
-    pub fn from_content_type(content_type: &str) -> Self {
-        match content_type.parse::<Mime>() {
-            Ok(mime) => match (mime.type_(), mime.subtype()) {
-                (mime::APPLICATION, mime::JSON) => Self::Json,
-                (mime::TEXT, subtype) if subtype == "event-stream" => Self::SseStream,
-                _ => Self::Passthrough,
-            },
-            Err(_) => Self::Passthrough,
-        }
+// Use MIME crate for proper parsing
+pub fn from_content_type(content_type: &str) -> Self {
+    match content_type.parse::<Mime>() {
+        Ok(mime) => match (mime.type_(), mime.subtype()) {
+            (mime::APPLICATION, mime::JSON) => Self::Json,
+            (mime::TEXT, subtype) if subtype == "event-stream" => Self::SseStream,
+            _ => Self::Passthrough,
+        },
+        Err(_) => Self::Passthrough,
     }
 }
 ```
 
-### Session Updates
+### ClientCapabilities Bitflags (from B.0)
+```rust
+bitflags! {
+    pub struct ClientCapabilities: u32 {
+        const ACCEPTS_JSON = 0b00000001;
+        const ACCEPTS_SSE = 0b00000010;
+        const ACCEPTS_BINARY = 0b00000100;
+        // Predefined combinations
+        const STANDARD = Self::ACCEPTS_JSON.bits();
+        const STREAMING = Self::ACCEPTS_JSON.bits() | Self::ACCEPTS_SSE.bits();
+    }
+}
+```
+
+### Session Structure Updates (from B.1)
 ```rust
 pub struct Session {
-    pub id: SessionId,
-    pub transport_type: TransportType,
-    pub response_mode: Option<ResponseMode>, // New
-    pub supports_streaming: bool, // New
-    pub upstream_session_id: Option<SessionId>, // For reverse proxy session mapping
-    // Remove: is_sse_session
+    // ... existing fields ...
+    // REMOVED: pub is_sse_session: bool,
+    pub response_mode: Option<ResponseMode>,
+    pub client_capabilities: ClientCapabilities,
+    pub upstream_session_id: Option<SessionId>, // For reverse proxy
 }
 ```
 
-### Response Detection
-```rust
-// Use proper MIME parsing
-let response_mode = ResponseMode::from_content_type(
-    hyper_response.content_type().unwrap_or("")
-);
+## Working Directory & Setup
 
-match response_mode {
-    ResponseMode::SseStream => forward_sse_stream(...),
-    ResponseMode::Json => handle_json_response(...),
-    ResponseMode::Passthrough => forward_raw_response(...), // Stream without buffering
-}
+```bash
+cd /Users/kevin/src/tapwire/shadowcat
+git checkout refactor/transport-type-architecture || git checkout -b refactor/transport-type-architecture
+
+# Add bitflags dependency
+# Edit Cargo.toml:
+# bitflags = { version = "2.9", features = ["serde"] }
 ```
+
+## Critical Implementation Notes
+
+1. **NO Backward Compatibility** - Remove all old methods completely
+2. **Use MIME Crate** - Don't use string contains for Content-Type
+3. **Bitflags Not Enumflags2** - Better const support, already a dependency
+4. **ProxyCore Not UnifiedProxy** - It's shared logic, not a unified proxy
+5. **Async SessionStore** - For future distributed storage compatibility
+6. **Don't Convert StdioCore to Streams** - Current implementation is optimal
+
+## Files to Reference
+
+### Analysis Documents (Read these for context)
+- `analysis/architecture-proposal.md` - Complete architecture design
+- `analysis/implementation-recommendations.md` - Specific guidance on bitflags
+- `analysis/design-decisions.md` - Rationale for all choices
+- `analysis/stream-architecture-assessment.md` - Why not to use Stream trait
+
+### Task Files (Follow these step-by-step)
+- `tasks/B.0-add-response-mode.md` - Complete implementation with tests
+- `tasks/B.1-update-session-structure.md` - Full migration guide
+- `tasks/B.2-migrate-usage-sites.md` - All usage patterns covered
+- `tasks/B.3-test-and-validate.md` - Comprehensive validation plan
 
 ## Success Criteria
 
-- ✅ No instances of `is_sse_session` remain in codebase
-- ✅ ResponseMode enum properly tracks response formats
+- ✅ No instances of `is_sse_session`, `mark_as_sse_session()`, or `is_sse()` remain
+- ✅ ResponseMode enum with exactly 3 variants (Json, SseStream, Passthrough)
+- ✅ ClientCapabilities using bitflags with predefined combinations
 - ✅ All existing tests continue to pass
-- ✅ No new clippy warnings introduced
-- ✅ Performance overhead <5%
-- ✅ Clean git history with atomic commits
+- ✅ No clippy warnings (`cargo clippy --all-targets -- -D warnings`)
+- ✅ Performance overhead <5% (benchmarks included in B.3)
+- ✅ Session remains Serialize/Deserialize for distributed storage
 
-## Important Notes
+## Common Pitfalls to Avoid
 
-- This is a quick fix phase - don't over-engineer
-- Keep changes focused on ResponseMode introduction
-- Save larger refactoring for Phase C
-- Test thoroughly - this affects core session handling
-- Use atomic commits for easy rollback if needed
+1. **Don't add is_sse() compatibility method** - Clean break
+2. **Don't use string contains for MIME** - Use mime crate
+3. **Don't forget to update test fixtures** - Many tests create sessions
+4. **Don't skip distributed storage updates** - Call session_store.update()
+5. **Don't mix up module paths** - core/ for types, directional/ for traits
 
-## Risks to Watch
+## Validation Checklist
 
-1. **Session Storage**: Ensure SQLite schema updates if persisted
-2. **Test Fixtures**: Many tests create sessions - update carefully
-3. **SSE Resilience**: Module depends on session state - test thoroughly
-4. **Performance**: Response mode detection on hot path - optimize
+After implementation, run the validation script from B.3:
+```bash
+# Check for old references
+rg "is_sse_session|mark_as_sse_session|\.is_sse\(\)" src/ tests/ --type rust
+
+# Should return NO results!
+
+# Run all tests
+cargo test
+
+# Check clippy
+cargo clippy --all-targets -- -D warnings
+
+# Run benchmarks
+cargo bench response_mode
+```
 
 ## Next Steps After Phase B
 
 Once B.3 validation is complete:
-1. Tag the commit: `git tag phase-b-complete`
+1. Commit with message: `refactor(transport): replace is_sse_session with ResponseMode and ClientCapabilities`
 2. Update tracker to show Phase B completion
-3. Prepare for Phase C (Transport Consolidation)
+3. Create PR for review before Phase C
+4. Phase C will unify transport architecture (8-10 hours)
 
 ---
 
-**Session Goal**: Complete Phase B implementation with ResponseMode enum
-**Estimated Duration**: 4-6 hours
-**Last Updated**: 2025-08-16
-**Critical**: Focus on clean, working implementation - don't expand scope
+**Session Goal**: Complete Phase B implementation using comprehensive task files  
+**Estimated Duration**: 7 hours (tasks have detailed time breakdowns)  
+**Last Updated**: 2025-08-16  
+**Critical**: Follow task files exactly - they contain complete implementations

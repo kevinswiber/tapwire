@@ -6,7 +6,7 @@ This tracker coordinates the refactoring of transport type handling in shadowcat
 
 **Last Updated**: 2025-08-16  
 **Total Estimated Duration**: 20-30 hours  
-**Status**: Phase A Complete - Ready for Implementation  
+**Status**: Phase A Complete, Phase B Tasks Ready - Ready for Implementation  
 **Working Branch**: `feat/transport-type-architecture` (in shadowcat repo)
 
 ## Context
@@ -62,10 +62,10 @@ Implement the immediate fix to eliminate the code smell.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.0 | **Add ResponseMode Enum** | 1h | A.3 | ⬜ Not Started | | [Details](tasks/B.0-add-response-mode.md) |
-| B.1 | **Update Session Structure** | 2h | B.0 | ⬜ Not Started | | [Details](tasks/B.1-update-session-structure.md) |
-| B.2 | **Migrate Usage Sites** | 2h | B.1 | ⬜ Not Started | | [Details](tasks/B.2-migrate-usage-sites.md) |
-| B.3 | **Test and Validate** | 1h | B.2 | ⬜ Not Started | | [Details](tasks/B.3-test-validate.md) |
+| B.0 | **Add ResponseMode Enum** | 1h | A.3 | 📋 Ready | | [Details](tasks/B.0-add-response-mode.md) - Comprehensive task file created |
+| B.1 | **Update Session Structure** | 2h | B.0 | 📋 Ready | | [Details](tasks/B.1-update-session-structure.md) - Comprehensive task file created |
+| B.2 | **Migrate Usage Sites** | 2h | B.1 | 📋 Ready | | [Details](tasks/B.2-migrate-usage-sites.md) - Comprehensive task file created |
+| B.3 | **Test and Validate** | 2h | B.2 | 📋 Ready | | [Details](tasks/B.3-test-and-validate.md) - Comprehensive task file created |
 
 **Phase B Total**: 6 hours
 
