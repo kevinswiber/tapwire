@@ -428,13 +428,19 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 
 ### D.1: Upstream Resilience (3 hours)
 **Goal**: Auto-reconnect to upstream SSE servers  
-**Status**: ⬜ Not Started
+**Status**: ⚠️ **PARTIALLY COMPLETE** - Full implementation deferred
 
-**Tasks**:
-- [ ] Replace direct hyper client with ReconnectingStream
-- [ ] Handle upstream disconnections gracefully
-- [ ] Resume from last known event ID
-- [ ] Implement exponential backoff with jitter
+**Completed**:
+- ✅ Analyzed reconnection architecture challenge
+- ✅ Added disconnection detection and logging
+- ✅ Documented where reconnection would occur
+- ✅ Created detailed implementation plan
+
+**Deferred** (see `analysis/upstream-reconnection-challenge.md`):
+- ⏸️ Full ReconnectingStream integration
+- ⏸️ Exponential backoff implementation
+- ⏸️ Last-Event-Id resumption
+- **Reason**: Need to fix transport type architecture first
 
 ### D.2: Client Resilience (3 hours)
 **Goal**: Support client SSE reconnections  

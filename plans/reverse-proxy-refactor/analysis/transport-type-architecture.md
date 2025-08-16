@@ -17,21 +17,25 @@ pub struct Session {
 
 ### Current TransportType Enum
 ```rust
+// Found in src/transport/mod.rs
 pub enum TransportType {
     Stdio,
     Http,
-    // Missing: distinction between Http-only and SSE
+    Sse,  // Exists but confusingly named - should be StreamableHttp
 }
 ```
 
 ## MCP Protocol Reality
 
-According to the MCP spec, there are 3 transport options:
+According to the MCP spec (modelcontextprotocol/specs/draft/basic/transports.mdx):
 1. **stdio** - Standard input/output streams
-2. **http** - HTTP-only (rarely used in practice)
-3. **streamable-http** - HTTP + SSE (common in practice)
+2. **Streamable HTTP** - HTTP POST requests with optional SSE responses (replaces old HTTP+SSE)
 
-Reference: `~/src/modelcontextprotocol/modelcontextprotocol/spec`
+The spec no longer lists plain "http" as a separate transport. The new "Streamable HTTP" transport:
+- Uses HTTP POST for client→server messages
+- Can return either `application/json` OR `text/event-stream` responses
+- Supports SSE for server→client streaming
+- Replaces the old HTTP+SSE transport from protocol 2024-11-05
 
 ## Architectural Requirements
 
@@ -42,20 +46,26 @@ As a proxy, we need to track BOTH:
 
 Example scenarios:
 - Client (stdio) → Proxy → Upstream (streamable-http)
-- Client (http) → Proxy → Upstream (stdio)
+- Client (streamable-http) → Proxy → Upstream (stdio)
 - Client (streamable-http) → Proxy → Upstream (streamable-http)
 
 ### 2. Message-Level Transport Indication
 Each message/envelope needs to indicate its transport:
 - Messages from stdio transport
-- HTTP request/response messages
-- SSE event messages (which are initiated by HTTP)
+- HTTP POST request messages
+- HTTP response messages (JSON or SSE stream)
+- SSE event messages within a stream
 
 ### 3. Protocol Compliance
 Must align with MCP's transport model:
 - stdio
-- http (rarely used)
-- streamable-http (HTTP + SSE)
+- streamable-http (HTTP POST + optional SSE response)
+
+### 4. Dynamic Response Type Handling
+The same session might handle:
+- JSON responses (application/json)
+- SSE streams (text/event-stream)
+Based on server's response to each request
 
 ## Design Options
 
