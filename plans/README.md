@@ -17,6 +17,7 @@ The following plans are currently being worked on or are ready for implementatio
 #### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
+| **[Traffic Recording Refactor](traffic-recording/traffic-recording-tracker.md)** | Planning | 16-24 hours | Fix SSE metadata handling and remove TransportContext::Sse |
 | **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** | Planning | 16-24 hours | Smart transport detection and improved UX |
 | **[Full Batch Support](full-batch-support/full-batch-support-tracker.md)** | Analysis | 20-30 hours | Complete MCP batch message support |
 | **[LLM Help Documentation](llm-help-documentation/llm-help-documentation-tracker.md)** | ✅ **COMPLETE** | 8-10 hours | Built-in help command with LLM-friendly output |

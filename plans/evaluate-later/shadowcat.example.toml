@@ -1,0 +1,183 @@
+# Shadowcat Configuration Example
+# 
+# This file demonstrates all available configuration options.
+# Copy this to shadowcat.toml and customize for your needs.
+#
+# Configuration priority (highest to lowest):
+# 1. CLI arguments
+# 2. Environment variables (SHADOWCAT_*)
+# 3. Configuration file
+# 4. Built-in defaults
+
+# Server configuration for reverse proxy mode
+[server]
+# Bind address for the reverse proxy server
+bind = "127.0.0.1:8080"
+
+# Number of worker threads (optional, defaults to CPU count)
+# workers = 4
+
+# Graceful shutdown timeout in seconds
+shutdown_timeout = 30
+
+# Core proxy settings
+[proxy]
+# Default upstream for reverse proxy (optional)
+# upstream = "http://localhost:3000"
+
+# Connection timeout in seconds
+connect_timeout = 10
+
+# Request timeout in seconds
+request_timeout = 30
+
+# Enable connection pooling
+connection_pool = true
+
+# Maximum connections per upstream
+max_connections = 100
+
+# Rate limiting (per-client)
+enable_rate_limit = false
+rate_limit_rpm = 600      # Requests per minute
+rate_limit_burst = 10     # Burst allowance
+
+# Transport configuration
+[transport]
+# Default transport type: "stdio", "http", "sse"
+default = "stdio"
+
+# Buffer size for message channels
+buffer_size = 100
+
+# Maximum message size in bytes
+max_message_size = 5242880  # 5MB
+
+# HTTP-specific transport settings
+[transport.http]
+# Maximum HTTP body size
+max_body_size = "10MB"
+
+# Enable compression for HTTP responses
+compression = true
+
+# Session management
+[session]
+# Session storage backend: "memory" or "sqlite"
+storage = "memory"
+
+# SQLite database path (used when storage = "sqlite")
+database = "./shadowcat.db"
+
+# Session timeout in seconds
+timeout = 3600
+
+# Maximum concurrent sessions
+max_sessions = 1000
+
+# Cleanup interval in seconds
+cleanup_interval = 300
+
+# Recording configuration
+[recording]
+# Enable automatic recording of all sessions
+enabled = false
+
+# Directory for recording output
+output_dir = "./recordings"
+
+# Recording format: "json" or "binary"
+format = "json"
+
+# Include timing metadata in recordings
+include_timing = true
+
+# Interceptor configuration
+[interceptor]
+# Enable the interceptor chain
+enabled = true
+
+# Path to rules file (optional)
+# rules_file = "./interceptor-rules.yaml"
+
+# Default action when no rules match: "continue", "pause", "block"
+default_action = "continue"
+
+# Authentication (OAuth 2.1)
+[auth]
+# Enable OAuth 2.1 authentication for reverse proxy
+enabled = false
+
+# Token validation endpoint (required if enabled)
+# token_endpoint = "https://auth.example.com/oauth/token"
+
+# Required scopes for access
+required_scopes = ["mcp:read", "mcp:write"]
+
+# Cache validated tokens
+cache_tokens = true
+
+# Token cache TTL in seconds
+cache_ttl = 300
+
+# Telemetry (OpenTelemetry)
+[telemetry]
+# Enable OpenTelemetry tracing
+enabled = false
+
+# OTLP endpoint for sending traces
+otlp_endpoint = "http://localhost:4317"
+
+# Service name for traces
+service_name = "shadowcat"
+
+# Sampling rate (0.0 to 1.0)
+sampling_rate = 0.1
+
+# Metrics (Prometheus)
+[metrics]
+# Enable Prometheus metrics endpoint
+enabled = false
+
+# Metrics endpoint bind address
+bind = "127.0.0.1:9090"
+
+# Metrics path
+path = "/metrics"
+
+# Logging configuration
+[logging]
+# Log level: "error", "warn", "info", "debug", "trace"
+level = "info"
+
+# Log format: "json", "pretty", "compact"
+format = "pretty"
+
+# Log output: "stdout", "stderr", or file path
+output = "stderr"
+
+# Include timestamps in logs
+timestamps = true
+
+# Rate limiting tiers
+[rate_limiting]
+# Enable tiered rate limiting
+enabled = false
+
+# Default tier for new clients
+default_tier = "standard"
+
+# Standard tier configuration
+[rate_limiting.tiers.standard]
+requests_per_second = 100
+burst_size = 200
+
+# Premium tier configuration
+[rate_limiting.tiers.premium]
+requests_per_second = 1000
+burst_size = 2000
+
+# Development tier (example of custom tier)
+[rate_limiting.tiers.development]
+requests_per_second = 10
+burst_size = 20
