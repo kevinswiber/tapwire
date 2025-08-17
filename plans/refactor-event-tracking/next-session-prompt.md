@@ -1,179 +1,165 @@
-# Next Session: Minimal Event Tracking Integration
+# Event Tracking Consolidation - Ready for Implementation
 
-## Project Context
+## Quick Context
 
-We're consolidating 5 overlapping Last-Event-Id tracking systems into a single authoritative source. This unblocks SSE resilience in the reverse proxy and simplifies the codebase significantly.
+We've completed deep analysis of 5 Last-Event-Id tracking systems in Shadowcat and discovered:
+1. **ReverseProxySseManager is DEAD CODE** - never used in production, only in tests
+2. **Transport EventTracker is perfect** - already has deduplication, just needs wiring
+3. **SessionStore trait already has the methods we need** - `store_last_event_id()` and `get_last_event_id()`
+4. **Simple 6-hour fix** - mostly deleting dead code and wiring callbacks
 
-**Project**: Event Tracking Refactor
-**Tracker**: `plans/refactor-event-tracking/refactor-event-tracking-tracker.md`
-**Status**: Phase B - Minimal Integration (0% Complete)
+## Your Mission: Execute Phase B (2.5 hours)
 
-## Current Status
+Start immediately with implementation - all analysis is complete.
 
-### What Has Been Completed
-- **Phase A: Analysis & Planning** (✅ Completed 2025-08-17)
-  - Identified 5 overlapping tracking systems
-  - Mapped all dependencies and usage
-  - Designed unified architecture with transport as authority
+### Task B.1: Delete Dead Code (30 minutes)
 
-### What's In Progress
-- **Phase B: Minimal Integration** (Not Started)
-  - Duration: 2-3 hours
-  - Dependencies: None
-  - Goal: Quick fix to unblock SSE resilience
-
-## Your Mission
-
-Implement the minimal changes needed to consolidate event tracking and unblock the reverse proxy SSE resilience feature.
-
-### Priority 1: Wire Transport Tracker (2 hours)
-
-1. **Task B.1: Wire transport tracker to proxy** (1h)
-   - Modify `src/proxy/reverse/sse_resilience.rs` to use transport's EventTracker
-   - Remove duplicate tracker creation
-   - Success: Proxy uses single tracker instance
-   
-2. **Task B.2: Connect session persistence** (1h)
-   - Update session store from transport events
-   - Ensure one-way flow: Transport → Session
-   - Success: Event IDs persist correctly
-
-### Priority 2: Test Integration (1 hour)
-
-3. **Task B.3: Test SSE resilience** (1h)
-   - Test with MCP Inspector
-   - Verify deduplication works
-   - Confirm reconnection with Last-Event-Id
-   - Success: SSE resilience functional
-
-## Essential Context Files to Read
-
-1. **Analysis**: `plans/refactor-event-tracking/analysis/last-event-id-tracking-analysis.md` - Full problem analysis
-2. **Transport Tracker**: `shadowcat/src/transport/sse/reconnect.rs` - Core EventTracker to use
-3. **Proxy Resilience**: `shadowcat/src/proxy/reverse/sse_resilience.rs` - Needs refactoring
-4. **Session Store**: `shadowcat/src/session/store.rs` - Persistence layer
-
-## Working Directory
+Delete the dead ReverseProxySseManager module:
 
 ```bash
-cd /Users/kevin/src/tapwire/shadowcat
+cd shadowcat
+git rm src/proxy/reverse/sse_resilience.rs
+# Edit src/proxy/reverse/mod.rs to remove: pub mod sse_resilience;
+cargo test  # Ensure nothing breaks
 ```
 
-## Commands to Run First
+### Task B.2: Add EventTracker Callbacks (1 hour)
+
+Modify `src/transport/sse/reconnect.rs`:
+
+```rust
+pub struct EventTracker {
+    // ... existing fields ...
+    // ADD THIS:
+    on_new_event: Option<Arc<dyn Fn(&str) + Send + Sync>>,
+}
+
+impl EventTracker {
+    // ADD THIS METHOD:
+    pub fn with_callback<F>(mut self, callback: F) -> Self 
+    where 
+        F: Fn(&str) + Send + Sync + 'static 
+    {
+        self.on_new_event = Some(Arc::new(callback));
+        self
+    }
+    
+    // MODIFY record_event() to call callback:
+    pub fn record_event(&self, event: &SseEvent) -> bool {
+        // ... existing dedup logic ...
+        if !is_duplicate {
+            if let Some(ref callback) = self.on_new_event {
+                if let Some(ref id) = event.id {
+                    callback(id);
+                }
+            }
+        }
+        !is_duplicate
+    }
+}
+```
+
+### Task B.3: Wire to SessionStore (1 hour)
+
+In `src/session/manager.rs`, add:
+
+```rust
+impl SessionManager {
+    pub fn create_event_tracker(&self, session_id: SessionId) -> Arc<EventTracker> {
+        let session_id = session_id.clone();
+        let store = self.store.clone(); // Already Arc<dyn SessionStore>!
+        
+        Arc::new(
+            EventTracker::new(1000) // or from config
+                .with_callback(move |event_id| {
+                    let store = store.clone();
+                    let session_id = session_id.clone();
+                    let event_id = event_id.to_string();
+                    tokio::spawn(async move {
+                        // Using EXISTING SessionStore method!
+                        let _ = store.store_last_event_id(&session_id, event_id).await;
+                    });
+                })
+        )
+    }
+    
+    pub async fn get_last_event_id(&self, session_id: &SessionId) -> Option<String> {
+        self.store.get_last_event_id(session_id).await.ok().flatten()
+    }
+}
+```
+
+## Phase C: Integration (2.5 hours) - If Time Permits
+
+### C.1: Update Reverse Proxy (1.5 hours)
+- Modify reverse proxy SSE handler to use `session_manager.create_event_tracker()`
+- Handle Last-Event-Id header from client reconnections
+- Use tracker for deduplication
+
+### C.2: Remove Redundant Tracking (1 hour)
+- Remove `last_event_id` field from `ConnectionInfo` in `src/session/sse_integration.rs`
+- Remove related methods
+- Update all call sites
+
+## Testing Commands
 
 ```bash
-# Verify current state
-cargo check
-
-# Run existing SSE tests
-cargo test sse
-
-# Check for issues
+# After each task:
+cargo test --lib
 cargo clippy --all-targets -- -D warnings
+
+# Integration test:
+cargo test transport::sse
+cargo test session::
+
+# Manual test with MCP Inspector if available
 ```
 
-## Implementation Strategy
+## Success Criteria
 
-### Phase 1: Understand Current Usage (15 min)
-1. Review how `ReverseProxySseManager` creates trackers
-2. Trace transport `EventTracker` usage
-3. Identify integration points
-
-### Phase 2: Wire Transport Tracker (1 hour)
-1. Modify `ReverseProxySseManager` to accept transport tracker
-2. Remove `session_trackers` HashMap
-3. Use transport's `ReconnectionManager` directly
-4. Update all method calls
-
-### Phase 3: Connect Persistence (45 min)
-1. Add callback from transport to session store
-2. Update `Session.last_event_id` on event receipt
-3. Ensure atomic updates
-
-### Phase 4: Test Integration (1 hour)
-1. Build reverse proxy with changes
-2. Test with MCP Inspector
-3. Simulate disconnection/reconnection
-4. Verify no duplicate events
-
-## Success Criteria Checklist
-
-- [ ] Single EventTracker instance per stream
-- [ ] No duplicate tracker creation
-- [ ] Session persistence updated from transport
-- [ ] SSE deduplication working
-- [ ] Reconnection with Last-Event-Id functional
-- [ ] All tests passing
+- [ ] ReverseProxySseManager deleted
+- [ ] EventTracker has callback support
+- [ ] SessionManager creates trackers with persistence
+- [ ] All tests pass
 - [ ] No clippy warnings
 
-## Key Commands
+## Key Files to Reference
 
-```bash
-# Development
-cd shadowcat
-cargo build --release
+- **Analysis**: `plans/refactor-event-tracking/analysis/consolidation-design.md`
+- **Task Details**: `plans/refactor-event-tracking/tasks/A.3-revised-implementation-plan.md`
+- **Tracker**: `plans/refactor-event-tracking/refactor-event-tracking-tracker.md`
 
-# Testing
-cargo test transport::sse
-cargo test proxy::reverse::sse
-cargo test session::sse
+## Important Context
 
-# Run reverse proxy
-./target/release/shadowcat reverse --bind 127.0.0.1:8080 --upstream http://localhost:3000/mcp
+### Why This Matters
+- Unblocks reverse proxy SSE resilience 
+- Enables distributed session storage (Redis)
+- Reduces 5 tracking systems to 1
+- Works automatically with future SessionStore implementations
 
-# Validation
-cargo clippy --all-targets -- -D warnings
-cargo fmt --check
-```
+### SessionStore Trait Already Perfect
+The existing trait has:
+- `async fn store_last_event_id(&self, session_id: &SessionId, event_id: String)`
+- `async fn get_last_event_id(&self, session_id: &SessionId) -> Option<String>`
 
-## Important Notes
+No modifications needed - just use these existing methods!
 
-- **Keep changes minimal** - We're doing Option A (quick fix) not full refactor
-- **Transport is authority** - All other systems should reference it
-- **One-way data flow** - Transport → Session, never reverse
-- **Test incrementally** - Verify each change works
-- **Document decisions** - Update analysis with implementation choices
+### Architecture Benefits
+- Transport EventTracker: Runtime deduplication
+- SessionStore: Persistence abstraction
+- Clean separation of concerns
+- Zero changes needed for new storage backends
 
-## Key Design Considerations
+## If You Complete Early
 
-1. **EventTracker Ownership**: Transport layer owns the canonical tracker
-2. **Persistence Timing**: Update session store after successful deduplication
-3. **Thread Safety**: Use Arc for shared tracker references
-4. **Backward Compatibility**: Existing session store interface unchanged
+Move on to Phase C tasks or:
+1. Write integration tests for the new event tracking
+2. Test with MCP Inspector if available
+3. Document the new architecture in code comments
 
-## Risk Factors & Blockers
+## Notes for Next Session
 
-- **Risk**: Breaking existing SSE functionality
-  - Mitigation: Test each change incrementally
-- **Risk**: Thread safety issues with shared tracker
-  - Mitigation: Use Arc<EventTracker> consistently
-
-## Next Steps After This Task
-
-Once Phase B is complete:
-- **Resume Reverse Proxy Refactor**: SSE resilience will be unblocked
-- **Phase C**: Remove redundant tracking systems (4 hours)
-- **Phase D**: Documentation and comprehensive tests (2 hours)
-
-After full consolidation:
-- Deprecate unused tracking systems
-- Consider Redis integration for distributed tracking
-
-## Model Usage Guidelines
-
-- **IMPORTANT**: This is a focused 2-3 hour task. If context grows large, complete Phase B and create new session for Phase C.
-
-## Session Time Management
-
-**Estimated Session Duration**: 2-3 hours
-- Setup & Context: 15 min
-- Implementation: 2 hours  
-- Testing: 30-45 min
-- Documentation: 15 min
-
----
-
-**Session Goal**: Wire transport EventTracker to reverse proxy and verify SSE resilience works
-
-**Last Updated**: 2025-08-17
-**Next Review**: After Phase B completion
+- Total remaining work: 6 hours (Phase B: 2.5h, Phase C: 2.5h, Phase D: 1h)
+- This unblocks the reverse proxy refactor
+- Delete first, then add callbacks, then wire persistence
+- Keep it simple - the abstractions are already perfect
