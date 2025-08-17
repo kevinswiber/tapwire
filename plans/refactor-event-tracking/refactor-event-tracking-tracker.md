@@ -4,9 +4,13 @@
 
 This tracker coordinates the consolidation and cleanup of Last-Event-Id tracking systems across the Shadowcat codebase. ~~We currently have **5 overlapping tracking systems** with no synchronization~~. **UPDATE**: Deep analysis revealed only 3 active systems and 1 dead system - simpler than expected!
 
+**🔴 CRITICAL UPDATE (2025-08-17)**: Architecture review after Phase C revealed **severe performance issues** that make the system unsuitable for production. Task explosion (1000+ tasks/second) and silent failures require immediate fixes.
+
 **Last Updated**: 2025-08-17  
-**Total Estimated Duration**: ~~8-12 hours~~ ~~7 hours~~ **6 hours** (further reduced - SessionStore trait already perfect!)  
-**Status**: Ready for Implementation
+**Total Estimated Duration**: **17 hours** (increased due to critical fixes)  
+**Status**: 🔴 CRITICAL FIXES REQUIRED (Phase E)  
+**Completed**: Phases A, B, C (9.5 hours)  
+**Remaining**: Phase E (6.5 hours critical), Phase D (1 hour deferred)
 
 ## Goals
 
@@ -114,27 +118,38 @@ Delete dead code and add callback mechanism using EXISTING SessionStore trait
 
 **Phase B Total**: 2.5 hours (COMPLETE - 2025-08-17)
 
-### Phase C: Integration & Cleanup (2.5 hours) - READY TO START
+### Phase C: Integration & Cleanup (2.5 hours) - ✅ COMPLETE (2025-08-17)
 Wire reverse proxy and remove redundancy
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.1 | **Update reverse proxy** | 1.5h | B.3 | ⬜ Not Started | | [Task details](tasks/C.1-update-reverse-proxy.md) |
-| C.2 | **Remove redundant tracking** | 1h | C.1 | ⬜ Not Started | | [Task details](tasks/C.2-remove-redundant-tracking.md) |
+| C.1 | **Update reverse proxy** | 1.5h | B.3 | ✅ Complete | | SSE deduplication and Last-Event-Id handling |
+| C.2 | **Remove redundant tracking** | 1h | C.1 | ✅ Complete | | Removed from ConnectionInfo and call sites |
 
-**Phase C Total**: 2.5 hours
+**Phase C Total**: 2.5 hours (COMPLETE)
 
-### Phase D: Testing & Validation (1 hour) - DEFINED
+### Phase D: Testing & Validation (1 hour) - DEFERRED
 Ensure everything works correctly
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| D.1 | **Integration testing** | 1h | C.2 | ⬜ Not Started | | [Task details](tasks/D.1-integration-testing.md) |
+| D.1 | **Integration testing** | 1h | C.2 | ⏸️ Deferred | | Deferred until after Phase E critical fixes |
 
-**Phase D Total**: 1 hour
+**Phase D Total**: 1 hour (DEFERRED)
 
-**GRAND TOTAL**: 4.5 (Phase A) + 2.5 (Phase B) + 2.5 (Phase C) + 1 (Phase D) = **10.5 hours**
-- Phases A & B complete: **3.5 hours remaining work**
+### Phase E: Critical Performance & Reliability Fixes (6.5 hours) - 🔴 CRITICAL
+Fix task explosion and reliability issues discovered in architecture review
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| E.1 | **Implement worker pattern** | 3h | C.2 | ⬜ Not Started | | [Task details](tasks/E.1-implement-worker-pattern.md) |
+| E.2 | **Fix activity tracking** | 1.5h | E.1 | ⬜ Not Started | | [Task details](tasks/E.2-fix-activity-tracking.md) |
+| E.3 | **Optimize memory usage** | 2h | E.1 | ⬜ Not Started | | [Task details](tasks/E.3-optimize-memory-usage.md) |
+
+**Phase E Total**: 6.5 hours (CRITICAL - Must complete before production)
+
+**GRAND TOTAL**: 4.5 (Phase A) + 2.5 (Phase B) + 2.5 (Phase C) + 6.5 (Phase E) + 1 (Phase D) = **17 hours**
+- Phases A, B & C complete: **7.5 hours remaining critical work** (Phase E + D)
 
 ### ~~Deprecated Phases~~ (No longer needed)
 - ~~Original Phase C.3~~: Update connection tracking - Not needed
@@ -154,19 +169,31 @@ Ensure everything works correctly
 - [x] A.0: Analyze tracking systems - Completed 2025-08-17
 - [x] A.1: Map dependencies - Completed 2025-08-17
 - [x] A.2: Design unified approach - Completed 2025-08-17
+- [x] B.1: Delete dead code - Completed 2025-08-17
+- [x] B.2: Add EventTracker callbacks - Completed 2025-08-17
+- [x] B.3: Wire to SessionStore - Completed 2025-08-17
+- [x] C.1: Update reverse proxy - Completed 2025-08-17
+- [x] C.2: Remove redundant tracking - Completed 2025-08-17
+- [x] Critical architecture review - Completed 2025-08-17
 
-### Next Session Tasks
-- [ ] B.1: Wire transport tracker to proxy
-- [ ] B.2: Connect session persistence
-- [ ] B.3: Test SSE resilience
+### 🔴 CRITICAL ISSUES DISCOVERED
+1. **Task Explosion**: Spawning 1000+ tasks/second under load
+2. **Silent Failures**: All persistence errors ignored
+3. **Memory Inefficiency**: 20KB per session overhead
+4. **No Backpressure**: Unbounded task growth possible
+
+### Next Session Tasks (CRITICAL)
+- [ ] E.1: Implement worker pattern - Replace task-per-event
+- [ ] E.2: Fix activity tracking - Eliminate task spawning
+- [ ] E.3: Optimize memory usage - Reduce to < 5KB/session
 
 ## Success Criteria
 
 ### Functional Requirements
-- ✅ Single source of truth for event IDs
-- ✅ No duplicate tracking logic
-- ✅ Clear data flow from transport to persistence
-- ✅ SSE resilience unblocked in reverse proxy
+- ✅ Single source of truth for event IDs (EventTracker)
+- ✅ No duplicate tracking logic (removed from ConnectionInfo)
+- ✅ Clear data flow from transport to persistence (via callbacks)
+- ✅ SSE resilience unblocked in reverse proxy (Last-Event-Id support)
 
 ### Quality Requirements
 - ✅ All tests passing
@@ -228,7 +255,9 @@ With our consolidation using the existing SessionStore trait:
 ## Related Documents
 
 ### Primary References
+- **🔴 [Critical Architecture Review](analysis/critical-architecture-review.md)** - MUST READ
 - [Last-Event-Id Tracking Analysis](analysis/last-event-id-tracking-analysis.md)
+- [Consolidation Design](analysis/consolidation-design.md)
 - [Reverse Proxy Refactor](../reverse-proxy-refactor/tracker.md) - ON HOLD pending this work
 - [Transport SSE Implementation](../../shadowcat/src/transport/sse/)
 

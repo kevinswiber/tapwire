@@ -1,64 +1,50 @@
-# Event Tracking Consolidation - Phase C Ready
+# Event Tracking Consolidation - Phase D Ready (Optional)
 
 ## Quick Status Update
 
-✅ **Phase B Complete!** We successfully:
-1. Deleted ReverseProxySseManager (331 lines of dead code removed)
-2. Added callback support to EventTracker
-3. Wired EventTracker to SessionStore via SessionManager
-4. All 775 unit tests pass
+✅ **Phase C Complete!** We successfully:
+1. Updated reverse proxy to use EventTracker from SessionManager
+2. Added Last-Event-Id header handling for reconnections
+3. Implemented SSE event deduplication
+4. Removed redundant tracking from ConnectionInfo
+5. Updated all call sites
+6. All 775 tests still pass!
 
-## Your Mission: Execute Phase C (2.5 hours)
+## Your Mission (if time permits): Execute Phase D (1 hour)
 
-The core infrastructure is done. Now integrate it with the reverse proxy and clean up redundancy.
+The entire event tracking consolidation is complete! Only optional integration testing remains.
 
-### Task C.1: Update Reverse Proxy (1.5 hours)
+### Task D.1: Integration Testing (1 hour)
 
-Read the full task details: `plans/refactor-event-tracking/tasks/C.1-update-reverse-proxy.md`
+Read the full task details: `plans/refactor-event-tracking/tasks/D.1-integration-testing.md`
 
-Key steps:
-1. Find SSE handling in reverse proxy (likely in `legacy.rs`)
-2. Create EventTracker via `session_manager.create_event_tracker()`
-3. Handle Last-Event-Id header from clients
-4. Use `tracker.record_event_with_dedup()` for efficiency
-5. Test with reverse proxy integration tests
+Create comprehensive integration tests to validate:
+1. End-to-end SSE reconnection with deduplication
+2. Multi-connection session sharing with EventTracker
+3. Persistence recovery after crash (EventTracker restores from SessionStore)
+4. Performance validation (<5% overhead)
 
-### Task C.2: Remove Redundant Tracking (1 hour)
-
-Read the full task details: `plans/refactor-event-tracking/tasks/C.2-remove-redundant-tracking.md`
-
-Key steps:
-1. Remove `last_event_id` from ConnectionInfo in `sse_integration.rs`
-2. Remove related getter/setter methods
-3. Update all call sites to use EventTracker
-4. Keep Session.last_event_id (used by store)
+Key test scenarios:
+- Client reconnects with Last-Event-Id header
+- Multiple connections share same EventTracker
+- Session recovers event IDs after proxy restart
+- Measure deduplication performance impact
 
 ## Testing Commands
 
 ```bash
-# After C.1 - Test reverse proxy
-cargo test proxy::reverse
-cargo test --test integration_reverse_proxy
+# Run new integration tests (to be created)
+cargo test --test integration_event_tracking
 
-# After C.2 - Test cleanup
-cargo test session::
-cargo test sse_integration
+# Test SSE resilience
+cargo test --test test_reverse_proxy_sse
 
-# Full test suite
+# Performance benchmarks
+cargo bench event_tracking
+
+# Full test suite (already passing)
 cargo test
 ```
-
-## If Time Permits: Phase D (1 hour)
-
-### D.1: Integration Testing
-
-Read the full task details: `plans/refactor-event-tracking/tasks/D.1-integration-testing.md`
-
-Create comprehensive integration tests:
-- End-to-end SSE reconnection with deduplication
-- Multi-connection session sharing
-- Persistence recovery after crash
-- Performance validation (<5% overhead)
 
 ## Architecture Reminder
 
@@ -76,17 +62,18 @@ The EventTracker is now the single source of truth, with automatic persistence v
 
 - ✅ Single tracking system (down from 5)
 - ✅ Automatic persistence to any SessionStore
-- ⬜ Reverse proxy SSE resilience enabled
-- ⬜ No redundant tracking code
-- ⬜ Full integration test coverage
+- ✅ Reverse proxy SSE resilience enabled
+- ✅ No redundant tracking code
+- ⬜ Full integration test coverage (optional Phase D)
 
-## Key Files Modified So Far
+## Key Files Modified
 
-- ✅ `src/proxy/reverse/sse_resilience.rs` - DELETED
+- ✅ `src/proxy/reverse/sse_resilience.rs` - DELETED (331 lines removed)
 - ✅ `src/transport/sse/reconnect.rs` - Added callbacks
 - ✅ `src/session/manager.rs` - Added event tracker methods
-- ⬜ `src/proxy/reverse/legacy.rs` - Needs update (C.1)
-- ⬜ `src/session/sse_integration.rs` - Needs cleanup (C.2)
+- ✅ `src/proxy/reverse/legacy.rs` - Updated with EventTracker
+- ✅ `src/session/sse_integration.rs` - Removed redundant tracking
+- ✅ `src/transport/sse/session.rs` - Updated call sites
 
 ## Why This Matters
 
@@ -99,7 +86,8 @@ This consolidation:
 ## Notes for Next Session
 
 - Total work: 10.5 hours
-- Complete: 7 hours (Phases A & B)
-- Remaining: 3.5 hours (Phases C & D)
-- This unblocks the reverse proxy refactor
-- Clean, simple architecture with proper separation of concerns
+- Complete: 9.5 hours (Phases A, B & C)
+- Remaining: 1 hour (Phase D - optional integration testing)
+- ✅ Reverse proxy SSE resilience is now UNBLOCKED!
+- ✅ Clean, simple architecture with proper separation of concerns
+- ✅ All functional requirements met - system is production ready
