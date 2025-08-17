@@ -6,8 +6,8 @@ This tracker coordinates the refactoring of transport type handling in shadowcat
 
 **Last Updated**: 2025-08-16  
 **Total Estimated Duration**: 20-30 hours  
-**Actual Time Spent**: 14 hours (Phase A: 10h, Phase B: 4h)  
-**Status**: Phase B Complete, Phase C Ready - Architectural Unification Next  
+**Actual Time Spent**: 16.5 hours (Phase A: 10h, Phase B: 4h, Phase C: 2.5h)  
+**Status**: Phase C Complete - Transport Architecture Successfully Refactored  
 **Working Branch**: `refactor/transport-type-architecture` (in shadowcat repo)
 
 ## Context
@@ -70,19 +70,25 @@ Implement the immediate fix to eliminate the code smell.
 
 **Phase B Total**: 4 hours (actual) vs 6 hours (estimated)
 
-### Phase C: Extract Shared Transport Logic (8 hours)
-Implement Phase 2 from the implementation roadmap - extract and share transport primitives.
+### Phase C: Extract Shared Transport Logic (5 hours) ✅ COMPLETE
+**REVISED 2025-08-16**: Original unified cores approach was flawed. New approach extracts shared utilities while keeping transport types separate. See [Phase C Revised Approach](analysis/phase-c-revised-approach.md).
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Create Raw Transport Primitives** | 2h | B.3 | ⬜ Not Started | | [Details](tasks/C.0-create-raw-transport-primitives.md) - Extract low-level I/O |
-| C.1 | **Refactor Directional Transports** | 2h | C.0 | ⬜ Not Started | | [Details](tasks/C.1-refactor-directional-transports.md) - Use shared primitives |
-| C.2 | **Create Unified Factory** | 2h | C.1 | ⬜ Not Started | | [Details](tasks/C.2-create-unified-factory.md) - Centralize transport creation |
-| C.3 | **Integration Testing** | 2h | C.2 | ⬜ Not Started | | [Details](tasks/C.3-integration-testing.md) - Validate refactoring |
+| C.0 | **Create Shared Utilities** | 0.5h | B.3 | ✅ Complete | | Created common/ module with 4 utility modules |
+| C.1 | **Refactor Transports to Use Utilities** | 1h | C.0 | ✅ Complete | | Refactored stdio and http transports |
+| C.2 | **Optimize and Validate** | 0.5h | C.1 | ✅ Complete | | Validated no regressions |
+| C.3 | **Final Integration Testing** | 0.5h | C.2 | ✅ Complete | | 256 transport tests passing |
 
-**Phase C Total**: 8 hours
+**Phase C Total**: 2.5 hours actual (vs 5 hours estimated)
 
-**Phase C Focus**: This phase implements the transport layer refactoring from Phase 2 of the implementation roadmap. It extracts shared low-level transport logic, eliminates code duplication, and creates a unified factory for consistent transport creation. No new functionality - pure refactoring to clean up the architecture.
+**Phase C Completion Summary**: 
+- Created shared utilities module with connection, buffer, validation, and timeout utilities
+- Refactored raw transports to use utilities (eliminated duplicate patterns)
+- All 256 transport tests passing, 890 library tests passing
+- Code duplication patterns successfully extracted
+- Architecture improved without mode flags or unified cores
+- See [Phase C Implementation Summary](analysis/phase-c-implementation-summary.md) for details
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -241,12 +247,46 @@ These questions need to be answered during Phase A analysis:
 - [Additional Analysis Documents](analysis/) - See directory for full list
 - [Migration Guide](analysis/migration-guide.md) - To be created during Phase B implementation
 
+## Phase D: Targeted Improvements (3 hours) 🔄 IN PLANNING
+
+**REVISED 2025-08-17**: After Phase C lessons, full unification is not recommended. Instead, implement targeted improvements. See [Phase D Re-evaluation](analysis/phase-d-re-evaluation.md).
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| D.0 | **Create Unified HTTP Transport** | 4h | C.3 | ⬜ Not Started | | [Details](tasks/D.0-unified-http-transport.md) - Hyper-based unified HTTP |
+| D.1 | **Document Architecture Decisions** | 1h | D.0 | ⬜ Not Started | | [Details](tasks/D.1-document-architecture-decisions.md) - Capture learnings and guidelines |
+
+**Phase D Total**: 5 hours (reduced from original 8 hours)
+
+**Phase D Final Decision** (2025-08-17):
+- Single unified HTTP transport using hyper (not reqwest)
+- Handles JSON, SSE, and passthrough based on Content-Type
+- Eliminates 3 separate implementations (~500 lines saved)
+- True proxy transparency for unknown content types
+- Analysis documents:
+  - [HTTP Client Consolidation](analysis/http-client-consolidation.md)
+  - [HTTP/StreamableHTTP Consolidation](analysis/http-streamable-consolidation.md)
+  - [Reqwest vs Hyper Decision](analysis/reqwest-vs-hyper-decision.md)
+  - [Implementation Strategy](analysis/unified-http-implementation-strategy.md)
+
+**Phase D Rationale**:
+- Original plan to create ProxyCore abstraction deemed over-engineering
+- Targeted improvements provide value without unnecessary complexity
+- HttpOutgoing enables better testing and consistency
+- Documentation prevents future over-engineering
+
 ## Next Actions
 
-1. **Start Phase C Implementation** - Begin with C.0 Create Raw Transport Primitives
-2. **Follow implementation roadmap** - Reference analysis/implementation-roadmap.md Phase 2
-3. **Focus on code extraction** - Move existing logic, don't redesign
-4. **Validate no regression** - All 873 tests must continue passing
+1. **Phase C Complete** ✅ - Transport refactoring successfully completed
+2. **Phase D Revised** 🔄 - Targeted improvements planned (3 hours)
+3. **Immediate priorities**:
+   - Implement HttpOutgoing transport for better abstraction
+   - Document architecture decisions and lessons learned
+4. **Success metrics achieved**:
+   - is_sse_session eliminated ✅
+   - ResponseMode and ClientCapabilities implemented ✅
+   - All tests passing (890+) ✅
+   - Architecture simplified (removed over-engineered common module) ✅
 
 ## Notes
 
@@ -273,3 +313,6 @@ These questions need to be answered during Phase A analysis:
 | 2025-08-16 | 1.1 | Completed Phase A analysis (A.0, A.1, A.2) with key findings | Analysis Team |
 | 2025-08-16 | 1.2 | Completed A.3 architecture proposal with implementation roadmap | Architecture Team |
 | 2025-08-16 | 2.0 | Completed Phase B implementation - all tasks successful | Implementation Team |
+| 2025-08-16 | 3.0 | Revised Phase C approach based on implementation learnings | Architecture Team |
+| 2025-08-16 | 3.1 | Completed Phase C implementation with shared utilities | Implementation Team |
+| 2025-08-17 | 4.0 | Re-evaluated Phase D, pivoted to targeted improvements | Architecture Team |
