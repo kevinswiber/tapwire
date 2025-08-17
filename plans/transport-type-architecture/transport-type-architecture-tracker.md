@@ -6,8 +6,8 @@ This tracker coordinates the refactoring of transport type handling in shadowcat
 
 **Last Updated**: 2025-08-17  
 **Total Estimated Duration**: 20-30 hours  
-**Actual Time Spent**: 19.5 hours (Phase A: 10h, Phase B: 4h, Phase C: 2.5h, Phase D.0: 3h)  
-**Status**: Phase D.0 80% Complete - Unified HTTP Transport Implemented  
+**Actual Time Spent**: 20.5 hours (Phase A: 10h, Phase B: 4h, Phase C: 2.5h, Phase D: 4h)  
+**Status**: Phase D In Progress - Transport Simplification Complete, HTTP Unification 80% Done  
 **Working Branch**: `refactor/transport-type-architecture` (in shadowcat repo)
 
 ## Context
@@ -247,7 +247,7 @@ These questions need to be answered during Phase A analysis:
 - [Additional Analysis Documents](analysis/) - See directory for full list
 - [Migration Guide](analysis/migration-guide.md) - To be created during Phase B implementation
 
-## Phase D: Targeted Improvements (3 hours) 🔄 IN PLANNING
+## Phase D: Targeted Improvements (7 hours) 🔄 IN PROGRESS
 
 **REVISED 2025-08-17**: After Phase C lessons, full unification is not recommended. Instead, implement targeted improvements. See [Phase D Re-evaluation](analysis/phase-d-re-evaluation.md).
 
@@ -255,8 +255,9 @@ These questions need to be answered during Phase A analysis:
 |----|------|----------|--------------|--------|-------|-------|
 | D.0 | **Create Unified HTTP Transport** | 4h | C.3 | 🔄 80% Complete | | [Details](tasks/D.0-unified-http-transport.md) - Core unification done, needs SSE buffer & reverse proxy |
 | D.1 | **Document Architecture Decisions** | 1h | D.0 | ⬜ Not Started | | [Details](tasks/D.1-document-architecture-decisions.md) - Capture learnings and guidelines |
+| D.2 | **Simplify Transport Module Structure** | 1h | D.0 | ✅ Complete | | [Details](tasks/D.2-simplify-transport-module.md) - Eliminated raw layer, renamed directional to incoming/outgoing |
 
-**Phase D Total**: 5 hours (reduced from original 8 hours)
+**Phase D Total**: 6 hours actual (vs 5 hours estimated)
 
 **Phase D Final Decision** (2025-08-17):
 - Single unified HTTP transport using hyper (not reqwest)
@@ -275,16 +276,17 @@ These questions need to be answered during Phase A analysis:
 - HttpOutgoing enables better testing and consistency
 - Documentation prevents future over-engineering
 
-## Phase D.0 Status (2025-08-17)
+## Phase D Status (2025-08-17)
 
-### ✅ Completed (80%):
-1. **Unified HyperHttpTransport created** - Single implementation for JSON/SSE/passthrough
-2. **Deleted 3 redundant files** - Removed ~500 lines of duplicate code
-3. **Content-Type auto-detection** - ResponseType enum with proper detection
-4. **Simplified naming** - HttpOutgoing, HttpIncoming (no more "Client"/"Server" prefixes)
-5. **All tests passing** - 237 transport tests, 890+ total library tests
+### ✅ Completed:
+1. **Unified HyperHttpTransport created** (D.0 - 80%) - Single implementation for JSON/SSE/passthrough
+2. **Transport module simplified** (D.2 - 100%) - Eliminated raw layer, reorganized as incoming/outgoing
+3. **Deleted redundant code** - Removed ~1000 lines total (500 from HTTP unification, 500 from transport simplification)
+4. **Content-Type auto-detection** - ResponseType enum with proper detection
+5. **Simplified naming** - HttpOutgoing, HttpIncoming, clear incoming/outgoing structure
+6. **All tests passing** - 890+ total library tests
 
-### 🔄 Remaining (20%):
+### 🔄 D.0 Remaining (20%):
 1. **SSE Buffering in HttpOutgoing** - Add SseEventBuffer for streaming through trait
 2. **Reverse Proxy Integration** - Migrate from hyper_client.rs to unified transport
 3. **Documentation Updates** - Content negotiation docs, architecture diagrams
@@ -299,11 +301,12 @@ These questions need to be answered during Phase A analysis:
 3. **Success metrics achieved**:
    - is_sse_session eliminated ✅
    - ResponseMode and ClientCapabilities implemented ✅
+   - Transport architecture simplified ✅
    - Single HTTP implementation ✅
    - Content-Type detection ✅
-   - ~500 lines removed ✅
+   - ~1000 lines removed ✅
    - All tests passing (890+) ✅
-   - Architecture simplified ✅
+   - Code is more intuitive ✅
 
 ## Notes
 
@@ -334,3 +337,4 @@ These questions need to be answered during Phase A analysis:
 | 2025-08-16 | 3.1 | Completed Phase C implementation with shared utilities | Implementation Team |
 | 2025-08-17 | 4.0 | Re-evaluated Phase D, pivoted to targeted improvements | Architecture Team |
 | 2025-08-17 | 4.1 | Phase D.0 80% complete - unified HTTP transport implemented | Implementation Team |
+| 2025-08-17 | 4.2 | Phase D.2 complete - transport module structure simplified | Implementation Team |
