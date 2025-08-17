@@ -1,11 +1,16 @@
 # Reverse Proxy Refactor - Implementation Tracker
 
 ## Project Status
-**Status**: 🚧 SSE Reconnection Foundation Complete - Phase D.0 Done!  
+**Status**: ⏸️ ON HOLD - Blocked by Event Tracking Refactor  
 **Started**: 2025-01-15  
-**Last Updated**: 2025-08-16  
+**Last Updated**: 2025-08-17  
 **Estimated Duration**: 32-35 hours (added Phase D for SSE reconnection)
-**Progress**: Phases A, B, C Complete + D.0 Foundation (~26 hours)
+**Progress**: Phases A, B, C Complete + D.0 Partial (~24 hours)
+
+### 🚨 BLOCKER: Event Tracking Consolidation Required
+**See**: [Event Tracking Refactor](../refactor-event-tracking/refactor-event-tracking-tracker.md)
+
+We discovered 5 overlapping Last-Event-Id tracking systems with no synchronization. This must be consolidated before SSE resilience can be properly integrated. Expected unblock: 2-3 hours of work.
 
 ## Executive Summary
 
@@ -416,33 +421,36 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 
 ### D.0: Foundation Integration (4 hours)
 **Goal**: Integrate existing reconnection infrastructure  
-**Status**: ✅ **COMPLETE** (2025-08-16)
+**Status**: ⚠️ **PARTIAL** (2025-08-16 created, 2025-08-17 integration pending)
 
 **Completed Tasks**:
 - ✅ Created `ReverseProxySseManager` wrapping ReconnectionManager
-- ✅ Added Last-Event-Id tracking to Session struct
 - ✅ Integrated EventTracker for deduplication per session
 - ✅ Added HealthMonitor for connection health
-- ✅ Created SessionSseExt trait for clean API
-- ✅ All 4 tests passing
+
+**Pending Tasks (2025-08-17 Discovery)**:
+- ❌ Module created but NOT integrated into reverse proxy
+- ❌ Last-Event-Id tracking NOT added to Session struct
+- ❌ SessionSseExt trait NOT created
+- ❌ No tests for integration
 
 ### D.1: Upstream Resilience (3 hours)
 **Goal**: Auto-reconnect to upstream SSE servers  
-**Status**: ⏸️ **PAUSED** - Blocked by transport architecture refactor
+**Status**: 🟢 **READY TO RESUME** - Transport architecture refactor complete!
 
 **Completed**:
 - ✅ Analyzed reconnection architecture challenge
 - ✅ Added disconnection detection and logging
 - ✅ Documented where reconnection would occur
 - ✅ Created detailed implementation plan
+- ✅ Transport Architecture Refactor COMPLETE (2025-08-17)
+- ✅ `is_sse_session` code smell removed
+- ✅ Clean transport type model implemented
 
-**Blocked on Transport Architecture Refactor**:
-- 🚧 See [Transport Type Architecture Plan](../transport-type-architecture/transport-type-architecture-tracker.md)
-- 🚧 Issue: `is_sse_session` code smell indicates deeper architectural problems
-- 🚧 Solution: Clean up transport type modeling first
-- ⏸️ Full ReconnectingStream integration
-- ⏸️ Exponential backoff implementation
-- ⏸️ Last-Event-Id resumption
+**Ready to Implement**:
+- [ ] Full ReconnectingStream integration
+- [ ] Exponential backoff implementation
+- [ ] Last-Event-Id resumption
 
 ### D.2: Client Resilience (3 hours)
 **Goal**: Support client SSE reconnections  
@@ -606,21 +614,29 @@ See `analysis/sse-module-consolidation.md` for detailed analysis.
 
 ## Next Steps
 
-### 🚧 DETOUR: Transport Architecture Refactor Required
+### ✅ Transport Architecture Refactor COMPLETE (2025-08-17)
 
-During Phase D.0 implementation, we discovered that the `is_sse_session` boolean is a code smell indicating deeper architectural issues with how we model transport types. Before continuing with SSE reconnection (Phase D.1-D.3), we need to:
+The transport architecture refactor has been successfully completed:
+- ✅ Eliminated `is_sse_session` boolean 
+- ✅ Properly modeled transport types (Stdio, Http only)
+- ✅ Added Delivery enum with Stdio/Http/Sse variants for message-level context
+- ✅ SSE metadata properly stored in Delivery::Sse
+- ✅ Clean separation of transport and protocol concerns
 
-1. **Complete Transport Type Architecture Refactor**
-   - See [Transport Type Architecture Plan](../transport-type-architecture/transport-type-architecture-tracker.md)
-   - Eliminate `is_sse_session` boolean
-   - Properly model bidirectional transports
-   - Add explicit ResponseMode tracking
-   - Unify forward and reverse proxy transport handling
+### 🔥 IMMEDIATE: Complete SSE Resilience Integration
 
-2. **Then Resume Phase D.1-D.3**
-   - With clean transport architecture in place
-   - Proper session tracking for SSE
-   - Clear response mode handling
+The `ReverseProxySseManager` was created but never integrated. Priority tasks:
+
+1. **Complete Phase D.0 Integration** (1-2 hours)
+   - [ ] Wire up ReverseProxySseManager in legacy.rs
+   - [ ] Add Last-Event-Id tracking to Session
+   - [ ] Create SessionSseExt trait
+   - [ ] Add integration tests
+
+2. **Resume Phase D.1-D.3** (6 hours)
+   - [ ] Implement upstream reconnection with ReconnectingStream
+   - [ ] Support client reconnection with Last-Event-Id
+   - [ ] Test with MCP Inspector
 
 ### Key Implementation Decisions
 - SessionManager **references** store (enables injection)

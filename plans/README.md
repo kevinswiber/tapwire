@@ -8,10 +8,20 @@
 
 The following plans are currently being worked on or are ready for implementation:
 
-#### 🔥 **TOP PRIORITY** - Critical Proxy Infrastructure
+#### 🔥 **IMMEDIATE PRIORITY** - Unblock SSE Resilience
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
-| **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | 🔴 **TOP PRIORITY** | 8-12 hours | Dual session ID tracking for SSE reconnection and failover |
+| **[Event Tracking Refactor](refactor-event-tracking/refactor-event-tracking-tracker.md)** | 🔥 **URGENT** | 2-3 hours | Consolidate 5 overlapping Last-Event-Id tracking systems |
+
+#### ⏸️ **ON HOLD** - Blocked by Event Tracking
+| Plan | Status | Estimated Duration | Description |
+|------|--------|-------------------|-------------|
+| **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | ⏸️ BLOCKED | 8-12 hours | Dual session ID tracking - blocked by event tracking |
+| **[Reverse Proxy Refactor](reverse-proxy-refactor/tracker.md)** | ⏸️ BLOCKED | 8 hours remaining | SSE resilience integration - blocked by event tracking |
+
+#### 🔴 **TOP PRIORITY** - After Event Tracking
+| Plan | Status | Estimated Duration | Description |
+|------|--------|-------------------|-------------|
 | **[Multi-Session Forward Proxy](multi-session-forward-proxy/multi-session-forward-proxy-tracker.md)** | 🔴 **TOP PRIORITY** | 11-15 hours | Support multiple concurrent client connections |
 
 #### Other Active Plans
