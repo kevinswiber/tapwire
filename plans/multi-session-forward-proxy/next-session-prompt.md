@@ -3,6 +3,11 @@
 ## Quick Context
 The forward proxy currently only handles **one client-server connection** at a time. We need to enable **multiple concurrent client connections** with independent upstream servers.
 
+## Recent Architecture Updates (2025-08-18)
+- ✅ **SessionManager Enhanced**: Now supports lazy persistence and custom stores
+- ✅ **EventTracker Integrated**: Clean channel-based architecture for SSE
+- ✅ **ReverseProxyServerBuilder**: Pattern we can follow for ForwardProxy
+
 ## Completed Work (Phase A - 2.5 hours)
 ✅ Analyzed current single-session architecture  
 ✅ Designed multi-session architecture with accept loop  
