@@ -11,6 +11,7 @@ The following plans are currently being worked on or are ready for implementatio
 #### 🔥 **IMMEDIATE PRIORITY** - Critical Infrastructure
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
+| **[Refactor Legacy Reverse Proxy](refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md)** | 🟢 **ACTIVE** | 25-35 hours | Extract 3,465-line monolith into clean modules |
 | **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | 🟡 **Ready** | 8-12 hours | Dual session ID tracking for better routing |
 
 #### ✅ **RECENTLY COMPLETED** 
@@ -157,6 +158,7 @@ plans/
 │   ├── next-session-prompt.md     # Session setup template
 │   └── task.md                    # Individual task template
 │
+├── refactor-legacy-reverse-proxy/  # 🔥 ACTIVE - Clean module extraction
 ├── reverse-proxy-session-mapping/  # 🔥 TOP PRIORITY - Dual session IDs
 ├── multi-session-forward-proxy/    # 🔥 TOP PRIORITY - Concurrent clients
 ├── better-cli-interface/           # 🎯 ACTIVE - Smart transport detection
@@ -327,4 +329,4 @@ ls plans/*/tasks/
 
 ---
 
-*Last Updated: 2025-08-18 - Reverse Proxy SSE Resilience Complete, Focus Shifted to Multi-Session Forward Proxy*
+*Last Updated: 2025-08-18 - Created Refactor Legacy Reverse Proxy plan to extract 3,465-line monolith into clean modules*

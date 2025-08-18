@@ -1,122 +1,107 @@
-# Next Session: Multi-Session Forward Proxy or Alternative Priorities
+# Next Session: Critical Reverse Proxy Issues
 
-## ✅ Completed in This Session (2025-08-18)
+## ⚠️ CRITICAL: block_on Deadlock Bug
 
-### SSE Resilience Integration - FULLY COMPLETE
-- EventTracker already integrated in handle_sse() (line 1676-1689)
-- Events recorded with deduplication (line 1966) 
-- Upstream reconnection with Last-Event-Id (line 1877-1880)
-- All functionality verified and working!
+**THIS MUST BE FIXED BEFORE PRODUCTION**
 
-### Session Store Architecture - COMPLETE
-- Lazy persistence initialization in SessionManager
-- ReverseProxyServerBuilder for custom stores
-- Library API exports for SessionStore interface
-- Ready for Redis/SQLite backends
-
-## Next Priority Options
-
-### Option 1: Multi-Session Forward Proxy (Recommended)
-
-The forward proxy currently only supports a single client. We need multiple concurrent clients.
-
-**Implementation Plan (4 hours):**
-1. Make ForwardProxy accept multiple connections
-2. Session isolation per client
-3. Connection pool sharing
-4. Resource limits and cleanup
-
-**Key Files:**
-- `src/proxy/forward/mod.rs`
-- `src/proxy/forward/stdio.rs`
-- `src/proxy/pool.rs`
-
-**Success Criteria:**
-- Support 100+ concurrent sessions
-- Clean resource management
-- All tests passing
-
-### Option 2: Dual Session ID Mapping
-
-Track both client and server session IDs in reverse proxy for better routing.
-
-**Implementation Plan (3 hours):**
-1. Create session_mapping module
-2. Store bidirectional mappings
-3. Handle ID conflicts
-4. Persistent storage
-
-**Key Files:**
-- `src/proxy/reverse/session_mapping.rs` (new)
-- `src/proxy/reverse/legacy.rs`
-
-### Option 3: Redis Session Store
-
-Implement distributed session storage for production deployments.
-
-**Implementation Plan (4 hours):**
-1. Create RedisSessionStore implementing SessionStore trait
-2. Handle connection pooling
-3. Implement TTL and cleanup
-4. Add to library exports
-
-**Key Files:**
-- `src/session/redis.rs` (new)
-- `src/session/mod.rs`
-- Integration with ReverseProxyServerBuilder
-
-## Testing Any Option
-
-```bash
-cd shadowcat
-
-# Run relevant tests
-cargo test proxy::forward        # Option 1
-cargo test proxy::reverse        # Option 2  
-cargo test session::             # Option 3
-
-# Build and manual test
-cargo build --release
-./target/release/shadowcat <relevant commands>
+Location: `shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs:200`
+```rust
+// THIS WILL DEADLOCK AT SCALE!
+let runtime = tokio::runtime::Handle::current();
+let processed = runtime.block_on(self.process_event(event));
 ```
 
-## Recommendation
+**Impact**: System freeze at 100+ concurrent connections
+**Risk**: Production outage under load
 
-Start with **Option 1: Multi-Session Forward Proxy** as it:
-- Addresses a clear limitation (single client only)
-- Builds on existing SessionManager work
-- Enables important use cases (shared proxy)
-- Has clear success metrics
+## Status Update (2025-08-18)
 
-The SessionManager and ConnectionPool are already thread-safe and ready for this enhancement.
+### What's Actually Complete ✅
+- **SSE Resilience**: Implemented via EventTracker (different approach than planned)
+- **Session Store**: Architecture complete with SessionStore trait
+- **Event Tracking**: PersistenceWorker handling all persistence efficiently
+- **Tests**: 775 unit tests passing
 
-## Repository Status
+### What's NOT Complete ❌
+1. **block_on deadlock** - Critical production blocker
+2. **Hyper migration** - legacy.rs still 3,465 lines (unchanged)
+3. **Integration testing** - Needed after fixes
 
-### shadowcat (submodule)
-- Latest commit: feat: add ReverseProxyServerBuilder for custom session stores
-- Branch: main
-- All tests passing ✅
+## Priority Tasks
 
-### tapwire (parent)
-- Updated tracker and documentation
-- Ready for next phase
-- Clear roadmap defined
+### Task 1: Fix block_on Deadlock 🔥 (2-3 hours)
+**File**: `tasks/E.0-fix-block-on-deadlock.md`
 
-## Quick Start for Next Session
+**Approach Options**:
+1. State machine pattern with pending futures
+2. Spawn task with channel communication
+3. Pre-process events before streaming
+
+**Quick Check**:
+```bash
+rg "block_on" shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs
+```
+
+### Task 2: Complete Hyper Migration (13-18 hours)
+**File**: `tasks/E.1-complete-hyper-migration.md`
+
+**Current State**:
+- legacy.rs: 3,465 lines (should be 0)
+- Hyper modules: Created but minimally used
+- Target: Delete legacy.rs entirely
+
+**Module Breakdown Needed**:
+- Server setup (~500 lines) → server.rs, config.rs
+- Request routing (~800 lines) → handlers/
+- Middleware (~600 lines) → middleware/
+- Admin UI (~876 lines) → admin/
+
+### Task 3: Integration Testing (3 hours)
+**File**: `tasks/E.2-integration-testing.md`
+
+**After block_on fix**:
+- Test 100+ concurrent SSE streams
+- Verify no deadlocks with tokio-console
+- Load test with mixed traffic
+- Memory profiling
+
+## Other Options (After Critical Fixes)
+
+### Multi-Session Forward Proxy
+- Forward proxy only supports single client
+- Needs concurrent client support
+- Plan in `plans/multi-session-forward-proxy/`
+
+### Redis Session Store
+- Implement RedisSessionStore trait
+- Enable distributed deployments
+- ~4 hours implementation
+
+## Immediate Actions
 
 ```bash
-# Pull latest changes
-cd ~/src/tapwire
-git pull
-git submodule update --init --recursive
-
-# Check current status
+# 1. See the problem
 cd shadowcat
+rg "block_on" src/
+
+# 2. Check tests still pass
 cargo test --lib
 
-# Review the specific plan
-cat ../plans/multi-session-forward-proxy/README.md  # If it exists
-# OR start fresh with the outline above
+# 3. Start fixing (see task E.0)
+code src/proxy/reverse/hyper_sse_intercepted.rs
+
+# 4. Test concurrency after fix
+RUST_LOG=debug cargo test test_concurrent_sse_streams -- --nocapture
 ```
 
-Pick Option 1 and implement multi-session support in the forward proxy!
+## Success Metrics
+- ✅ No block_on in async contexts
+- ✅ 100+ connections without deadlock
+- ✅ All tests passing
+- ✅ Memory <100KB per session
+- ✅ legacy.rs deleted
+
+## Why This Matters
+The block_on issue is a **ticking time bomb**. It will cause production outages when traffic increases. This is not theoretical - it WILL happen at scale.
+
+Fix the deadlock first, then continue with the refactor.
