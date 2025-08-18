@@ -2,23 +2,21 @@
 
 ## Objective
 
-Create a comprehensive inventory of all error types, Result aliases, and their usage patterns across the shadowcat codebase to inform the migration strategy.
+Create a comprehensive inventory of all error types, Result aliases, and their usage patterns across the shadowcat codebase.
 
 ## Background
 
-The current error handling uses a centralized error.rs file containing all error enums and Result type aliases. Before modularizing, we need to understand:
+The current error handling uses a centralized error.rs file containing all error enums and Result type aliases. Since Shadowcat hasn't been released yet, we can make breaking changes. We need to understand:
 - What error types exist
 - Where they are used
 - How they interconnect via From implementations
-- What public APIs expose them
 
 ## Key Questions to Answer
 
 1. What error enums are defined in error.rs?
 2. What Result type aliases exist and how are they used?
 3. Which errors have From implementations for ShadowcatError?
-4. What is the public API surface for each error type?
-5. Are there any circular dependencies between error types?
+4. Are there any circular dependencies between error types?
 
 ## Step-by-Step Process
 
@@ -116,10 +114,10 @@ session/: Uses SessionError, SessionResult
 
 ## Duration Estimate
 
-**Total: 2 hours**
-- Analysis: 30 minutes
-- Usage mapping: 1 hour
-- Documentation: 30 minutes
+**Total: 1 hour**
+- Analysis: 15 minutes
+- Usage mapping: 30 minutes
+- Documentation: 15 minutes
 
 ## Dependencies
 

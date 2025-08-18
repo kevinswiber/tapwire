@@ -4,9 +4,9 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-01-18  
+**Last Updated**: 2025-01-18 (Session 2)  
 **Total Estimated Duration**: 20-25 hours (reduced after removing admin UI)  
-**Status**: Phase A Complete - Ready for Implementation
+**Status**: Phase B & C Partially Complete - 3,137 lines remaining in legacy.rs
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
@@ -75,26 +75,25 @@ Extract foundational components and remove admin UI.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.0 | **Transport Overlap Analysis** | 0.5h | A.3 | ⬜ Not Started | | Document reuse opportunities |
-| B.1 | **Remove Admin UI** | 0.5h | B.0 | ⬜ Not Started | | Delete ~900 lines |
-| B.2 | **Extract Error Types** | 0.5h | B.1 | ⬜ Not Started | | Create error.rs |
-| B.3 | **Extract Config Types** | 1h | B.2 | ⬜ Not Started | | Create config.rs |
-| B.4 | **Extract Metrics & State** | 0.5h | B.3 | ⬜ Not Started | | metrics.rs, state.rs |
-| B.5 | **Extract Helper Modules** | 1h | B.4 | ⬜ Not Started | | pipeline.rs, session_helpers.rs, headers.rs |
+| B.0 | **Transport Overlap Analysis** | 0.5h | A.3 | ✅ Complete | | Document reuse opportunities |
+| B.1 | **Remove Admin UI** | 0.5h | B.0 | ✅ Complete | | No admin UI found in legacy.rs |
+| B.2 | **Extract Error Types** | 0.5h | B.1 | ✅ Complete | | Using crate::error types |
+| B.3 | **Extract State & Config** | 1h | B.2 | ✅ Complete | | state.rs created |
+| B.4 | **Extract Helper Modules** | 1h | B.3 | ✅ Complete | | headers.rs, session_helpers.rs, selector.rs |
 
-**Phase B Total**: 4 hours
+**Phase B Total**: 3.5 hours ✅ COMPLETE
 
 ### Phase C: Upstream & Handler Implementation (Week 2)
 Create upstream abstractions and thin handlers.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Create UpstreamService Trait** | 1h | B.5 | ✅ Complete | | upstream/mod.rs |
+| C.0 | **Create UpstreamService Trait** | 1h | B.4 | ✅ Complete | | upstream/mod.rs |
 | C.1 | **Implement Upstream Modules** | 3h | C.0 | ✅ Complete | | stdio.rs, http.rs, selector.rs |
-| C.2 | **Create Thin Handlers** | 2h | C.1 | ⬜ Not Started | | mcp.rs, health.rs |
-| C.3 | **Wire Router & Server** | 1h | C.2 | ⬜ Not Started | | router.rs, server.rs |
+| C.2 | **Create Thin Handlers** | 2h | C.1 | ✅ Complete | | handlers/mcp.rs, health.rs, metrics.rs |
+| C.3 | **Wire Router & Server** | 1h | C.2 | ✅ Complete | | router.rs, server.rs |
 
-**Phase C Total**: 7 hours (4 hours complete, 3 hours remaining)
+**Phase C Total**: 7 hours ✅ COMPLETE
 
 ### Phase D: Cleanup & Validation (Week 3)
 Remove legacy.rs and validate everything works.
@@ -119,16 +118,26 @@ Remove legacy.rs and validate everything works.
 ## Progress Tracking
 
 ### Completed
-- **2025-01-18**: Phase A - Analysis & Design (9 hours)
+- **2025-01-18 Session 1**: Phase A - Analysis & Design (9 hours)
   - Comprehensive analysis of legacy.rs
   - Designed refined architecture
   - Created implementation plan
-- **2025-01-18**: Phase C (Partial) - Upstream Abstractions (4 hours)
+- **2025-01-18 Session 1**: Phase C.0-C.1 - Upstream Abstractions (4 hours)
   - Created UpstreamService trait
   - Implemented HTTP and stdio upstreams
   - Added load balancing selector
   - Moved hyper client to transport module
   - Removed HyperResponse wrapper
+- **2025-01-18 Session 2**: Phase B - Foundation Extraction (3.5 hours)
+  - Extracted AppState to state.rs
+  - Extracted header validation to headers.rs
+  - Extracted session helpers to session_helpers.rs
+  - Extracted upstream selection to selector.rs
+- **2025-01-18 Session 2**: Phase C.2-C.3 - Handlers & Wiring (3 hours)
+  - Created handler modules (mcp, health, metrics)
+  - Created router.rs for route configuration  
+  - Created server.rs for server lifecycle
+  - **Progress**: legacy.rs reduced from 3,307 to 3,137 lines (168 lines removed)
 
 ### Week 1 (Starting 2025-01-19)
 - [ ] Phase B: Core Extraction (4 hours)

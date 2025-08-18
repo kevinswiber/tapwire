@@ -6,14 +6,13 @@ Migrate internal code from using centralized error Result aliases (TransportResu
 
 ## Background
 
-This is the most substantial task - updating all internal usage to the new pattern. We'll do this module by module, ensuring tests pass after each module migration.
+This is the most substantial task - updating all internal usage to the new pattern. Since we're not maintaining backward compatibility, we can update everything in one go.
 
 ## Key Questions to Answer
 
-1. What's the safest migration order?
-2. How do we handle cross-module error usage?
-3. Should we use qualified paths or imports?
-4. How do we ensure we don't miss any usage?
+1. How do we handle cross-module error usage?
+2. Should we use qualified paths or imports?
+3. How do we ensure we don't miss any usage?
 
 ## Step-by-Step Process
 
@@ -125,7 +124,7 @@ Per module (example for transport):
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Missing some usage | MEDIUM | Use multiple search patterns |
-| Breaking tests | MEDIUM | Migrate module by module, test each |
+| Breaking tests | MEDIUM | Fix as we find them |
 | Import confusion | LOW | Use qualified paths where unclear |
 | Merge conflicts if long-running | HIGH | Complete in single session/PR |
 

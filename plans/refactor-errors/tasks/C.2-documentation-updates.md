@@ -2,22 +2,20 @@
 
 ## Objective
 
-Complete all documentation updates for the error refactoring, including rustdoc comments, migration guide, changelog, README updates, and example code.
+Complete all documentation updates for the error refactoring, including rustdoc comments, changelog, README updates, and example code.
 
 ## Background
 
-Good documentation is critical for this change. Users need to understand:
-- Why the change was made
+Good documentation is critical. Since this is pre-release, we need to document:
 - How to use the new patterns
-- How to migrate existing code
-- When deprecations will be removed
+- The modular error architecture
+- Examples of common patterns
 
 ## Key Questions to Answer
 
 1. What documentation needs updating?
-2. How detailed should the migration guide be?
-3. Should we create a blog post?
-4. How do we handle docs.rs versioning?
+2. What examples best demonstrate the new patterns?
+3. How do we clearly explain module vs crate-level errors?
 
 ## Step-by-Step Process
 
@@ -57,52 +55,7 @@ Update module and error documentation:
 /// [`ShadowcatError`]: crate::ShadowcatError
 ```
 
-### 2. Migration Guide (30 min)
-
-Create comprehensive migration guide:
-
-```markdown
-# Error Handling Migration Guide
-
-## Overview
-Version 0.X.0 introduces module-local error types for better ergonomics...
-
-## Quick Start
-[Simple before/after example]
-
-## Detailed Migration
-
-### Step 1: Update Imports
-[Examples with sed commands]
-
-### Step 2: Update Function Signatures
-[Examples of common patterns]
-
-### Step 3: Handle Cross-Module Errors
-[How to use qualified paths]
-
-## Common Patterns
-
-### Module-Local Operations
-```rust
-use crate::transport::Result;
-fn local_op() -> Result<Data> { ... }
-```
-
-### Cross-Module Operations
-```rust
-fn orchestrate() -> crate::Result<()> {
-    transport::operation()?;
-    session::operation()?;
-    Ok(())
-}
-```
-
-## Troubleshooting
-[Common issues and solutions]
-```
-
-### 3. Changelog Entry (15 min)
+### 2. Changelog Entry (10 min)
 
 Write clear changelog entry:
 
@@ -118,18 +71,12 @@ Write clear changelog entry:
 - Error types are now accessed via their modules (e.g., `transport::Error`)
 - Result types are now module-specific (e.g., `transport::Result<T>`)
 
-### Deprecated
-- `TransportResult<T>` - use `transport::Result<T>` instead
-- `SessionResult<T>` - use `session::Result<T>` instead
-- [List all deprecated types]
-- These deprecated items will be removed in version 0.X+2.0
-
-### Migration
-See [Migration Guide](docs/MIGRATION.md) for detailed instructions.
-Automated migration available via `cargo fix --edition`.
+### Removed
+- Old Result type aliases (TransportResult, SessionResult, etc.)
+- Direct error exports from error module
 ```
 
-### 4. README Updates (10 min)
+### 3. README Updates (10 min)
 
 Update main README with new patterns:
 
@@ -154,7 +101,7 @@ fn orchestrate() -> Result<()> {
 ```
 ```
 
-### 5. Example Code Updates (15 min)
+### 4. Example Code Updates (10 min)
 
 Update all examples to use new patterns:
 
@@ -166,7 +113,7 @@ find examples -name "*.rs"
 sed -i '' 's/use shadowcat::error::/use shadowcat::transport::/g' examples/*.rs
 ```
 
-### 6. API Documentation (10 min)
+### 5. API Documentation (10 min)
 
 Ensure cargo doc output is clear:
 
@@ -181,7 +128,6 @@ cargo doc --no-deps 2>&1 | grep -i warning
 ## Expected Deliverables
 
 ### New Files
-- `docs/MIGRATION.md` - Comprehensive migration guide
 - `docs/ERROR_HANDLING.md` - Error handling patterns guide
 
 ### Modified Files
@@ -218,12 +164,11 @@ cargo doc --no-deps 2>&1 | grep -i warning
 
 ## Duration Estimate
 
-**Total: 2 hours**
-- Rustdoc updates: 30 minutes
-- Migration guide: 30 minutes
-- Changelog: 15 minutes
+**Total: 1 hour**
+- Rustdoc updates: 20 minutes
+- Changelog: 10 minutes
 - README updates: 10 minutes
-- Example updates: 15 minutes
+- Example updates: 10 minutes
 - API documentation: 10 minutes
 
 ## Dependencies

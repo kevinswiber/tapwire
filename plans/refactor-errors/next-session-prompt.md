@@ -1,60 +1,74 @@
-# Next Session: Error Refactoring - Phase A Analysis
+# Next Session: Error Refactoring - Full Implementation
 
 ## Project Context
 
-We're refactoring Shadowcat's error handling from centralized error types to module-local Error and Result types for better ergonomics and clarity, while maintaining full backward compatibility.
+We're refactoring Shadowcat's error handling from centralized error types to module-local Error and Result types for better ergonomics and clarity. Since Shadowcat hasn't been released yet, we can make breaking changes without backward compatibility concerns.
 
 **Project**: Error & Result Modularization
 **Tracker**: `plans/refactor-errors/refactor-errors-tracker.md`
-**Status**: Phase A - Analysis & Planning (0% Complete)
+**Status**: Ready to implement (0% Complete)
 
 ## Current Status
 
 ### What Has Been Completed
 - Plan structure created with all task files
-- Comprehensive tracker with timeline and risk assessment
-- Detailed task breakdowns for all phases
+- Simplified tracker without backward compatibility
+- All tasks updated for clean migration
 
-### What's In Progress
-- **Phase A**: Analysis & Planning (Not Started)
-  - A.0: Current State Inventory
-  - A.1: Migration Impact Analysis
-  - A.2: Compatibility Strategy
+### What's Ready to Start
+- **Phase A**: Analysis (1 hour)
+- **Phase B**: Implementation (6 hours)
+- **Phase C**: Testing & Documentation (2 hours)
 
 ## Your Mission
 
-Complete the analysis phase to understand the current error architecture and plan the migration strategy.
+Complete the entire error refactoring in a single session, migrating from centralized to module-local error patterns.
 
-### Priority 1: Analysis Tasks (5 hours)
+### Full Implementation Plan (9 hours)
 
-1. **A.0: Current State Inventory** (2h)
-   - Document all error enums and their variants
-   - Map Result type aliases and usage counts
+1. **A.0: Current State Inventory** (1h)
+   - Document all error enums and variants
+   - Map Result type aliases and usage
    - Create From implementation graph
-   - Identify public API exposure
    - Success: Complete inventory in `analysis/error-inventory.md`
    
-2. **A.1: Migration Impact Analysis** (2h)
-   - Assess public API impact
-   - Identify import conflict risks
-   - Create complexity matrix by module
-   - Determine migration order
-   - Success: Impact analysis in `analysis/migration-impact.md`
+2. **B.1: Add Module Re-exports** (1h)
+   - Add Error and Result to each module
+   - Update module documentation
+   - Success: All modules have local types
+   
+3. **B.2: Update ShadowcatError** (1h)
+   - Update From implementations to use module paths
+   - Verify error conversions work
+   - Success: Clean error flow from modules to top-level
 
-3. **A.2: Compatibility Strategy** (1h)
-   - Design deprecation approach
-   - Create migration tooling plan
-   - Define version strategy
-   - Success: Strategy document in `analysis/compatibility-strategy.md`
+4. **B.3: Migrate Internal Usage** (3h)
+   - Update all files to use module patterns
+   - Fix imports and type references
+   - Success: No usage of old patterns
+
+5. **B.4: Remove Old Aliases** (1h)
+   - Delete all Result type aliases from error.rs
+   - Clean up error.rs
+   - Success: Clean error module
+
+6. **C.1: Test Suite Updates** (1h)
+   - Update test imports
+   - Add error conversion tests
+   - Success: All tests passing
+
+7. **C.2: Documentation Updates** (1h)
+   - Update rustdoc comments
+   - Update README and examples
+   - Success: Clear documentation
 
 ## Essential Context Files to Read
 
-1. **Primary Tracker**: `plans/refactor-errors/refactor-errors-tracker.md` - Full project context
-2. **Current Error Module**: `shadowcat/src/error.rs` - Existing error definitions
-3. **Task Details**: 
+1. **Primary Tracker**: `plans/refactor-errors/refactor-errors-tracker.md`
+2. **Current Error Module**: `shadowcat/src/error.rs`
+3. **Key Task Files**: 
    - `plans/refactor-errors/tasks/A.0-current-state-inventory.md`
-   - `plans/refactor-errors/tasks/A.1-migration-impact-analysis.md`
-   - `plans/refactor-errors/tasks/A.2-compatibility-strategy.md`
+   - `plans/refactor-errors/tasks/B.3-migrate-internal-usage.md`
 
 ## Working Directory
 
@@ -80,101 +94,95 @@ cargo clippy --all-targets -- -D warnings
 
 ## Implementation Strategy
 
-### Phase 1: Inventory (2 hours)
-1. List all error enums with variant counts
-2. Document Result type aliases
-3. Map From implementations
-4. Count usage per module
-5. Create comprehensive inventory document
+### Phase 1: Analysis (1 hour)
+1. Document all error types
+2. Map usage patterns
+3. Create inventory document
 
-### Phase 2: Impact Analysis (2 hours)
-1. Identify public API changes
-2. Find potential import conflicts
-3. Assess module complexity
-4. Determine safe migration order
-5. Document risks and mitigations
+### Phase 2: Add New Patterns (2 hours)
+1. Add module re-exports
+2. Update ShadowcatError
+3. Verify everything still compiles
 
-### Phase 3: Strategy Design (1 hour)
-1. Design deprecation messages
-2. Plan re-export structure
-3. Create migration tooling
-4. Define version timeline
-5. Draft migration guide outline
+### Phase 3: Migration (4 hours)
+1. Update all internal usage
+2. Remove old aliases
+3. Fix any compilation errors
+
+### Phase 4: Finalize (2 hours)
+1. Update all tests
+2. Update documentation
+3. Final verification
 
 ## Success Criteria Checklist
 
 - [ ] Complete error inventory created
-- [ ] Usage patterns documented
-- [ ] Impact analysis complete
-- [ ] Migration order determined
-- [ ] Compatibility strategy defined
-- [ ] All analysis documents in `analysis/` directory
-- [ ] Tracker updated with findings
+- [ ] All modules have Error and Result types
+- [ ] ShadowcatError uses module paths
+- [ ] All internal usage migrated
+- [ ] Old aliases removed
+- [ ] All tests passing
+- [ ] No clippy warnings
+- [ ] Documentation updated
+- [ ] Clean, consistent error patterns
 
 ## Key Commands
 
 ```bash
-# Analysis commands
+# Analysis
 rg "pub enum \w+Error" src/error.rs -A 5
 rg "pub type \w+Result" src/error.rs
-rg "impl From<.*Error>" src/error.rs
 
-# Usage analysis
-for error in Transport Session Storage Auth Config Intercept Recorder Proxy ReverseProxy; do
-  echo "=== ${error}Error ==="
-  rg "${error}Error" --type rust -g '!target' -c
-done
+# Migration helpers
+# For each module, add at top of mod.rs:
+echo "pub use crate::error::TransportError as Error;" >> src/transport/mod.rs
+echo "pub type Result<T> = std::result::Result<T, Error>;" >> src/transport/mod.rs
 
-# Public API check
-rg "pub.*fn.*->.*Result" --type rust src/
+# Update usage (example for transport)
+rg -l "TransportResult<" | xargs sed -i '' 's/TransportResult</Result</g'
+
+# Verification
+cargo build
+cargo test
+cargo clippy --all-targets -- -D warnings
 ```
 
 ## Important Notes
 
-- **Always use TodoWrite tool** to track progress through analysis tasks
-- **Document everything** - This analysis will guide the entire refactoring
-- **Check public API carefully** - We must maintain backward compatibility
-- **Consider all platforms** - Migration commands should work on macOS/Linux
-- **Think about users** - Make migration as painless as possible
+- **No backward compatibility needed** - Shadowcat is pre-release
+- **Clean break** - Remove all old patterns completely
+- **Use TodoWrite tool** to track progress through tasks
+- **Test frequently** - Run cargo build after each major change
+- **Document as you go** - Update module docs with new patterns
 
-## Key Design Considerations
+## Key Design Principles
 
-1. **Backward Compatibility**: All existing code must continue to compile
-2. **Gradual Migration**: Users need time to adapt to new patterns
-3. **Clear Documentation**: Migration path must be obvious
-4. **Minimal Disruption**: Changes should be transparent to most users
+1. **Module Locality**: Errors belong with their modules
+2. **Clear Hierarchy**: Module errors flow into ShadowcatError
+3. **Ergonomics**: Use unqualified Result within modules
+4. **Consistency**: Same pattern across all modules
 
-## Risk Factors & Blockers
+## Risk Factors
 
-- **Public API Changes**: Must identify all public surfaces
-- **Import Conflicts**: Multiple Result types could confuse
-- **Documentation Clarity**: Must be crystal clear
-
-## Next Steps After This Task
-
-Once analysis is complete:
-- **Phase B**: Implementation (B.1-B.4) - 7 hours
-- **Phase C**: Testing & Documentation (C.1-C.2) - 4 hours
-
-Total project estimate: 16 hours
-
-## Model Usage Guidelines
-
-- **IMPORTANT**: If context window approaches 70%, save progress and create new session
-- Consider using focused searches rather than reading entire files
+- **Missing usage sites**: Use comprehensive search patterns
+- **Import conflicts**: Use qualified paths when needed
+- **Test failures**: Fix as encountered
 
 ## Session Time Management
 
-**Estimated Session Duration**: 5 hours
-- Setup & Context: 15 min
-- Inventory: 2 hours
-- Impact Analysis: 2 hours
-- Strategy Design: 1 hour
-- Documentation: 15 min
+**Estimated Session Duration**: 9 hours
+- Analysis: 1 hour
+- Implementation: 6 hours
+- Testing & Docs: 2 hours
+
+If time is limited, prioritize:
+1. Analysis (essential)
+2. Module re-exports (foundation)
+3. Migration (can be incremental)
 
 ---
 
-**Session Goal**: Complete Phase A analysis with comprehensive documentation in the `analysis/` directory
+**Session Goal**: Complete full error refactoring with all old patterns removed
 
 **Last Updated**: 2025-01-18
-**Next Review**: After Phase A completion
+**Next Review**: After completion

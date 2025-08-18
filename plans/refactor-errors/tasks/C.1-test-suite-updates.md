@@ -2,13 +2,12 @@
 
 ## Objective
 
-Update the test suite to use the new module-local error patterns, ensure all tests pass, and add specific tests for error conversions and deprecation warnings.
+Update the test suite to use the new module-local error patterns, ensure all tests pass, and add specific tests for error conversions.
 
 ## Background
 
 Tests may need updates to use the new error patterns. We also want to add tests that verify:
 - Error conversions work correctly
-- Deprecation warnings appear as expected
 - Module boundaries are respected
 
 ## Key Questions to Answer
@@ -98,25 +97,7 @@ mod error_conversion_tests {
 }
 ```
 
-### 4. Add Deprecation Tests (20 min)
-
-Test that deprecations work:
-
-```rust
-#[test]
-#[allow(deprecated)]
-fn test_deprecated_aliases_still_work() {
-    use crate::error::TransportResult;
-    
-    fn old_style() -> TransportResult<()> {
-        Ok(())
-    }
-    
-    assert!(old_style().is_ok());
-}
-```
-
-### 5. Run Full Test Suite (10 min)
+### 4. Run Full Test Suite (10 min)
 
 ```bash
 # Run all tests
@@ -168,16 +149,15 @@ cargo test --doc
 
 ## Duration Estimate
 
-**Total: 2 hours**
-- Test inventory: 20 minutes
-- Update imports: 40 minutes
-- Add conversion tests: 30 minutes
-- Add deprecation tests: 20 minutes
+**Total: 1 hour**
+- Test inventory: 10 minutes
+- Update imports: 20 minutes
+- Add conversion tests: 20 minutes
 - Full test run: 10 minutes
 
 ## Dependencies
 
-- B.4: Deprecation warnings in place
+- B.4: Old aliases removed
 - All implementation complete
 
 ## Integration Points
