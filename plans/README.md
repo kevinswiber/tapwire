@@ -11,7 +11,6 @@ The following plans are currently being worked on or are ready for implementatio
 #### 🔥 **IMMEDIATE PRIORITY** - Critical Infrastructure
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
-| **[Multi-Session Forward Proxy](multi-session-forward-proxy/multi-session-forward-proxy-tracker.md)** | 🔥 **Phase B Ready** | 6-8 hours remaining | Support multiple concurrent client connections |
 | **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | 🟡 **Ready** | 8-12 hours | Dual session ID tracking for better routing |
 
 #### ✅ **RECENTLY COMPLETED** 
@@ -19,6 +18,11 @@ The following plans are currently being worked on or are ready for implementatio
 |------|--------|----------------|-------------|
 | **[Reverse Proxy Refactor](reverse-proxy-refactor/reverse-proxy-refactor-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | SSE resilience with EventTracker integration |
 | **[Event Tracking Refactor](refactor-event-tracking/refactor-event-tracking-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | Consolidated event tracking with lazy persistence |
+
+#### ⏸️ **PAUSED** - Requires Architecture Changes
+| Plan | Status | Estimated Duration | Description |
+|------|--------|-------------------|-------------|
+| **[Multi-Session Forward Proxy](multi-session-forward-proxy/multi-session-forward-proxy-tracker.md)** | 🔴 **PAUSED** | 20-30 hours (revised) | Requires transport layer redesign - see [lessons learned](multi-session-forward-proxy/lessons-learned.md) |
 
 #### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
@@ -35,22 +39,12 @@ The following plans are currently being worked on or are ready for implementatio
 
 Based on scope, dependencies, and conflict analysis, here's the optimal approach for tackling these plans:
 
-#### **🔥 IMMEDIATE PRIORITY: Multi-Session Forward Proxy**
-This plan addresses a fundamental limitation and should be completed first:
+#### **🔥 IMMEDIATE PRIORITY: Session Mapping Enhancement**
 
-1. **[Multi-Session Forward Proxy](multi-session-forward-proxy/)** (6-8 hours remaining)
-   - Phase A complete, ready for Phase B implementation
-   - Removes single-connection limitation
-   - Enables production use cases
-   - Leverages enhanced SessionManager from recent work
-   - Start with Phase B.0: Refactor ForwardProxy structure
-
-#### **Next Priority: Session Mapping Enhancement**
-After multi-session support:
-
-2. **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/)** (8-12 hours)
+1. **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/)** (8-12 hours)
    - Dual session ID tracking for better routing
    - Builds on completed SSE resilience work
+   - Improves debugging and monitoring capabilities
    - Improves debugging and monitoring capabilities
 
 #### **Phase 1: Quick Win (Week 1, Days 1-2)** ✅ COMPLETE
