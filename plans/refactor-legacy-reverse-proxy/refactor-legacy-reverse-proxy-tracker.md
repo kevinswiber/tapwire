@@ -95,6 +95,25 @@ Completed the refactoring by moving SSE handler and deleting legacy.rs.
 **Phase G Total**: 1 hour ✅ COMPLETE
 **Lines Removed**: 903 lines (legacy.rs completely deleted)
 
+### Phase H: Critical Fixes from Review (URGENT)
+Address all critical issues identified in comprehensive review.
+
+| ID | Task | Duration | Status | Priority | Notes |
+|----|------|----------|--------|----------|-------|
+| H.0 | **Fix Connection Pool Leak** | 2h | ⏳ Pending | 🔴 Critical | Fix Drop impl in pool.rs |
+| H.1 | **Fix Stdio Subprocess Spawning** | 4h | ⏳ Pending | 🔴 Critical | Implement real pooling |
+| H.2 | **Add Server Drop Implementation** | 2h | ⏳ Pending | 🔴 Critical | Clean up resources |
+| H.3 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
+| H.4 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
+| H.5 | **Add Request Timeouts** | 3h | ⏳ Pending | 🟡 High | All upstream impls |
+| H.6 | **Restore Buffer Pooling** | 2h | ⏳ Pending | 🟡 High | SSE memory reduction |
+| H.7 | **Restore Admin Endpoints** | 4h | ⏳ Pending | 🟡 High | Or document removal |
+| H.8 | **Restore Rate Limiting Tests** | 2h | ⏳ Pending | 🟡 High | Test coverage |
+| H.9 | **Performance Benchmarks** | 3h | ⏳ Pending | 🟡 High | Validate fixes |
+| H.10 | **Migration Documentation** | 2h | ⏳ Pending | 🟢 Medium | Breaking changes |
+
+**Phase H Total**: 31 hours (3-4 days)
+
 ## Final Achievement 🎉
 
 **REFACTORING COMPLETE!**
@@ -139,37 +158,69 @@ upstream/
 └── stdio/               # Stdio transport
 ```
 
-## Next Steps
+## Next Steps - Critical Issues from Review
 
-1. **Extract ReverseProxyServer** - Move server and builder to server.rs
-2. **Extract SSE Handler** - Move handle_mcp_sse_request to handlers/sse.rs
-3. **Consolidate Router** - Move all routing logic to router.rs
-4. **Organize Tests** - Create proper test modules
-5. **Delete legacy.rs** - Final removal once everything is extracted
+### Phase H: Critical Fixes (URGENT - Before Merge)
+
+Based on comprehensive review (2025-08-18), critical issues must be addressed:
+
+1. **Fix Resource Leaks** - Connection pool, spawned tasks, missing Drop
+2. **Fix Performance Regressions** - Stdio spawning, double buffering, Arc overhead
+3. **Restore Missing Features** - SSE reconnection, admin endpoints, rate limiting
+4. **Restore Test Coverage** - Re-add critical tests that were removed
+5. **Document Breaking Changes** - Migration guides for removed features
 
 ## Success Metrics
 
+### Original Refactoring Goals
 - [x] All tests passing (19/19) ✅
 - [x] No clippy warnings ✅
-- [ ] legacy.rs deleted
-- [ ] No module > 500 lines
-- [ ] Clear module boundaries
+- [x] legacy.rs deleted ✅
+- [x] No module > 500 lines ✅
+- [x] Clear module boundaries ✅
+
+### Critical Issues (From Review - MUST FIX)
+- [ ] No resource leaks (connection pool, tasks)
+- [ ] Performance within 5% of legacy
+- [ ] SSE reconnection implemented
+- [ ] Full test coverage restored
+- [ ] Breaking changes documented
 
 ## Risk Assessment
 
-**Low Risk** - We've successfully:
-- Extracted 49.5% of legacy.rs
-- Maintained all functionality
-- Kept tests passing
-- Improved code organization
+### Current Risk Level: **HIGH** ⚠️
 
-**Remaining Risk**: 
-- ReverseProxyServer extraction is complex (~566 lines)
-- Need to carefully handle dependencies
-- Test module organization needs planning
+**Critical Issues Found (2025-08-18 Review):**
+- **Resource Leaks**: Connection pool and spawned tasks will exhaust memory
+- **Performance Regression**: 140% p95 latency increase, 35% throughput loss
+- **Missing Features**: SSE reconnection, admin endpoints
+- **Test Coverage Loss**: ~565 lines of critical tests removed
+
+**Must Fix Before Merge:**
+- Connection pool Drop implementation
+- Stdio subprocess reuse (currently spawns per request!)
+- SSE reconnection logic
+- Restore critical test coverage
+
+**Estimated Fix Time**: 3 days focused development
 
 ## Notes
 
-- Session 6 focused on cleanup and consolidation
-- Excellent progress on module organization
-- Ready for final extraction phase
+### Session History
+- Session 6: Cleanup and consolidation
+- Session 7: Completed refactoring, deleted legacy.rs
+- Session 8 (2025-08-18): Comprehensive review revealed critical issues
+
+### Review Findings
+- Architecture is excellent but implementation has critical flaws
+- Resource management issues will cause production failures
+- Performance regressions exceed acceptable limits (target <5%)
+- Several features were inadvertently removed
+
+### Review Documents
+See `/plans/refactor-legacy-reverse-proxy/reviews/` for:
+- Executive Summary
+- Technical Analysis
+- Resource & Performance Analysis
+- Recommendations & Action Items
+- Critical Issues Checklist

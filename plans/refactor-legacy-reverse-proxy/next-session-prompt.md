@@ -1,40 +1,83 @@
-# Next Session Prompt: Phase G - Final SSE Extraction
+# Next Session Prompt - URGENT: Critical Fixes for Reverse Proxy Refactor
 
-## Current Status
-- **legacy.rs**: 903 lines (74% reduction from original 3,465)
-- **Branch**: `refactor/legacy-reverse-proxy` in shadowcat submodule
-- **Compilation**: ✅ All code compiles successfully
+## ⚠️ CRITICAL CONTEXT
 
-## Primary Objective: Extract SSE Handler (Final Phase)
+**The refactoring is architecturally complete BUT has critical production-blocking issues!**
 
-Extract the remaining `handle_mcp_sse_request` function from legacy.rs to complete the refactoring.
+A comprehensive review (2025-08-18) found:
+- **Resource leaks** that will cause production outages
+- **Performance regressions** exceeding 140% at p95 latency
+- **Missing core features** (SSE reconnection, admin endpoints)
+- **90% throughput loss** for stdio transport
 
-### Tasks:
-1. **Extract SSE Handler** (~150 lines)
-   - Move `handle_mcp_sse_request` to `handlers/sse.rs`
-   - Update all imports and references
-   - Ensure mcp.rs handler properly delegates
+## 🔴 Your Mission: Fix Critical Issues (Day 1 - 8 hours)
 
-2. **Clean Up Tests**
-   - Determine which tests should stay vs be deleted
-   - Move integration tests to appropriate test files
-   - Remove obsolete test code
+### Task H.0: Fix Connection Pool Leak (2 hours) 
+**File**: `src/proxy/reverse/upstream/pool.rs:56-60`
+```rust
+// BROKEN - Connections leak when return channel fails
+impl<T> Drop for PooledConnection<T> {
+    fn drop(&mut self) {
+        let _ = self.pool.return_tx.send(connection); // Silent failure!
+    }
+}
+```
+**Fix**: Implement proper cleanup with spawned task to ensure return or count decrement
+**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.0-fix-connection-pool-leak.md`
 
-3. **Final Verification**
-   - Ensure all tests pass
-   - Verify no functionality lost
-   - Check that legacy.rs can be deleted (or is under 500 lines)
+### Task H.1: Fix Stdio Subprocess Spawning (4 hours)
+**File**: `src/proxy/reverse/upstream/stdio.rs:87-106`  
+**Problem**: Creates NEW process per request instead of reusing connections!
+**Impact**: 90% throughput reduction, 10ms overhead per request
+**Fix**: Implement true connection reuse or process pool
+**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.1-fix-stdio-subprocess-spawning.md`
 
-## Context
-- Most functionality has been successfully extracted
-- Clean module structure established
-- Only SSE handler and tests remain in legacy.rs
+### Task H.2: Add Server Drop Implementation (2 hours)
+**File**: `src/proxy/reverse/server.rs`
+**Problem**: No resource cleanup on shutdown - tasks keep running, pools leak
+**Fix**: Implement Drop trait to abort tasks, flush recorder, close pools
+**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.2-add-server-drop-implementation.md`
 
-## Success Criteria
-- [ ] SSE handler extracted to handlers/sse.rs
+## Working Directory & Branch
+```bash
+cd /Users/kevin/src/tapwire/shadowcat
+git checkout refactor/legacy-reverse-proxy
+```
+
+## Validation After Each Fix
+```bash
+# Test for leaks
+cargo test pool_tests::test_connection_pool_leak_prevention
+
+# Check performance
+cargo bench --bench reverse_proxy
+
+# Verify no clippy warnings
+cargo clippy --all-targets -- -D warnings
+```
+
+## Success Criteria for Day 1
+- [ ] Connection pool Drop fixed - no leaks under pressure
+- [ ] Stdio reuses connections - <20ms per request
+- [ ] Server Drop implemented - clean shutdown verified
 - [ ] All tests passing
-- [ ] legacy.rs under 500 lines OR completely removed
-- [ ] No duplicate code or unnecessary imports
+- [ ] Memory stable under load test
 
-## Reference
-Full tracker: `/Users/kevin/src/tapwire/plans/refactor-legacy-reverse-proxy/feature-tracker.md`
+## Critical Resources
+- **Full Review**: `/plans/refactor-legacy-reverse-proxy/reviews/`
+- **All Tasks**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/`
+- **Tracker**: `/plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
+
+## DO NOT
+- Skip tests for any fix
+- Mark complete without verification
+- Merge to main until ALL critical issues fixed
+
+## Priority Order
+1. H.0 first (affects all upstreams)
+2. H.1 second (biggest perf impact)  
+3. H.2 third (prevents resource cleanup)
+
+Each task file has detailed implementation steps, code examples, and test cases. Follow them exactly.
+
+**This is blocking production deployment. Focus and fix these issues!**
