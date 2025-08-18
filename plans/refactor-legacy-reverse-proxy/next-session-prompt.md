@@ -1,100 +1,59 @@
-# Next Session: Phase E - Cleanup & Consolidation
+# Continue Reverse Proxy Refactoring - Phase F Final Extraction
 
 ## Context
-You are continuing the refactoring of shadowcat's reverse proxy `legacy.rs` file. We've successfully eliminated reqwest and extracted major components. Now we need final cleanup.
+We're refactoring shadowcat's monolithic 3,465-line `legacy.rs` reverse proxy into a clean modular architecture. 
 
-## Current Status
-- **Session**: Starting session 6
-- **Branch**: `refactor/legacy-reverse-proxy` in shadowcat submodule  
-- **Progress**: legacy.rs at 2,196 lines (down from 3,465)
-- **All 20 tests passing** ✅
-- **Reqwest eliminated** ✅
+**Current Status**: Phase E complete - legacy.rs reduced to 1,749 lines (49.5% reduction)
+**Tests**: 19 passing
+**Goal**: Extract remaining components and delete legacy.rs entirely
 
-## What Was Accomplished (Session 5)
-1. ✅ Completely eliminated reqwest dependency
-2. ✅ Created hyper-based SSE initiator (288 lines)
-3. ✅ Deleted 538 lines from legacy.rs
-4. ✅ Removed unused modules (upstream_response.rs, json_processing.rs)
-5. ✅ All HTTP/SSE now uses hyper exclusively
+## Phase F Tasks (Priority Order)
 
-## Priority Tasks for Phase E
+### F.0 - Move ReverseProxyServer & Builder (~566 lines)
+Extract the main server implementation to `server.rs`:
+- ReverseProxyServer struct and its impl
+- ReverseProxyServerBuilder and its impl  
+- Keep builder pattern intact
+- Update imports in main.rs
 
-### Task E.0: Consolidate Selectors (30 min)
-- Compare `selector.rs` vs `upstream/selector.rs`
-- Merge duplicate functionality
-- Single source of truth for upstream selection
+### F.1 - Move handle_mcp_sse_request (~163 lines)
+Extract SSE handler to `handlers/sse.rs`:
+- Move the entire handle_mcp_sse_request function
+- Update handlers/mcp.rs to import from handlers/sse.rs instead of legacy
+- Ensure all SSE streaming modules are properly connected
 
-### Task E.1: Rename Hyper Modules (30 min)
-- Rename `hyper_raw_streaming.rs` → better name
-- Rename `hyper_sse_intercepted.rs` → better name
-- Create proper module structure (streaming/ or sse/)
+### F.2 - Move Router Creation (~70 lines)
+Extract create_router to `router.rs`:
+- Move the create_router function
+- Update server to use router::create_router
+- Ensure all routes are properly configured
 
-### Task E.2: Clean Up Old Files (15 min)
-- Delete `handlers/mcp_old.rs`
-- Delete `handlers/mcp_original.rs`
-- Remove any .bak files
+### F.3 - Move Health/Metrics Handlers (~100 lines)
+Extract to `handlers/health.rs`:
+- handle_health function
+- handle_metrics function
+- Update router to use handlers::health
 
-### Task E.3: Extract Remaining Handlers (2 hours)
-- Move `handle_mcp_request` from legacy.rs to handlers/
-- Move `handle_mcp_sse_request` from legacy.rs to handlers/
-- Create handlers/helpers.rs for shared logic
-- Target: legacy.rs under 1,800 lines
+### F.4 - Organize Tests (~850 lines)
+Create proper test modules:
+- Move integration tests to tests/
+- Create unit test modules for each component
+- Ensure all tests still pass
 
-### Task E.4: Final Server Extraction (1 hour)
-- Move ReverseProxyServer implementation to server.rs
-- Move builder pattern to server.rs
-- Target: legacy.rs under 1,000 lines
+### F.5 - Delete legacy.rs
+Final removal once everything is extracted and tests pass
 
-## Commands to Run
-```bash
-# Navigate to shadowcat
-cd shadowcat
+## Key Files to Reference
+- Main tracker: `/Users/kevin/src/tapwire/plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
+- Legacy file: `/Users/kevin/src/tapwire/shadowcat/src/proxy/reverse/legacy.rs`
+- Phase F tasks: `/Users/kevin/src/tapwire/plans/refactor-legacy-reverse-proxy/tasks/F.0-extract-server.md`
 
-# Check current status
-git status
-wc -l src/proxy/reverse/legacy.rs
-ls -la src/proxy/reverse/*.bak* 2>/dev/null
+## Success Criteria
+- All 19 tests passing
+- No clippy warnings
+- legacy.rs completely removed
+- No module exceeds 500 lines
+- Clean module boundaries
 
-# Run tests frequently
-cargo test --lib proxy::reverse
-
-# Before committing
-cargo fmt
-cargo clippy --all-targets -- -D warnings
-```
-
-## Module Structure Issues to Fix
-```
-Current Issues:
-- Duplicate: selector.rs vs upstream/selector.rs
-- Poor naming: hyper_raw_streaming.rs, hyper_sse_intercepted.rs  
-- Old files: mcp_old.rs, mcp_original.rs
-- Large legacy.rs still has handlers and server code
-```
-
-## Success Criteria for This Session
-- [ ] No duplicate selector modules
-- [ ] No hyper_ prefixed files
-- [ ] No old/backup files
-- [ ] legacy.rs under 1,000 lines
-- [ ] All 20 tests still passing
-- [ ] No clippy warnings
-
-## Git Workflow
-```bash
-# You're on branch refactor/legacy-reverse-proxy
-cd shadowcat
-git add -A
-git commit -m "refactor: [description]"
-
-# After significant progress
-cd ..  # back to tapwire
-git add shadowcat plans/
-git commit -m "chore: update shadowcat submodule and tracking"
-```
-
-## Important Notes
-- We're in cleanup phase - focus on organization
-- Don't break anything that's working
-- Small, incremental commits
-- Goal is to make legacy.rs deletable
+## Start Command
+Begin with Phase F.0 - extracting ReverseProxyServer to server.rs. This is the largest remaining component (~566 lines) and will significantly reduce legacy.rs.
