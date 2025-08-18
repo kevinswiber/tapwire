@@ -1,66 +1,49 @@
-# Next Session: Continue Legacy Reverse Proxy Refactoring - Phase D
+# Next Session: Phase E - Cleanup & Consolidation
 
 ## Context
-You are continuing the refactoring of the shadowcat reverse proxy's `legacy.rs` file, following the architecture defined in `@plans/refactor-legacy-reverse-proxy/analysis/final-architecture.md`.
+You are continuing the refactoring of shadowcat's reverse proxy `legacy.rs` file. We've successfully eliminated reqwest and extracted major components. Now we need final cleanup.
 
 ## Current Status
-- **Session**: 4 complete, starting session 5
-- **Branch**: `refactor/legacy-reverse-proxy` in shadowcat submodule
-- **Progress**: legacy.rs at 2,897 lines (down from 3,465)
-- **Phase C**: Complete ✅
-- **Phase D**: Started - Upstream extraction
+- **Session**: Starting session 6
+- **Branch**: `refactor/legacy-reverse-proxy` in shadowcat submodule  
+- **Progress**: legacy.rs at 2,196 lines (down from 3,465)
 - **All 20 tests passing** ✅
+- **Reqwest eliminated** ✅
 
-## What Was Accomplished (Session 4)
-1. ✅ Thinned handlers/mcp.rs from 492 → 192 lines (proper orchestrator pattern)
-2. ✅ Added session version tracking functions to session_helpers.rs
-3. ✅ Added frame recording functions to pipeline.rs  
-4. ✅ Created upstream/http/sse.rs placeholder (delegates to legacy)
-5. ✅ Renamed session_ops.rs → session_helpers.rs per architecture
-6. ✅ Created upstream/http/ module structure
+## What Was Accomplished (Session 5)
+1. ✅ Completely eliminated reqwest dependency
+2. ✅ Created hyper-based SSE initiator (288 lines)
+3. ✅ Deleted 538 lines from legacy.rs
+4. ✅ Removed unused modules (upstream_response.rs, json_processing.rs)
+5. ✅ All HTTP/SSE now uses hyper exclusively
 
-## Priority Tasks for Next Session
+## Priority Tasks for Phase E
 
-### Task D.1: Extract HTTP Client Logic (2 hours)
-Move the actual HTTP upstream implementation from legacy.rs:
-- Extract `process_via_http_hyper()` → upstream/http/client.rs
-- Create proper Hyper client wrapper
-- Remove duplicated logic between legacy and upstream/http.rs
-- Update handlers to use the new upstream service
+### Task E.0: Consolidate Selectors (30 min)
+- Compare `selector.rs` vs `upstream/selector.rs`
+- Merge duplicate functionality
+- Single source of truth for upstream selection
 
-### Task D.2: Extract Stdio Processing (1.5 hours)
-Move stdio upstream implementation:
-- Extract `process_via_stdio_pooled()` → enhance upstream/stdio.rs
-- Implement connection pooling properly
-- Remove from legacy.rs
-- Update handlers to use the new upstream service
+### Task E.1: Rename Hyper Modules (30 min)
+- Rename `hyper_raw_streaming.rs` → better name
+- Rename `hyper_sse_intercepted.rs` → better name
+- Create proper module structure (streaming/ or sse/)
 
-### Task D.3: Complete SSE Extraction (2 hours)
-Replace placeholder with actual implementation:
-- Move full `proxy_sse_from_upstream()` logic from legacy.rs
-- Implement in upstream/http/sse.rs (not just a placeholder)
-- Handle reqwest_eventsource dependencies
-- Remove from legacy.rs
+### Task E.2: Clean Up Old Files (15 min)
+- Delete `handlers/mcp_old.rs`
+- Delete `handlers/mcp_original.rs`
+- Remove any .bak files
 
-### Task D.4: Handler Integration (1 hour)
-Update handlers to use upstream services properly:
-- Remove direct calls to legacy functions
-- Use UpstreamService trait
-- Ensure proper error handling
-- Test all proxy modes
+### Task E.3: Extract Remaining Handlers (2 hours)
+- Move `handle_mcp_request` from legacy.rs to handlers/
+- Move `handle_mcp_sse_request` from legacy.rs to handlers/
+- Create handlers/helpers.rs for shared logic
+- Target: legacy.rs under 1,800 lines
 
-## Key Files to Work With
-- `shadowcat/src/proxy/reverse/legacy.rs` - Main file being refactored (goal: reduce significantly)
-- `shadowcat/src/proxy/reverse/handlers/mcp.rs` - Should use upstream services, not legacy
-- `shadowcat/src/proxy/reverse/upstream/http/` - Implement client.rs, complete sse.rs
-- `shadowcat/src/proxy/reverse/upstream/stdio.rs` - Enhance with pooling logic
-
-## Architecture Reminders
-Per `analysis/final-architecture.md`:
-- **Handlers** should be thin orchestrators (<200 lines)
-- **Upstream modules** handle all communication with upstream servers
-- **No direct legacy.rs calls** from handlers after this phase
-- **UpstreamService trait** is the abstraction boundary
+### Task E.4: Final Server Extraction (1 hour)
+- Move ReverseProxyServer implementation to server.rs
+- Move builder pattern to server.rs
+- Target: legacy.rs under 1,000 lines
 
 ## Commands to Run
 ```bash
@@ -70,6 +53,7 @@ cd shadowcat
 # Check current status
 git status
 wc -l src/proxy/reverse/legacy.rs
+ls -la src/proxy/reverse/*.bak* 2>/dev/null
 
 # Run tests frequently
 cargo test --lib proxy::reverse
@@ -79,34 +63,38 @@ cargo fmt
 cargo clippy --all-targets -- -D warnings
 ```
 
+## Module Structure Issues to Fix
+```
+Current Issues:
+- Duplicate: selector.rs vs upstream/selector.rs
+- Poor naming: hyper_raw_streaming.rs, hyper_sse_intercepted.rs  
+- Old files: mcp_old.rs, mcp_original.rs
+- Large legacy.rs still has handlers and server code
+```
+
 ## Success Criteria for This Session
-- [ ] legacy.rs reduced to <2400 lines (remove ~500 lines)
-- [ ] HTTP client logic in upstream/http/client.rs
-- [ ] Stdio processing in upstream/stdio.rs  
-- [ ] SSE logic in upstream/http/sse.rs (not placeholder)
-- [ ] Handlers using UpstreamService trait
+- [ ] No duplicate selector modules
+- [ ] No hyper_ prefixed files
+- [ ] No old/backup files
+- [ ] legacy.rs under 1,000 lines
 - [ ] All 20 tests still passing
 - [ ] No clippy warnings
-
-## Important Notes
-- **Focus on extraction**, not perfection - we can refine later
-- **Keep tests passing** at each step
-- **Small, incremental commits** make review easier
-- The goal is to empty legacy.rs so it can be deleted
-- Follow the architecture in final-architecture.md strictly
 
 ## Git Workflow
 ```bash
 # You're on branch refactor/legacy-reverse-proxy
 cd shadowcat
 git add -A
-git commit -m "refactor: [description of extraction]"
+git commit -m "refactor: [description]"
 
 # After significant progress
 cd ..  # back to tapwire
 git add shadowcat plans/
-git commit -m "chore: update shadowcat submodule and tracking docs"
-git push
+git commit -m "chore: update shadowcat submodule and tracking"
 ```
 
-Remember: The goal is to completely eliminate legacy.rs by moving all its functionality to proper modules!
+## Important Notes
+- We're in cleanup phase - focus on organization
+- Don't break anything that's working
+- Small, incremental commits
+- Goal is to make legacy.rs deletable
