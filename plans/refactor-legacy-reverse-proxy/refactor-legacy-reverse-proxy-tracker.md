@@ -89,12 +89,12 @@ Create upstream abstractions and thin handlers.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Create UpstreamService Trait** | 1h | B.5 | ⬜ Not Started | | upstream/mod.rs |
-| C.1 | **Implement Upstream Modules** | 3h | C.0 | ⬜ Not Started | | stdio.rs, http/* |
+| C.0 | **Create UpstreamService Trait** | 1h | B.5 | ✅ Complete | | upstream/mod.rs |
+| C.1 | **Implement Upstream Modules** | 3h | C.0 | ✅ Complete | | stdio.rs, http.rs, selector.rs |
 | C.2 | **Create Thin Handlers** | 2h | C.1 | ⬜ Not Started | | mcp.rs, health.rs |
 | C.3 | **Wire Router & Server** | 1h | C.2 | ⬜ Not Started | | router.rs, server.rs |
 
-**Phase C Total**: 7 hours
+**Phase C Total**: 7 hours (4 hours complete, 3 hours remaining)
 
 ### Phase D: Cleanup & Validation (Week 3)
 Remove legacy.rs and validate everything works.
@@ -123,6 +123,12 @@ Remove legacy.rs and validate everything works.
   - Comprehensive analysis of legacy.rs
   - Designed refined architecture
   - Created implementation plan
+- **2025-01-18**: Phase C (Partial) - Upstream Abstractions (4 hours)
+  - Created UpstreamService trait
+  - Implemented HTTP and stdio upstreams
+  - Added load balancing selector
+  - Moved hyper client to transport module
+  - Removed HyperResponse wrapper
 
 ### Week 1 (Starting 2025-01-19)
 - [ ] Phase B: Core Extraction (4 hours)
@@ -131,7 +137,9 @@ Remove legacy.rs and validate everything works.
   - Extract foundation modules
 
 ### Week 2
-- [ ] Phase C: Upstream & Handler Implementation (7 hours)
+- [ ] Phase C: Complete Handler Implementation (3 hours remaining)
+  - Create thin handlers
+  - Wire router & server
 
 ### Week 3  
 - [ ] Phase D: Cleanup & Validation (5 hours)

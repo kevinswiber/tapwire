@@ -1,205 +1,157 @@
-# Next Session: Implementation Phase B - Core Extraction
+# Next Session: Complete Foundation Extraction (Phase B) and Handlers (Phase C.2-C.3)
 
 ## Project Context
 
-Refactoring the monolithic 3,682-line `legacy.rs` reverse proxy into clean modules. Phase A (Analysis & Design) is COMPLETE with refined architecture that addresses naming conflicts, leverages transport module, and removes admin UI.
+Refactoring the monolithic 3,298-line `legacy.rs` reverse proxy into clean modules. Phase A (Analysis) and Phase C.0-C.1 (Upstream Abstractions) are COMPLETE.
 
 **Project**: Refactor Legacy Reverse Proxy
 **Tracker**: `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
-**Status**: Phase A Complete - Ready for Phase B Implementation
+**Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
+**Status**: Upstream abstractions complete, need foundation modules and handlers
 
 ## Current Status
 
-### What Has Been Completed
-- **Phase A - Analysis & Design** (✅ Completed 2025-01-18)
-  - Analyzed 3,682-line legacy.rs structure
-  - Designed clean architecture with 14 modules, all <300 lines
-  - Refined plan to avoid conflicts and reuse transport
-  - Created [Final Architecture](analysis/final-architecture.md)
-  - Identified [Transport Overlap](analysis/transport-overlap-analysis.md) for analysis
+### Completed
+- ✅ Phase A: Analysis & Design
+- ✅ Phase C.0-C.1: Upstream abstractions (trait, HTTP, stdio, selector)
+- ✅ Moved hyper client to transport module
+- ✅ All 20 tests passing
 
-### Key Architecture Decisions
-- **Remove admin UI entirely** (~900 lines to delete)
-- **Rename to avoid conflicts**: upstream/ instead of transport/, session_helpers.rs instead of session/
-- **Leverage transport::sse** instead of reimplementing
-- **Thin handlers** (<150 lines) that only orchestrate
-- **Pipeline pattern** for cross-cutting concerns
+### Module Structure Created
+```
+src/proxy/reverse/
+├── upstream/
+│   ├── mod.rs       # UpstreamService trait ✅
+│   ├── selector.rs  # Load balancing ✅
+│   ├── http.rs      # HTTP upstream ✅
+│   └── stdio.rs     # Stdio upstream ✅
+├── config.rs        # Existing (needs expansion)
+├── metrics.rs       # Existing (needs expansion)
+└── legacy.rs        # 3,298 lines to refactor
+```
 
 ## Your Mission
 
-Begin Phase B implementation following the final architecture plan.
+### Priority 1: Foundation Extraction (Phase B) - 3 hours
 
-### Priority 0: Quick Analysis & Admin Removal (1 hour)
-
-1. **Transport Overlap Analysis** (30 min)
-   - Review transport module capabilities
-   - Identify what proxy::reverse can reuse
-   - Note what might move to transport later
-   - Document findings in transport-overlap-analysis.md
-
-2. **Remove Admin UI** (30 min)
+1. **Remove Admin UI** (30 min)
+   ```bash
+   # Count admin lines
+   grep -n "admin" src/proxy/reverse/legacy.rs | wc -l
+   ```
    - Delete handle_admin_request function
    - Remove admin routes from router
-   - Delete admin-related tests
-   - Verify remaining tests pass
+   - Update tests
 
-### Priority 1: Foundation Modules (3 hours)
-
-3. **Extract Error Types** (30 min)
+2. **Extract Error Types** (30 min)
    - Create `src/proxy/reverse/error.rs`
-   - Move ReverseProxyError enum and IntoResponse impl
-   - Add re-export in legacy.rs
+   - Move ReverseProxyError enum if not using crate::error
+   - Add re-exports
 
-4. **Extract Config Types** (1 hour)
-   - Create `src/proxy/reverse/config.rs`
-   - Move all config structs (UpstreamConfig, LoadBalancingStrategy, etc.)
-   - Include Default impls
+3. **Extract State & Expand Config** (1 hour)
+   - Create `src/proxy/reverse/state.rs` - AppState struct
+   - Expand `config.rs` with missing config types
+   - Move all config-related code
 
-5. **Extract Metrics & State** (30 min)
-   - Create `src/proxy/reverse/metrics.rs` - ReverseProxyMetrics
-   - Create `src/proxy/reverse/state.rs` - AppState
+4. **Extract Helper Modules** (1 hour)
+   - `headers.rs` - Header manipulation utilities
+   - `session_helpers.rs` - Session operations
+   - `pipeline.rs` - Interceptor/pause/record orchestration
 
-6. **Extract Helper Modules** (1 hour)
-   - Create `src/proxy/reverse/headers.rs` - Header utilities
-   - Create `src/proxy/reverse/session_helpers.rs` - Session operations
-   - Create `src/proxy/reverse/pipeline.rs` - Intercept/pause/record
+### Priority 2: Thin Handlers (Phase C.2-C.3) - 3 hours
 
-### Priority 2: Upstream Abstraction (if time permits)
+5. **Create Handler Modules** (2 hours)
+   - `handlers/mod.rs` - Exports
+   - `handlers/mcp.rs` - Main /mcp endpoint (<150 lines)
+   - `handlers/health.rs` - Health & metrics endpoints
+   - Handlers should orchestrate, not implement logic
 
-7. **Create UpstreamService Trait** (30 min)
-   - Create `src/proxy/reverse/upstream/mod.rs`
-   - Define trait and response types
-
-## Working Directory
-
-```bash
-cd /Users/kevin/src/tapwire/shadowcat
-```
+6. **Wire Router & Server** (1 hour)
+   - Create `router.rs` - Route setup
+   - Create `server.rs` - Server builder pattern
+   - Update mod.rs exports
 
 ## Commands to Run First
 
 ```bash
-# Create or checkout refactor branch
-git checkout -b refactor/legacy-reverse-proxy || git checkout refactor/legacy-reverse-proxy
+cd /Users/kevin/src/tapwire/shadowcat
+git checkout refactor/legacy-reverse-proxy
+git pull
 
-# Baseline tests (note the count)
+# Verify starting point
 cargo test proxy::reverse --lib | grep "test result"
 # Should show: "test result: ok. 20 passed"
 
-# Check transport module structure for reuse opportunities
-ls -la src/transport/
-grep -r "pub struct.*Transport" src/transport/
-grep -r "impl.*Transport" src/transport/
+# Check legacy.rs size
+wc -l src/proxy/reverse/legacy.rs
+# Currently: 3,298 lines
 
-# Count admin-related lines to remove
-grep -n "admin" src/proxy/reverse/legacy.rs | wc -l
-
-# Create module structure
-mkdir -p src/proxy/reverse/{handlers,upstream/http}
+# See what needs extraction
+grep -n "struct AppState" src/proxy/reverse/legacy.rs
+grep -n "handle_admin" src/proxy/reverse/legacy.rs
 ```
 
 ## Implementation Strategy
 
-### For Admin Removal:
-```rust
-// Find and delete:
-// - handle_admin_request function
-// - route("/admin", ...) in router
-// - Any admin HTML generation
-// - Admin-specific imports
+### For Each Extraction:
+1. Create new file
+2. Move code with imports
+3. Add temporary re-exports in legacy.rs
+4. Run tests immediately
+5. Fix compilation errors
+6. Commit when green
 
-// After deletion, run:
-cargo test proxy::reverse --lib
-// Some tests might fail if they were admin-related - remove those too
+### Handler Pattern:
+```rust
+// handlers/mcp.rs - THIN orchestration
+pub async fn handle_mcp_request(
+    State(app): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Response> {
+    // 1. Extract/validate headers
+    let mcp_headers = headers::extract_mcp_headers(&headers)?;
+    
+    // 2. Parse body
+    let message = parse_request_body(&body)?;
+    
+    // 3. Get/create session
+    let session = session_helpers::get_or_create_session(&app, &mcp_headers)?;
+    
+    // 4. Apply pipeline (intercept/pause/record)
+    let message = pipeline::process_inbound(&app, message, &session).await?;
+    
+    // 5. Select upstream
+    let upstream = app.upstream_selector.select().await
+        .ok_or(ReverseProxyError::NoUpstreamsAvailable)?;
+    
+    // 6. Forward to upstream
+    let response = upstream.send_request(message, &session, app.interceptor_chain.clone()).await?;
+    
+    // 7. Apply outbound pipeline
+    pipeline::process_outbound(&app, response, &session).await
+}
 ```
 
-### For Each Module Extraction:
-```rust
-// 1. Create new file
-// 2. Move types/functions with their imports
-// 3. In legacy.rs, add:
-mod error;  // or whatever module
-use error::*;  // temporary compatibility
-
-// 4. Test immediately
-cargo test proxy::reverse --lib
-
-// 5. Fix any compilation errors
-// 6. Run clippy
-cargo clippy --all-targets -- -D warnings
-
-// 7. Commit if green
-git add -A && git commit -m "refactor: extract {module} from legacy.rs"
-```
-
-## Success Criteria Checklist
-
-- [ ] Admin UI completely removed (~900 lines gone)
-- [ ] Transport overlap documented
-- [ ] Error module created (<50 lines)
-- [ ] Config module created (<250 lines)
-- [ ] Metrics module created (<50 lines)
-- [ ] State module created (<100 lines)
-- [ ] Helper modules created (headers, session_helpers, pipeline)
-- [ ] All non-admin tests still passing
+## Success Criteria
+- [ ] Admin UI completely removed
+- [ ] All foundation modules extracted
+- [ ] Handlers < 150 lines each
+- [ ] Legacy.rs < 2,500 lines
+- [ ] All 20 tests still passing
 - [ ] No clippy warnings
-- [ ] Each extraction committed separately
 
-## Key Architecture Points to Remember
+## Key Files to Reference
+- See `plans/refactor-legacy-reverse-proxy/phase-c-summary.md` for what was just completed
+- Check `src/proxy/reverse/upstream/` for the new upstream abstractions
+- Transport HTTP client: `src/transport/outgoing/http.rs::send_mcp_request_raw()`
 
-1. **upstream/ not transport/** - Avoid naming conflict
-2. **session_helpers.rs not session/** - Single file, not a module
-3. **relay.rs not forward.rs** - Clearer naming in reverse proxy context
-4. **Reuse transport::sse** - Don't reimplement SSE parsing
-5. **Thin handlers** - Move logic to pipeline.rs and upstream/
-
-## Example Extraction Pattern
-
-```rust
-// src/proxy/reverse/pipeline.rs
-pub mod intercept {
-    use crate::interceptor::{InterceptAction, InterceptContext};
-    
-    pub async fn apply_inbound(
-        app: &AppState,
-        msg: Value,
-    ) -> Result<Value> {
-        // Move interception logic here
-    }
-}
-
-pub mod record {
-    use crate::recorder::TapeRecorder;
-    
-    pub async fn record_request(
-        recorder: Option<&Arc<TapeRecorder>>,
-        envelope: MessageEnvelope,
-    ) -> Result<()> {
-        // Move recording logic here
-    }
-}
-```
-
-## Next Steps After This Session
-
-Once foundation modules are extracted:
-- **Phase C**: Create upstream implementations
-- **Phase D**: Thin out handlers to <150 lines
-- **Phase E**: Final cleanup and legacy.rs deletion
-
-## Session Time Management
-
-**Estimated Session Duration**: 4-5 hours
-- Transport analysis: 30 min
-- Admin removal: 30 min
-- Type extractions: 2 hours
-- Helper modules: 1 hour
-- Testing & validation: 30 min
-- Documentation: 30 min
+## Time Estimate
+- Foundation extraction: 3 hours
+- Handler creation: 2 hours  
+- Wiring: 1 hour
+- Testing/validation: 30 min
+**Total: 6.5 hours**
 
 ---
-
-**Session Goal**: Remove admin UI and extract foundation modules while maintaining test coverage
-
-**Last Updated**: 2025-01-18
-**Next Review**: After Priority 1 tasks complete
+**Remember**: The goal is incremental refactoring. Each extraction should maintain green tests!
