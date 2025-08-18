@@ -1,100 +1,116 @@
-# Next Session: Extract Large Functions from legacy.rs (Phase D Preparation)
+# Next Session: Continue Legacy Reverse Proxy Refactoring - Phase C
 
-## Project Context
-
-Refactoring the monolithic 3,137-line `legacy.rs` reverse proxy into clean modules. Phase B and C are COMPLETE.
-
-**Project**: Refactor Legacy Reverse Proxy
-**Tracker**: `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
-**Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
-**Status**: Need to extract ~637 more lines to reach target of < 2,500 lines
+## Context
+You are continuing the refactoring of the shadowcat reverse proxy's `legacy.rs` file, following the architecture defined in `@plans/refactor-legacy-reverse-proxy/analysis/final-architecture.md`.
 
 ## Current Status
+- **Session**: 3 complete, starting session 4
+- **Branch**: `refactor/legacy-reverse-proxy` in shadowcat submodule
+- **Progress**: legacy.rs reduced from 3,465 → 2,894 lines (571 lines extracted)
+- **Phase C**: 4.5 hours complete, 5 hours remaining
+- **All 20 tests passing** ✅
 
-### Completed
-- ✅ Phase A: Analysis & Design
-- ✅ Phase B: Foundation modules extracted (state, headers, session_helpers, selector)
-- ✅ Phase C: Upstream abstractions and handlers created
-- ✅ All 20 tests passing
-- ✅ Clean module structure established
+## What Was Done (Session 3)
+1. Created handlers/ module with thin orchestrator pattern
+2. Extracted MCP handlers to handlers/mcp.rs (486 lines - TOO BIG)
+3. Created handlers/health.rs (21 lines)
+4. Extracted interceptor logic to pipeline.rs (236 lines)
+5. Renamed session_helpers.rs to session_ops.rs
+6. Updated router.rs to use new handlers
 
-### Progress
-- **Starting point**: 3,465 lines
-- **After Session 1**: 3,307 lines (158 lines removed)
-- **After Session 2**: 3,137 lines (170 lines removed)
-- **Total removed**: 328 lines
-- **Target**: < 2,500 lines (need to remove ~637 more)
+## Critical Next Task: Thin the MCP Handler
+**PRIORITY**: The handlers/mcp.rs file is 486 lines but should be <150 lines per architecture.
 
-## Your Mission
+Move logic OUT of handlers/mcp.rs to appropriate modules:
+- Session version tracking → session_ops.rs
+- Frame recording logic → pipeline.rs or dedicated module
+- Upstream routing/selection → upstream modules
+- Request/response processing → upstream modules
 
-### Priority: Extract Large Functions
+The handler should ONLY:
+1. Parse/validate request
+2. Get/create session
+3. Call pipeline for processing
+4. Call upstream for execution
+5. Format and return response
 
-The largest remaining functions in legacy.rs that need extraction:
+## Next Tasks (Priority Order)
 
-1. **handle_mcp_request** (~551 lines) - Already have thin version in handlers/mcp.rs
-   - Extract the actual processing logic to appropriate modules
-   - Move interceptor handling to pipeline.rs
-   - Move upstream processing to upstream modules
-
-2. **handle_mcp_sse_request** (~400 lines) - SSE handling
-   - Create sse_handler.rs or integrate with existing SSE modules
-   - Extract SSE-specific logic
-
-3. **process_message** and related upstream processing
-   - Move to upstream modules
-   - Consolidate with existing upstream implementations
-
-### Strategy
-
-1. **Start with handle_mcp_request internals**
-   - Move interceptor logic to pipeline.rs
-   - Move session tracking logic to session_helpers.rs
-   - Move upstream communication to upstream modules
-   - Keep handler thin (< 150 lines)
-
-2. **Extract SSE handling**
-   - Consider reusing transport::sse modules
-   - Create clean abstraction for SSE responses
-
-3. **Consolidate upstream processing**
-   - Move process_via_stdio_pooled to upstream/stdio.rs
-   - Move process_via_http_hyper to upstream/http/
-   - Remove duplication
-
-## Commands to Run First
-
+### Task C.5: Thin MCP Handler (2 hours) 🔄
 ```bash
-cd /Users/kevin/src/tapwire/shadowcat
-git checkout refactor/legacy-reverse-proxy
-git pull
-
-# Verify starting point
-cargo test proxy::reverse --lib | grep "test result"
-# Should show: "test result: ok. 20 passed"
-
-# Check legacy.rs size
-wc -l src/proxy/reverse/legacy.rs
-# Currently: 3,137 lines
-
-# Find large functions
-grep -n "^async fn\|^fn" src/proxy/reverse/legacy.rs | head -20
+cd shadowcat
+# The handlers/mcp.rs file needs to be reduced from 486 to <150 lines
+# Move business logic to appropriate modules
 ```
 
-## Success Criteria
-- [ ] legacy.rs < 2,500 lines
+### Task C.6: Extract Upstream Logic (3 hours)
+Create upstream module structure per final-architecture.md:
+```
+upstream/
+├── mod.rs               # UpstreamService trait
+├── selector.rs          # Already exists
+├── stdio.rs            # Extract from legacy.rs
+└── http/
+    ├── mod.rs          # HttpUpstream impl
+    ├── client.rs       # Move process_via_http_hyper
+    ├── relay.rs        # JSON response handling
+    └── sse_adapter.rs  # Move proxy_sse_from_upstream
+```
+
+Functions to move from legacy.rs:
+- `process_via_http_hyper()` → upstream/http/client.rs
+- `proxy_sse_from_upstream()` → upstream/http/sse_adapter.rs
+- `process_via_stdio_pooled()` → upstream/stdio.rs
+- `process_message()` → distribute appropriately
+
+### Phase D: Final Cleanup
+- Move tests from legacy.rs to appropriate modules
+- Delete legacy.rs when empty
+- Update all imports
+- Validate performance
+
+## Commands to Run
+```bash
+# Navigate to shadowcat
+cd shadowcat
+
+# Check current status
+git status
+wc -l src/proxy/reverse/legacy.rs
+wc -l src/proxy/reverse/handlers/mcp.rs
+
+# Run tests frequently
+cargo test --lib proxy::reverse
+
+# Before committing
+cargo fmt
+cargo clippy --all-targets -- -D warnings
+```
+
+## Success Criteria for This Session
+- [ ] handlers/mcp.rs reduced to <150 lines
+- [ ] Upstream modules created and populated
+- [ ] legacy.rs reduced to <2000 lines
 - [ ] All 20 tests still passing
 - [ ] No clippy warnings
-- [ ] Each extracted module < 500 lines
 
-## Time Estimate
-- Extract handle_mcp_request logic: 2 hours
-- Extract SSE handling: 1.5 hours
-- Consolidate upstream processing: 1.5 hours
-- Testing/validation: 30 min
-**Total: 5.5 hours**
+## Important Files
+- `shadowcat/src/proxy/reverse/legacy.rs` - Main file being refactored
+- `shadowcat/src/proxy/reverse/handlers/mcp.rs` - Needs thinning
+- `plans/refactor-legacy-reverse-proxy/analysis/final-architecture.md` - Architecture guide
+- `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md` - Progress tracking
 
----
-**Remember**: 
-- Incremental refactoring - keep tests green at each step
-- Use temporary re-exports in legacy.rs during migration
-- Commit frequently with clear messages
+## Git Workflow
+```bash
+# You're on branch refactor/legacy-reverse-proxy
+cd shadowcat
+git add -A
+git commit -m "refactor: [description of extraction]"
+
+# After significant progress
+cd ..  # back to tapwire
+git add shadowcat plans/
+git commit -m "chore: update shadowcat submodule and tracking docs"
+```
+
+Remember: The goal is to completely empty legacy.rs so it can be deleted!

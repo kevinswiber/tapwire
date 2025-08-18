@@ -4,9 +4,9 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-01-18 (Session 2)  
+**Last Updated**: 2025-01-18 (Session 3)  
 **Total Estimated Duration**: 20-25 hours (reduced after removing admin UI)  
-**Status**: Phase B & C Partially Complete - 3,137 lines remaining in legacy.rs
+**Status**: Phase C In Progress - 2,894 lines remaining in legacy.rs
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
@@ -83,17 +83,21 @@ Extract foundational components and remove admin UI.
 
 **Phase B Total**: 3.5 hours ✅ COMPLETE
 
-### Phase C: Upstream & Handler Implementation (Week 2)
-Create upstream abstractions and thin handlers.
+### Phase C: Handler Extraction & Architecture Alignment (Week 2)
+Extract handlers following thin orchestrator pattern from final-architecture.md.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Create UpstreamService Trait** | 1h | B.4 | ✅ Complete | | upstream/mod.rs |
-| C.1 | **Implement Upstream Modules** | 3h | C.0 | ✅ Complete | | stdio.rs, http.rs, selector.rs |
-| C.2 | **Create Thin Handlers** | 2h | C.1 | ✅ Complete | | handlers/mcp.rs, health.rs, metrics.rs |
-| C.3 | **Wire Router & Server** | 1h | C.2 | ✅ Complete | | router.rs, server.rs |
+| C.0 | **Extract Interceptor Logic** | 1h | B.4 | ✅ Complete | | pipeline.rs (236 lines) |
+| C.1 | **Create Handler Structure** | 0.5h | C.0 | ✅ Complete | | handlers/mod.rs |
+| C.2 | **Extract MCP Handlers** | 2h | C.1 | ✅ Complete | | handlers/mcp.rs (486 lines - needs thinning) |
+| C.3 | **Extract Health/Metrics** | 0.5h | C.2 | ✅ Complete | | handlers/health.rs (21 lines) |
+| C.4 | **Update Router** | 0.5h | C.3 | ✅ Complete | | router.rs uses new handlers |
+| C.5 | **Thin MCP Handler** | 2h | C.4 | 🔄 Next | | Reduce from 486 to <150 lines |
+| C.6 | **Extract Upstream Logic** | 3h | C.5 | ⏳ Planned | | Create upstream modules per architecture |
 
-**Phase C Total**: 7 hours ✅ COMPLETE
+**Phase C Progress**: 4.5 hours complete, 5 hours remaining
+**Lines Extracted**: 411 lines (legacy.rs: 3,305 → 2,894)
 
 ### Phase D: Cleanup & Validation (Week 3)
 Remove legacy.rs and validate everything works.
