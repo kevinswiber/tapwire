@@ -1,189 +1,122 @@
-# ✅ UNBLOCKED - Ready to Complete SSE Integration
+# Next Session: Multi-Session Forward Proxy or Alternative Priorities
 
-**UPDATE (2025-08-18)**: Event tracking refactor is COMPLETE. Work can proceed immediately.
+## ✅ Completed in This Session (2025-08-18)
 
-## Critical Architecture Changes
+### SSE Resilience Integration - FULLY COMPLETE
+- EventTracker already integrated in handle_sse() (line 1676-1689)
+- Events recorded with deduplication (line 1966) 
+- Upstream reconnection with Last-Event-Id (line 1877-1880)
+- All functionality verified and working!
 
-### What's Different Now
+### Session Store Architecture - COMPLETE
+- Lazy persistence initialization in SessionManager
+- ReverseProxyServerBuilder for custom stores
+- Library API exports for SessionStore interface
+- Ready for Redis/SQLite backends
 
-1. **ReverseProxySseManager is GONE** 
-   - Was dead code, never used in production
-   - Deleted during event tracking refactor
-   - Replace with direct SessionManager integration
+## Next Priority Options
 
-2. **SessionManager Has SSE Support**
-   - New method: `create_event_tracker(session_id)`
-   - Automatic persistence via PersistenceWorker
-   - No callbacks needed - all channel-based
+### Option 1: Multi-Session Forward Proxy (Recommended)
 
-3. **Simpler Integration Path**
-   - No complex wiring required
-   - SessionManager → EventTracker → Done
-   - ~2 hours instead of original estimate
+The forward proxy currently only supports a single client. We need multiple concurrent clients.
 
-## Immediate Tasks: Wire Up SSE Resilience (2 hours)
+**Implementation Plan (4 hours):**
+1. Make ForwardProxy accept multiple connections
+2. Session isolation per client
+3. Connection pool sharing
+4. Resource limits and cleanup
 
-### Task 1: Integrate SessionManager with Reverse Proxy (30 min)
+**Key Files:**
+- `src/proxy/forward/mod.rs`
+- `src/proxy/forward/stdio.rs`
+- `src/proxy/pool.rs`
 
-```rust
-// In shadowcat/src/proxy/reverse/legacy.rs
+**Success Criteria:**
+- Support 100+ concurrent sessions
+- Clean resource management
+- All tests passing
 
-struct ReverseProxyServer {
-    session_manager: Arc<SessionManager>,  // Already exists!
-    // Remove any ReverseProxySseManager references
-}
+### Option 2: Dual Session ID Mapping
 
-// In handle_mcp_request around line 1300
-if is_sse_response {
-    // Create event tracker for this session
-    let event_tracker = app_state.session_manager
-        .create_event_tracker(session_id.clone())
-        .await;
-    
-    // Check for client reconnection
-    if let Some(last_event_id) = headers.get("last-event-id") {
-        event_tracker.set_last_event_id(last_event_id.to_string()).await;
-    }
-    
-    // Continue with streaming...
-}
-```
+Track both client and server session IDs in reverse proxy for better routing.
 
-### Task 2: Update SSE Streaming Loop (45 min)
+**Implementation Plan (3 hours):**
+1. Create session_mapping module
+2. Store bidirectional mappings
+3. Handle ID conflicts
+4. Persistent storage
 
-```rust
-// In shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs
+**Key Files:**
+- `src/proxy/reverse/session_mapping.rs` (new)
+- `src/proxy/reverse/legacy.rs`
 
-// During SSE event processing
-while let Some(event) = event_stream.next().await {
-    // Record event for deduplication and persistence
-    if let Some(ref id) = event.id {
-        event_tracker.record_event(&event).await?;
-    }
-    
-    // Forward to client
-    tx.send(Event::default()
-        .id(event.id)
-        .data(event.data))
-        .await?;
-}
-```
+### Option 3: Redis Session Store
 
-### Task 3: Handle Upstream Reconnection (30 min)
+Implement distributed session storage for production deployments.
 
-```rust
-// When upstream connection drops
-let last_event_id = event_tracker.get_last_event_id().await;
+**Implementation Plan (4 hours):**
+1. Create RedisSessionStore implementing SessionStore trait
+2. Handle connection pooling
+3. Implement TTL and cleanup
+4. Add to library exports
 
-// Add to upstream request headers for reconnection
-if let Some(last_id) = last_event_id {
-    upstream_headers.insert("Last-Event-Id", last_id.parse()?);
-}
-```
+**Key Files:**
+- `src/session/redis.rs` (new)
+- `src/session/mod.rs`
+- Integration with ReverseProxyServerBuilder
 
-### Task 4: Clean Up Dead Code (15 min)
+## Testing Any Option
 
 ```bash
-# Remove references to deleted components
-grep -r "ReverseProxySseManager" shadowcat/src/
-# Should return nothing - if found, remove
-
-# Check for unused SSE modules
-grep -r "SessionAwareSseManager" shadowcat/src/proxy/
-# If not used in proxy, we might not need it
-```
-
-## Testing Plan
-
-### Manual Testing with MCP Inspector
-```bash
-# Terminal 1: Start proxy
 cd shadowcat
+
+# Run relevant tests
+cargo test proxy::forward        # Option 1
+cargo test proxy::reverse        # Option 2  
+cargo test session::             # Option 3
+
+# Build and manual test
 cargo build --release
-./target/release/shadowcat reverse \
-    --bind 127.0.0.1:8080 \
-    --upstream http://localhost:3000/mcp
-
-# Terminal 2: Start MCP server with SSE
-npx -y @modelcontextprotocol/server-everything
-
-# Terminal 3: Connect Inspector through proxy
-# 1. Open MCP Inspector
-# 2. Connect to http://localhost:8080
-# 3. Trigger SSE events
-# 4. Kill upstream server
-# 5. Restart upstream
-# 6. Verify reconnection with Last-Event-Id
+./target/release/shadowcat <relevant commands>
 ```
 
-### Automated Tests
+## Recommendation
+
+Start with **Option 1: Multi-Session Forward Proxy** as it:
+- Addresses a clear limitation (single client only)
+- Builds on existing SessionManager work
+- Enables important use cases (shared proxy)
+- Has clear success metrics
+
+The SessionManager and ConnectionPool are already thread-safe and ready for this enhancement.
+
+## Repository Status
+
+### shadowcat (submodule)
+- Latest commit: feat: add ReverseProxyServerBuilder for custom session stores
+- Branch: main
+- All tests passing ✅
+
+### tapwire (parent)
+- Updated tracker and documentation
+- Ready for next phase
+- Clear roadmap defined
+
+## Quick Start for Next Session
+
 ```bash
-# Run existing SSE tests
-cargo test transport::sse
+# Pull latest changes
+cd ~/src/tapwire
+git pull
+git submodule update --init --recursive
 
-# Run reverse proxy tests  
-cargo test proxy::reverse
+# Check current status
+cd shadowcat
+cargo test --lib
 
-# Integration test
-cargo test --test integration_reverse_proxy_sse
+# Review the specific plan
+cat ../plans/multi-session-forward-proxy/README.md  # If it exists
+# OR start fresh with the outline above
 ```
 
-## Key Files to Modify
-
-1. **shadowcat/src/proxy/reverse/legacy.rs**
-   - Line ~1300: SSE response handling
-   - Add EventTracker integration
-   - Parse Last-Event-Id header
-
-2. **shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs**  
-   - SSE streaming loop
-   - Add event recording
-   - Handle reconnection
-
-3. **shadowcat/src/proxy/reverse/mod.rs**
-   - Remove any ReverseProxySseManager exports
-   - Clean up imports
-
-## Architecture After Integration
-
-```
-ReverseProxyServer
-    ├── session_manager: Arc<SessionManager>
-    │   ├── create_event_tracker() → EventTracker
-    │   └── PersistenceWorker (background)
-    │
-    ├── handle_mcp_request()
-    │   ├── Detect SSE (Accept header)
-    │   ├── Create EventTracker
-    │   ├── Parse Last-Event-Id
-    │   └── Stream with deduplication
-    │
-    └── No ReverseProxySseManager needed!
-```
-
-## Questions Already Resolved
-
-1. **Do we need SessionAwareSseManager?** 
-   - NO - Direct SessionManager is simpler
-   - Can remove if unused after integration
-
-2. **How to handle persistence?**
-   - Automatic via PersistenceWorker
-   - No manual persistence needed
-
-3. **What about multiple upstreams?**
-   - Create EventTracker per upstream connection
-   - SessionManager handles multiple trackers
-
-## Success Criteria
-
-- [ ] SSE streams work through proxy
-- [ ] Client reconnection with Last-Event-Id works
-- [ ] Upstream reconnection resumes from last event
-- [ ] No duplicate events after reconnection
-- [ ] Memory usage bounded (~60KB per session)
-- [ ] No task explosion (1 worker total)
-
-## Estimated Time: 2 hours
-
-Much simpler than originally planned thanks to the completed event tracking refactor!
+Pick Option 1 and implement multi-session support in the forward proxy!
