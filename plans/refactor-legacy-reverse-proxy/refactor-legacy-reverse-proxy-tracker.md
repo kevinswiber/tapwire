@@ -4,9 +4,9 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-01-18 (Session 3)  
+**Last Updated**: 2025-01-18 (Session 4)  
 **Total Estimated Duration**: 20-25 hours (reduced after removing admin UI)  
-**Status**: Phase C In Progress - 2,894 lines remaining in legacy.rs
+**Status**: Phase C Complete, Phase D Started - 2,897 lines remaining in legacy.rs
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
@@ -30,11 +30,11 @@ src/proxy/reverse/
 ├── router.rs                 # Router setup (100 lines)
 ├── handlers/
 │   ├── mod.rs               # Handler exports (20 lines)
-│   ├── mcp.rs               # /mcp endpoint - THIN (100 lines)
+│   ├── mcp.rs               # /mcp endpoint - THIN (192 lines) ✅
 │   └── health.rs            # /health, /metrics (50 lines)
-├── pipeline.rs              # Intercept/pause/record (200 lines)
-├── session_helpers.rs       # Session operations (150 lines)
-├── headers.rs               # Header utilities (100 lines)
+├── pipeline.rs              # Intercept/pause/record (236 lines) ✅
+├── session_helpers.rs       # Session operations (183 lines) ✅
+├── headers.rs               # Header utilities (100 lines) ✅
 └── upstream/
     ├── mod.rs               # UpstreamService trait (50 lines)
     ├── selector.rs          # Load balancing (100 lines)
@@ -43,7 +43,7 @@ src/proxy/reverse/
         ├── mod.rs           # HttpUpstream impl (50 lines)
         ├── client.rs        # Hyper client (150 lines)
         ├── relay.rs         # JSON responses (150 lines)
-        └── sse_adapter.rs   # Uses transport::sse (100 lines)
+        └── sse.rs           # SSE streaming (54 lines placeholder) 🚧
 
 REMOVED:
 └── admin/                   # Admin UI deleted (~900 lines)
@@ -142,6 +142,18 @@ Remove legacy.rs and validate everything works.
   - Created router.rs for route configuration  
   - Created server.rs for server lifecycle
   - **Progress**: legacy.rs reduced from 3,307 to 3,137 lines (168 lines removed)
+- **2025-01-18 Session 3**: Phase B Completion (2.5 hours)
+  - Extracted interceptor logic to pipeline.rs
+  - Created initial handlers structure
+  - Fixed module organization
+  - **Progress**: legacy.rs reduced to 2,894 lines
+- **2025-01-18 Session 4**: Phase C Completion & D Start (2 hours)
+  - Thinned handlers/mcp.rs from 492 → 192 lines (proper orchestrator)
+  - Added session version tracking to session_helpers.rs
+  - Added frame recording to pipeline.rs
+  - Created upstream/http/sse.rs placeholder
+  - Renamed session_ops.rs → session_helpers.rs per architecture
+  - **Progress**: legacy.rs at 2,897 lines, all 20 tests passing
 
 ### Week 1 (Starting 2025-01-19)
 - [ ] Phase B: Core Extraction (4 hours)
