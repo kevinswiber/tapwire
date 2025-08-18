@@ -1,123 +1,189 @@
-# ⏸️ ON HOLD - Blocked by Event Tracking Refactor
+# ✅ UNBLOCKED - Ready to Complete SSE Integration
 
-**IMPORTANT**: This work is blocked. See [Event Tracking Refactor](../refactor-event-tracking/refactor-event-tracking-tracker.md) which must be completed first (2-3 hours).
+**UPDATE (2025-08-18)**: Event tracking refactor is COMPLETE. Work can proceed immediately.
 
----
+## Critical Architecture Changes
 
-# Next Session: Complete SSE Resilience Integration
+### What's Different Now
 
-## Context Update (2025-08-17)
+1. **ReverseProxySseManager is GONE** 
+   - Was dead code, never used in production
+   - Deleted during event tracking refactor
+   - Replace with direct SessionManager integration
 
-### Major Changes Since Last Session
-1. **Transport Architecture Refactor COMPLETE** ✅
-   - `TransportContext::Sse` replaced with `Delivery::Sse` 
-   - Clean transport types: only Stdio and Http
-   - SSE metadata properly at message level
-   - No more `is_sse_session` code smell
+2. **SessionManager Has SSE Support**
+   - New method: `create_event_tracker(session_id)`
+   - Automatic persistence via PersistenceWorker
+   - No callbacks needed - all channel-based
 
-2. **SSE Resilience Module Created but NOT Integrated** ⚠️
-   - `ReverseProxySseManager` exists in `src/proxy/reverse/sse_resilience.rs`
-   - Has EventTracker, HealthMonitor, ReconnectionManager integration
-   - But it's not being used by the reverse proxy at all!
+3. **Simpler Integration Path**
+   - No complex wiring required
+   - SessionManager → EventTracker → Done
+   - ~2 hours instead of original estimate
 
-## Immediate Priority: Wire Up SSE Resilience
+## Immediate Tasks: Wire Up SSE Resilience (2 hours)
 
-The foundation exists but needs to be connected. This is a quick win - likely 1-2 hours to complete.
+### Task 1: Integrate SessionManager with Reverse Proxy (30 min)
 
-### Task 1: Integrate ReverseProxySseManager (30 min)
-```bash
-# Files to modify
-shadowcat/src/proxy/reverse/legacy.rs  # Add SSE manager field and initialization
-shadowcat/src/proxy/reverse/mod.rs     # Export SSE resilience types
-```
-
-**Steps:**
-1. Add `sse_manager: Arc<ReverseProxySseManager>` to ReverseProxyServer
-2. Initialize in ReverseProxyServer::new()
-3. Use manager in SSE streaming paths
-
-### Task 2: Use Existing Last-Event-Id Field (15 min)
-```bash
-# Session ALREADY has last_event_id field!
-shadowcat/src/session/store.rs:92  # pub last_event_id: Option<String>
-shadowcat/src/session/sse_integration.rs  # Rich per-connection tracking
-```
-
-**Steps:**
-1. Session already has the field at line 92 ✅
-2. Just need to read/write it in proxy flow
-3. Consider using SseSessionState for richer tracking
-
-### Task 3: Wire Up Upstream Reconnection (45 min)
-```bash
-# Files to modify  
-shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs  # Use ReconnectingStream
-```
-
-**Steps:**
-1. Check for SSE disconnection in streaming loop
-2. Call reconnection_manager when connection drops
-3. Resume from Last-Event-Id
-
-### Task 4: Support Client Reconnection (30 min)
-```bash
-# Files to modify
-shadowcat/src/proxy/reverse/legacy.rs  # Parse Last-Event-Id header
-```
-
-**Steps:**
-1. Extract Last-Event-Id from client headers
-2. Store in session via sse_manager
-3. Use for upstream reconnection
-
-### Task 5: Test with MCP Inspector (15 min)
-```bash
-# Test commands
-cd shadowcat
-cargo build --release
-./target/release/shadowcat reverse --bind 127.0.0.1:8080 --upstream http://localhost:3000/mcp
-
-# In another terminal
-# Start MCP Inspector and connect through proxy
-# Simulate disconnection and verify reconnection works
-```
-
-## Key Integration Points
-
-### In legacy.rs handle_mcp_request():
 ```rust
-// Around line 1300 where SSE streaming happens
+// In shadowcat/src/proxy/reverse/legacy.rs
+
+struct ReverseProxyServer {
+    session_manager: Arc<SessionManager>,  // Already exists!
+    // Remove any ReverseProxySseManager references
+}
+
+// In handle_mcp_request around line 1300
 if is_sse_response {
-    // NEW: Use SSE manager for resilience
-    let last_event_id = self.sse_manager.get_last_event_id(&session_id).await;
+    // Create event tracker for this session
+    let event_tracker = app_state.session_manager
+        .create_event_tracker(session_id.clone())
+        .await;
     
-    // NEW: Parse client's Last-Event-Id if reconnecting
-    if let Some(client_last_id) = headers.get("last-event-id") {
-        self.sse_manager.set_last_event_id(&session_id, client_last_id).await;
+    // Check for client reconnection
+    if let Some(last_event_id) = headers.get("last-event-id") {
+        event_tracker.set_last_event_id(last_event_id.to_string()).await;
     }
     
-    // Continue with existing streaming logic but add reconnection
+    // Continue with streaming...
 }
 ```
 
+### Task 2: Update SSE Streaming Loop (45 min)
+
+```rust
+// In shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs
+
+// During SSE event processing
+while let Some(event) = event_stream.next().await {
+    // Record event for deduplication and persistence
+    if let Some(ref id) = event.id {
+        event_tracker.record_event(&event).await?;
+    }
+    
+    // Forward to client
+    tx.send(Event::default()
+        .id(event.id)
+        .data(event.data))
+        .await?;
+}
+```
+
+### Task 3: Handle Upstream Reconnection (30 min)
+
+```rust
+// When upstream connection drops
+let last_event_id = event_tracker.get_last_event_id().await;
+
+// Add to upstream request headers for reconnection
+if let Some(last_id) = last_event_id {
+    upstream_headers.insert("Last-Event-Id", last_id.parse()?);
+}
+```
+
+### Task 4: Clean Up Dead Code (15 min)
+
+```bash
+# Remove references to deleted components
+grep -r "ReverseProxySseManager" shadowcat/src/
+# Should return nothing - if found, remove
+
+# Check for unused SSE modules
+grep -r "SessionAwareSseManager" shadowcat/src/proxy/
+# If not used in proxy, we might not need it
+```
+
+## Testing Plan
+
+### Manual Testing with MCP Inspector
+```bash
+# Terminal 1: Start proxy
+cd shadowcat
+cargo build --release
+./target/release/shadowcat reverse \
+    --bind 127.0.0.1:8080 \
+    --upstream http://localhost:3000/mcp
+
+# Terminal 2: Start MCP server with SSE
+npx -y @modelcontextprotocol/server-everything
+
+# Terminal 3: Connect Inspector through proxy
+# 1. Open MCP Inspector
+# 2. Connect to http://localhost:8080
+# 3. Trigger SSE events
+# 4. Kill upstream server
+# 5. Restart upstream
+# 6. Verify reconnection with Last-Event-Id
+```
+
+### Automated Tests
+```bash
+# Run existing SSE tests
+cargo test transport::sse
+
+# Run reverse proxy tests  
+cargo test proxy::reverse
+
+# Integration test
+cargo test --test integration_reverse_proxy_sse
+```
+
+## Key Files to Modify
+
+1. **shadowcat/src/proxy/reverse/legacy.rs**
+   - Line ~1300: SSE response handling
+   - Add EventTracker integration
+   - Parse Last-Event-Id header
+
+2. **shadowcat/src/proxy/reverse/hyper_sse_intercepted.rs**  
+   - SSE streaming loop
+   - Add event recording
+   - Handle reconnection
+
+3. **shadowcat/src/proxy/reverse/mod.rs**
+   - Remove any ReverseProxySseManager exports
+   - Clean up imports
+
+## Architecture After Integration
+
+```
+ReverseProxyServer
+    ├── session_manager: Arc<SessionManager>
+    │   ├── create_event_tracker() → EventTracker
+    │   └── PersistenceWorker (background)
+    │
+    ├── handle_mcp_request()
+    │   ├── Detect SSE (Accept header)
+    │   ├── Create EventTracker
+    │   ├── Parse Last-Event-Id
+    │   └── Stream with deduplication
+    │
+    └── No ReverseProxySseManager needed!
+```
+
+## Questions Already Resolved
+
+1. **Do we need SessionAwareSseManager?** 
+   - NO - Direct SessionManager is simpler
+   - Can remove if unused after integration
+
+2. **How to handle persistence?**
+   - Automatic via PersistenceWorker
+   - No manual persistence needed
+
+3. **What about multiple upstreams?**
+   - Create EventTracker per upstream connection
+   - SessionManager handles multiple trackers
+
 ## Success Criteria
-- [ ] SSE manager integrated and initialized
-- [ ] Last-Event-Id tracked per session
-- [ ] Upstream disconnections trigger reconnection
-- [ ] Client reconnections with Last-Event-Id work
-- [ ] MCP Inspector maintains connection through failures
+
+- [ ] SSE streams work through proxy
+- [ ] Client reconnection with Last-Event-Id works
+- [ ] Upstream reconnection resumes from last event
 - [ ] No duplicate events after reconnection
+- [ ] Memory usage bounded (~60KB per session)
+- [ ] No task explosion (1 worker total)
 
-## Architecture Reminder
-We're not reinventing - just connecting existing pieces:
-- `ReverseProxySseManager` - Already wraps transport reconnection logic
-- `ReconnectionManager` - Handles exponential backoff
-- `EventTracker` - Deduplicates events
-- `HealthMonitor` - Detects idle connections
+## Estimated Time: 2 hours
 
-The gap is simply that these aren't wired into the proxy flow yet!
-
-## Time Estimate
-Total: 2-3 hours to complete integration and test
-
-This is mostly plumbing work - the hard architectural decisions are done.
+Much simpler than originally planned thanks to the completed event tracking refactor!
