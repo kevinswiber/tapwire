@@ -4,9 +4,10 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-08-18  
-**Total Estimated Duration**: 25-35 hours  
-**Status**: Planning
+**Last Updated**: 2025-01-18  
+**Total Estimated Duration**: 20-25 hours (reduced after removing admin UI)  
+**Status**: Phase A Complete - Ready for Implementation
+**Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
 
@@ -16,45 +17,44 @@ Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation i
 4. **Maintain Functionality** - All tests continue passing
 5. **Improve Testability** - Enable unit testing of components
 
-## Architecture Vision
+## Architecture Vision (Refined)
 
 ```
 src/proxy/reverse/
-├── mod.rs              # Public API (re-exports)
-├── config/             # Configuration (~600 lines total)
-│   ├── mod.rs          # Config traits
-│   ├── upstream.rs     # Upstream configs
-│   ├── session.rs      # Session configs
-│   └── middleware.rs   # Auth, rate limit configs
-├── server/             # Server lifecycle (~800 lines)
-│   ├── mod.rs          # Server struct
-│   ├── builder.rs      # Builder pattern
-│   └── state.rs        # Shared app state
-├── router/             # Routing (~400 lines)
-│   ├── mod.rs          # Router setup
-│   ├── routes.rs       # Route definitions
-│   └── middleware.rs   # Middleware stack
-├── handlers/           # Request handlers (~1400 lines)
-│   ├── mod.rs          # Handler traits
-│   ├── mcp.rs          # MCP requests
-│   ├── sse.rs          # SSE streaming
-│   ├── health.rs       # Health/metrics
-│   └── admin.rs        # Admin endpoints
-├── streaming/          # Already exists (~850 lines)
-│   ├── hyper_client.rs
-│   ├── hyper_raw_streaming.rs
-│   ├── hyper_sse_intercepted.rs ✅ (fixed)
-│   └── json_processing.rs
-├── upstream/           # Upstream management (~500 lines)
-│   ├── mod.rs          # Upstream traits
-│   ├── selection.rs    # Load balancing
-│   ├── pool.rs         # Connection pooling
-│   └── health.rs       # Health checking
-└── admin/              # Admin UI (feature-gated, ~876 lines)
-    ├── mod.rs          
-    ├── dashboard.rs    # HTML UI
-    └── api.rs          # Admin API
+├── mod.rs                    # Public API exports
+├── error.rs                  # ReverseProxyError (50 lines)
+├── config.rs                 # All config types (250 lines)
+├── state.rs                  # AppState (100 lines)
+├── metrics.rs                # Metrics collection (50 lines)
+├── server.rs                 # Server + Builder (200 lines)
+├── router.rs                 # Router setup (100 lines)
+├── handlers/
+│   ├── mod.rs               # Handler exports (20 lines)
+│   ├── mcp.rs               # /mcp endpoint - THIN (100 lines)
+│   └── health.rs            # /health, /metrics (50 lines)
+├── pipeline.rs              # Intercept/pause/record (200 lines)
+├── session_helpers.rs       # Session operations (150 lines)
+├── headers.rs               # Header utilities (100 lines)
+└── upstream/
+    ├── mod.rs               # UpstreamService trait (50 lines)
+    ├── selector.rs          # Load balancing (100 lines)
+    ├── stdio.rs             # Stdio upstream (200 lines)
+    └── http/
+        ├── mod.rs           # HttpUpstream impl (50 lines)
+        ├── client.rs        # Hyper client (150 lines)
+        ├── relay.rs         # JSON responses (150 lines)
+        └── sse_adapter.rs   # Uses transport::sse (100 lines)
+
+REMOVED:
+└── admin/                   # Admin UI deleted (~900 lines)
 ```
+
+**Total Lines**: ~1,970 (down from 3,682)
+**Key Changes**: 
+- Admin UI removed entirely
+- Renamed to avoid conflicts (upstream/ not transport/)
+- Leverages transport::sse
+- Thin handlers (<150 lines)
 
 ## Work Phases
 
@@ -63,56 +63,51 @@ Understanding the current architecture and designing the clean solution.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| A.0 | **Current State Analysis** | 2h | None | ⬜ Not Started | | [Details](tasks/A.0-current-state-analysis.md) |
-| A.1 | **Dependency Mapping** | 2h | A.0 | ⬜ Not Started | | [Details](tasks/A.1-dependency-mapping.md) |
-| A.2 | **Module Design** | 3h | A.1 | ⬜ Not Started | | [Details](tasks/A.2-module-design.md) |
-| A.3 | **Interface Design** | 2h | A.2 | ⬜ Not Started | | [Details](tasks/A.3-interface-design.md) |
+| A.0 | **Current State Analysis** | 2h | None | ✅ Complete | | [Analysis](analysis/current-structure.md) |
+| A.1 | **Dependency Mapping** | 2h | A.0 | ✅ Complete | | [Dependencies](analysis/dependencies.md) |
+| A.2 | **Module Design** | 3h | A.1 | ✅ Complete | | [Architecture](analysis/module-architecture.md) |
+| A.3 | **Architecture Refinement** | 2h | A.2 | ✅ Complete | | [Final Architecture](analysis/final-architecture.md) |
 
-**Phase A Total**: 9 hours
+**Phase A Total**: 9 hours ✅ COMPLETE
 
 ### Phase B: Core Extraction (Week 1-2)
-Extract foundational components that everything else depends on.
+Extract foundational components and remove admin UI.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.0 | **Extract Config Types** | 2h | A.3 | ⬜ Not Started | | [Details](tasks/B.0-extract-config.md) |
-| B.1 | **Extract Server Core** | 3h | B.0 | ⬜ Not Started | | [Details](tasks/B.1-extract-server.md) |
-| B.2 | **Extract App State** | 2h | B.1 | ⬜ Not Started | | [Details](tasks/B.2-extract-state.md) |
+| B.0 | **Transport Overlap Analysis** | 0.5h | A.3 | ⬜ Not Started | | Document reuse opportunities |
+| B.1 | **Remove Admin UI** | 0.5h | B.0 | ⬜ Not Started | | Delete ~900 lines |
+| B.2 | **Extract Error Types** | 0.5h | B.1 | ⬜ Not Started | | Create error.rs |
+| B.3 | **Extract Config Types** | 1h | B.2 | ⬜ Not Started | | Create config.rs |
+| B.4 | **Extract Metrics & State** | 0.5h | B.3 | ⬜ Not Started | | metrics.rs, state.rs |
+| B.5 | **Extract Helper Modules** | 1h | B.4 | ⬜ Not Started | | pipeline.rs, session_helpers.rs, headers.rs |
 
-**Phase B Total**: 7 hours
+**Phase B Total**: 4 hours
 
-### Phase C: Handler Extraction (Week 2)
-Move request handling logic to dedicated modules.
-
-| ID | Task | Duration | Dependencies | Status | Owner | Notes |
-|----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Extract MCP Handler** | 4h | B.2 | ⬜ Not Started | | [Details](tasks/C.0-extract-mcp-handler.md) |
-| C.1 | **Extract SSE Handler** | 3h | B.2 | ⬜ Not Started | | [Details](tasks/C.1-extract-sse-handler.md) |
-| C.2 | **Extract Health/Admin** | 2h | B.2 | ⬜ Not Started | | [Details](tasks/C.2-extract-health-admin.md) |
-
-**Phase C Total**: 9 hours
-
-### Phase D: Infrastructure (Week 2-3)
-Extract supporting infrastructure components.
+### Phase C: Upstream & Handler Implementation (Week 2)
+Create upstream abstractions and thin handlers.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| D.0 | **Extract Upstream Management** | 3h | C.0 | ⬜ Not Started | | [Details](tasks/D.0-extract-upstream.md) |
-| D.1 | **Extract Router/Middleware** | 2h | C.0, C.1, C.2 | ⬜ Not Started | | [Details](tasks/D.1-extract-router.md) |
-| D.2 | **Feature-gate Admin UI** | 2h | C.2 | ⬜ Not Started | | [Details](tasks/D.2-feature-gate-admin.md) |
+| C.0 | **Create UpstreamService Trait** | 1h | B.5 | ⬜ Not Started | | upstream/mod.rs |
+| C.1 | **Implement Upstream Modules** | 3h | C.0 | ⬜ Not Started | | stdio.rs, http/* |
+| C.2 | **Create Thin Handlers** | 2h | C.1 | ⬜ Not Started | | mcp.rs, health.rs |
+| C.3 | **Wire Router & Server** | 1h | C.2 | ⬜ Not Started | | router.rs, server.rs |
 
-**Phase D Total**: 7 hours
+**Phase C Total**: 7 hours
 
-### Phase E: Cleanup & Validation (Week 3)
-Remove legacy code and ensure everything works.
+### Phase D: Cleanup & Validation (Week 3)
+Remove legacy.rs and validate everything works.
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.0 | **Delete Legacy.rs** | 1h | D.0, D.1, D.2 | ⬜ Not Started | | [Details](tasks/E.0-delete-legacy.md) |
-| E.1 | **Integration Testing** | 2h | E.0 | ⬜ Not Started | | [Details](tasks/E.1-integration-testing.md) |
-| E.2 | **Performance Validation** | 2h | E.1 | ⬜ Not Started | | [Details](tasks/E.2-performance-validation.md) |
+| D.0 | **Delete legacy.rs** | 0.5h | C.3 | ⬜ Not Started | | Final removal |
+| D.1 | **Organize Tests** | 1h | D.0 | ⬜ Not Started | | Move to test modules |
+| D.2 | **Integration Testing** | 2h | D.1 | ⬜ Not Started | | Full test suite |
+| D.3 | **Performance Validation** | 1h | D.2 | ⬜ Not Started | | Benchmark comparison |
+| D.4 | **Documentation** | 0.5h | D.3 | ⬜ Not Started | | Update docs |
 
-**Phase E Total**: 5 hours
+**Phase D Total**: 5 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -123,15 +118,31 @@ Remove legacy code and ensure everything works.
 
 ## Progress Tracking
 
-### Week 1 (Starting 2025-08-19)
-- [ ] A.0: Current State Analysis
-- [ ] A.1: Dependency Mapping
-- [ ] A.2: Module Design
-- [ ] A.3: Interface Design
-- [ ] B.0: Extract Config Types
+### Completed
+- **2025-01-18**: Phase A - Analysis & Design (9 hours)
+  - Comprehensive analysis of legacy.rs
+  - Designed refined architecture
+  - Created implementation plan
 
-### Completed Tasks
-- [x] Fixed block_on deadlock in hyper_sse_intercepted.rs - Completed 2025-08-18
+### Week 1 (Starting 2025-01-19)
+- [ ] Phase B: Core Extraction (4 hours)
+  - Transport overlap analysis
+  - Remove admin UI
+  - Extract foundation modules
+
+### Week 2
+- [ ] Phase C: Upstream & Handler Implementation (7 hours)
+
+### Week 3  
+- [ ] Phase D: Cleanup & Validation (5 hours)
+
+## Key Decisions Made
+
+1. **Admin UI**: Removed entirely (~900 lines deleted)
+2. **Naming**: `upstream/` instead of `transport/`, `session_helpers.rs` not `session/`
+3. **SSE**: Reuse `transport::sse` via adapter
+4. **Handlers**: Thin (<150 lines), orchestration only
+5. **Pipeline**: Single file for cross-cutting concerns
 
 ## Success Criteria
 
