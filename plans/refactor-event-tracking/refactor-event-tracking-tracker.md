@@ -6,9 +6,9 @@ This tracker coordinates the consolidation and cleanup of Last-Event-Id tracking
 
 **🔴 CRITICAL UPDATE (2025-08-17)**: Architecture review after Phase C revealed **severe performance issues** that make the system unsuitable for production. Task explosion (1000+ tasks/second) and silent failures require immediate fixes.
 
-**Last Updated**: 2025-08-17  
-**Total Estimated Duration**: **17 hours** (increased due to critical fixes)  
-**Status**: 🔴 CRITICAL FIXES REQUIRED (Phase E)  
+**Last Updated**: 2025-08-18  
+**Total Estimated Duration**: **17 hours** (E.0 removed - using channels instead of callbacks)  
+**Status**: 🔴 CRITICAL FIXES REQUIRED (Phase E - FINAL with channel-based approach)  
 **Completed**: Phases A, B, C (9.5 hours)  
 **Remaining**: Phase E (6.5 hours critical), Phase D (1 hour deferred)
 
@@ -137,16 +137,27 @@ Ensure everything works correctly
 
 **Phase D Total**: 1 hour (DEFERRED)
 
-### Phase E: Critical Performance & Reliability Fixes (6.5 hours) - 🔴 CRITICAL
-Fix task explosion and reliability issues discovered in architecture review
+### Phase E: Critical Performance & Reliability Fixes (6.5 hours) - 🔴 CRITICAL FINAL
+Fix task explosion and reliability issues with channel-based approach
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.1 | **Implement worker pattern** | 3h | C.2 | ⬜ Not Started | | [Task details](tasks/E.1-implement-worker-pattern.md) |
+| ~~E.0~~ | ~~Make EventTracker async~~ | ~~1h~~ | ~~C.2~~ | ❌ REMOVED | | [Removed - using channels](tasks/E.0-removed-no-callbacks-needed.md) |
+| E.1 | **Implement worker pattern** | 3h | C.2 | ⬜ Not Started | | [FINAL v2 with all optimizations](tasks/E.1-worker-pattern-final-v2.md) |
 | E.2 | **Fix activity tracking** | 1.5h | E.1 | ⬜ Not Started | | [Task details](tasks/E.2-fix-activity-tracking.md) |
 | E.3 | **Optimize memory usage** | 2h | E.1 | ⬜ Not Started | | [Task details](tasks/E.3-optimize-memory-usage.md) |
 
 **Phase E Total**: 6.5 hours (CRITICAL - Must complete before production)
+
+**Critical Fixes Incorporated (v2)**:
+- ✅ Real backpressure via channel ownership (E.1)
+- ✅ Short timeout (100ms) + latest-only buffer (E.1)
+- ✅ O(1) duplicate detection with HashSet (E.1)
+- ✅ BinaryHeap for proper retry ordering (E.1)
+- ✅ recv_many for efficient batching (E.1)
+- ✅ Coalescing everywhere (worker + retries) (E.1)
+- ✅ Skip interval bursts (E.1)
+- ✅ SSE heartbeats to prevent timeouts (E.1)
 
 **GRAND TOTAL**: 4.5 (Phase A) + 2.5 (Phase B) + 2.5 (Phase C) + 6.5 (Phase E) + 1 (Phase D) = **17 hours**
 - Phases A, B & C complete: **7.5 hours remaining critical work** (Phase E + D)
@@ -178,12 +189,19 @@ Fix task explosion and reliability issues discovered in architecture review
 
 ### 🔴 CRITICAL ISSUES DISCOVERED
 1. **Task Explosion**: Spawning 1000+ tasks/second under load
-2. **Silent Failures**: All persistence errors ignored
+2. **Silent Failures**: All persistence errors ignored  
 3. **Memory Inefficiency**: 20KB per session overhead
 4. **No Backpressure**: Unbounded task growth possible
 
-### Next Session Tasks (CRITICAL)
-- [ ] E.1: Implement worker pattern - Replace task-per-event
+### 🔴 GPT-5 REVIEW FINDINGS (2025-08-18)
+5. ~~**try_send doesn't apply backpressure**~~ - SOLVED: Channel ownership provides natural backpressure
+6. **Retry queue not sorted** - FIXED: Using BinaryHeap
+7. **Missing coalescing** - FIXED: Implemented in E.1
+8. **Inefficient batching** - FIXED: Using recv_many
+9. **Interval burst behavior** - FIXED: Using Skip behavior
+
+### Next Session Tasks (CRITICAL - FINAL)
+- [ ] E.1: Implement worker pattern with channel-based EventTracker
 - [ ] E.2: Fix activity tracking - Eliminate task spawning
 - [ ] E.3: Optimize memory usage - Reduce to < 5KB/session
 
@@ -255,7 +273,9 @@ With our consolidation using the existing SessionStore trait:
 ## Related Documents
 
 ### Primary References
-- **🔴 [Critical Architecture Review](analysis/critical-architecture-review.md)** - MUST READ
+- **🔴 [Channel-Based Approach](analysis/revised-channel-based-approach.md)** - FINAL IMPLEMENTATION APPROACH
+- **🔴 [GPT-5 Worker Review](analysis/gpt5-worker-review-and-revised-plan.md)** - Critical fixes incorporated
+- **🔴 [Critical Architecture Review](analysis/critical-architecture-review.md)** - Original issues
 - [Last-Event-Id Tracking Analysis](analysis/last-event-id-tracking-analysis.md)
 - [Consolidation Design](analysis/consolidation-design.md)
 - [Reverse Proxy Refactor](../reverse-proxy-refactor/tracker.md) - ON HOLD pending this work
@@ -298,3 +318,6 @@ With our consolidation using the existing SessionStore trait:
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-08-17 | 1.0 | Initial plan created from analysis | Claude + Kevin |
+| 2025-08-18 | 1.1 | Added E.0, revised E.1 with GPT-5 critical fixes | Claude + Kevin + GPT-5 |
+| 2025-08-18 | 1.2 | Removed E.0, channel-based approach (no callbacks) | Claude + Kevin |
+| 2025-08-18 | 1.3 | Updated E.1 to v2 with GPT-5 optimizations | Claude + Kevin + GPT-5 |
