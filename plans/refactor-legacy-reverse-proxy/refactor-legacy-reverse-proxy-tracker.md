@@ -4,9 +4,9 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-01-18 (Session 7 - REFACTORING COMPLETE!)  
-**Total Estimated Duration**: 20-25 hours  
-**Status**: ✅ COMPLETE - legacy.rs DELETED! (100% reduction)
+**Last Updated**: 2025-08-19 (Session 8 - CRITICAL FIXES IN PROGRESS)  
+**Total Estimated Duration**: 30-35 hours (extended due to critical issues)  
+**Status**: 🔧 FIXING - Critical production issues discovered
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
@@ -24,6 +24,32 @@ Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation i
 - **Tests**: All passing
 - **Modules Created**: 22 well-organized files
 - **Achievement**: 100% reduction - complete modularization!
+
+## ⚠️ CRITICAL ISSUES DISCOVERED (Session 8)
+
+### Connection Pool Not Reusing Connections
+**Status**: ✅ FIXED (Session 9)
+- **Root Cause**: Drop implementation was shutting down maintenance loop prematurely
+- **GPT-5 Analysis**: Identified multiple architectural issues
+- **Fixes Applied**:
+  1. ✅ Fixed semaphore leak - now uses OwnedSemaphorePermit
+  2. ✅ Removed Arc<Mutex> from receiver - moved ownership to maintenance task
+  3. ✅ Fixed subprocess disconnection detection
+  4. ✅ Fixed lock-held-across-await in cleanup_idle_connections
+  5. ✅ Fixed pool capacity check logic
+  6. ✅ **CRITICAL FIX**: Removed Drop impl that was triggering shutdown on ANY clone drop
+- **Verified Working**: Pool now correctly reuses connections (1 subprocess for N requests)
+- **Tests Added**: test_simple_pool_reuse, test_stdio_subprocess_pool_reuse
+
+### Performance Regressions
+- **140% latency increase** at p95
+- **90% throughput loss** for stdio transport
+- Every request spawns new subprocess (10ms overhead)
+
+### Missing Drop Implementation
+- Server lacks Drop trait for resource cleanup
+- Tasks continue running after shutdown
+- Pools not properly closed
 
 ## Architecture Vision (Current State)
 
@@ -100,8 +126,8 @@ Address all critical issues identified in comprehensive review.
 
 | ID | Task | Duration | Status | Priority | Notes |
 |----|------|----------|--------|----------|-------|
-| H.0 | **Fix Connection Pool Leak** | 2h | ⏳ Pending | 🔴 Critical | Fix Drop impl in pool.rs |
-| H.1 | **Fix Stdio Subprocess Spawning** | 4h | ⏳ Pending | 🔴 Critical | Implement real pooling |
+| H.0 | **Fix Connection Pool Leak** | 2h | ✅ Complete | 🔴 Critical | Fixed semaphore, try_send, capacity check |
+| H.1 | **Fix Stdio Subprocess Spawning** | 10h | ✅ Complete | 🔴 Critical | Fixed Drop impl, pool now reuses connections |
 | H.2 | **Add Server Drop Implementation** | 2h | ⏳ Pending | 🔴 Critical | Clean up resources |
 | H.3 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
 | H.4 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
@@ -209,7 +235,8 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
 ### Session History
 - Session 6: Cleanup and consolidation
 - Session 7: Completed refactoring, deleted legacy.rs
-- Session 8 (2025-08-18): Comprehensive review revealed critical issues
+- Session 8 (2025-08-18): Comprehensive review revealed critical issues, started fixing pool
+- Session 9 (2025-08-19): Fixed critical pool issue - Drop impl was shutting down maintenance
 
 ### Review Findings
 - Architecture is excellent but implementation has critical flaws

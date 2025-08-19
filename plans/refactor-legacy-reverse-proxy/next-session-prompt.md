@@ -1,83 +1,88 @@
-# Next Session Prompt - URGENT: Critical Fixes for Reverse Proxy Refactor
+# Next Session Prompt - Continue Critical Fixes
 
-## ⚠️ CRITICAL CONTEXT
+## Context
+We've been fixing critical issues in the reverse proxy refactor that were causing severe performance regressions (140% p95 latency, 90% throughput loss).
 
-**The refactoring is architecturally complete BUT has critical production-blocking issues!**
+## What We've Completed (Sessions 8-9)
 
-A comprehensive review (2025-08-18) found:
-- **Resource leaks** that will cause production outages
-- **Performance regressions** exceeding 140% at p95 latency
-- **Missing core features** (SSE reconnection, admin endpoints)
-- **90% throughput loss** for stdio transport
+### ✅ SOLVED: Connection Pool Not Reusing Connections
+**Root Cause Found**: The Drop implementation was triggering shutdown on ANY clone drop, not just the last reference. This caused the maintenance loop to shut down immediately, preventing connection reuse.
 
-## 🔴 Your Mission: Fix Critical Issues (Day 1 - 8 hours)
+**Fix Applied**: Removed the problematic Drop implementation. The pool now correctly reuses connections.
 
-### Task H.0: Fix Connection Pool Leak (2 hours) 
-**File**: `src/proxy/reverse/upstream/pool.rs:56-60`
-```rust
-// BROKEN - Connections leak when return channel fails
-impl<T> Drop for PooledConnection<T> {
-    fn drop(&mut self) {
-        let _ = self.pool.return_tx.send(connection); // Silent failure!
-    }
-}
-```
-**Fix**: Implement proper cleanup with spawned task to ensure return or count decrement
-**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.0-fix-connection-pool-leak.md`
+**Verified**: Tests confirm only 1 subprocess is created for N requests (was N subprocesses before).
 
-### Task H.1: Fix Stdio Subprocess Spawning (4 hours)
-**File**: `src/proxy/reverse/upstream/stdio.rs:87-106`  
-**Problem**: Creates NEW process per request instead of reusing connections!
-**Impact**: 90% throughput reduction, 10ms overhead per request
-**Fix**: Implement true connection reuse or process pool
-**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.1-fix-stdio-subprocess-spawning.md`
+### Applied GPT-5's Architectural Fixes
+1. **✅ Fixed Semaphore Leak** - Now uses `OwnedSemaphorePermit` tied to connection lifetime
+2. **✅ Fixed Receiver Pattern** - Moved from `Arc<Mutex<Receiver>>` to direct ownership in maintenance task
+3. **✅ Fixed Subprocess Health** - Marks disconnected when stdout closes or send fails
+4. **✅ Fixed Lock Contention** - No more await while holding locks
+5. **✅ Fixed Pool Capacity** - Was rejecting at wrong threshold
+6. **✅ Fixed Drop Implementation** - Removed premature shutdown trigger
 
-### Task H.2: Add Server Drop Implementation (2 hours)
-**File**: `src/proxy/reverse/server.rs`
-**Problem**: No resource cleanup on shutdown - tasks keep running, pools leak
-**Fix**: Implement Drop trait to abort tasks, flush recorder, close pools
-**Details**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/H.2-add-server-drop-implementation.md`
-
-## Working Directory & Branch
+## Files to Examine
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 git checkout refactor/legacy-reverse-proxy
+
+# Core pool implementation
+src/proxy/pool.rs:280-318  # maintenance_loop - should be receiving
+src/proxy/pool.rs:320-350  # process_returned_connection - should add to idle
+src/proxy/pool.rs:248-274  # get_idle_connection - should find reusable
+
+# Test showing the issue
+tests/test_pool_reuse_integration.rs  # Simple test that should reuse
 ```
 
-## Validation After Each Fix
+git checkout refactor/legacy-reverse-proxy
+```
+
+## Immediate Next Steps (Critical Issues)
+
+### H.2: Add Server Drop Implementation (2h)
+The reverse proxy server lacks a Drop trait implementation for proper resource cleanup. This causes:
+- Tasks continue running after shutdown
+- Connection pools not properly closed
+- Potential resource leaks in production
+
+**Implementation needed**:
+```rust
+impl Drop for ReverseProxyServer {
+    fn drop(&mut self) {
+        // Shutdown all pools
+        // Cancel background tasks
+        // Close database connections
+    }
+}
+```
+
+### H.3: Deduplicate AppState Creation (1h)
+Multiple methods create AppState differently, causing inconsistency.
+- Consolidate into single `AppState::new()` method
+- Ensure all components use same initialization
+
+### H.4: Implement SSE Reconnection (6h)
+SSE connections don't reconnect on failure. Need:
+- Exponential backoff retry logic
+- Connection state tracking
+- Proper error recovery
+
+## Test Commands
 ```bash
-# Test for leaks
-cargo test pool_tests::test_connection_pool_leak_prevention
+# Run integration tests to verify fixes
+cargo test --test integration_reverse_proxy
 
-# Check performance
-cargo bench --bench reverse_proxy
-
-# Verify no clippy warnings
-cargo clippy --all-targets -- -D warnings
+# Check for performance improvements
+cargo bench reverse_proxy
 ```
 
-## Success Criteria for Day 1
-- [ ] Connection pool Drop fixed - no leaks under pressure
-- [ ] Stdio reuses connections - <20ms per request
-- [ ] Server Drop implemented - clean shutdown verified
+## Success Criteria
+- [ ] Server properly cleans up resources on shutdown
+- [ ] Performance within 5% of legacy implementation
+- [ ] SSE connections automatically reconnect
 - [ ] All tests passing
-- [ ] Memory stable under load test
 
-## Critical Resources
-- **Full Review**: `/plans/refactor-legacy-reverse-proxy/reviews/`
-- **All Tasks**: `/plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/`
-- **Tracker**: `/plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
-
-## DO NOT
-- Skip tests for any fix
-- Mark complete without verification
-- Merge to main until ALL critical issues fixed
-
-## Priority Order
-1. H.0 first (affects all upstreams)
-2. H.1 second (biggest perf impact)  
-3. H.2 third (prevents resource cleanup)
-
-Each task file has detailed implementation steps, code examples, and test cases. Follow them exactly.
-
-**This is blocking production deployment. Focus and fix these issues!**
+## References
+- Tracker: `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
+- Critical issues: `plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/`
+- Review: `/Users/kevin/src/tapwire/reviews/refactor-legacy-reverse-proxy-review.md`
