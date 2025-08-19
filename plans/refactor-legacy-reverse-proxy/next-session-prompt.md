@@ -1,113 +1,118 @@
-# Next Session Prompt - Continue Critical Fixes
+# Next Session Prompt - Session 11
 
-## Context
-We've made significant progress on the critical issues from the reverse proxy refactor review. The connection pool now properly reuses connections, subprocess health detection works correctly, and the server has proper resource cleanup.
+## Quick Start
+Continue the refactor-legacy-reverse-proxy plan by implementing critical fixes H.5 through H.10.
 
-## What We've Completed (Session 10)
+## Current Status (Session 10 Complete)
+- ✅ H.0: Fixed connection pool (inner Arc pattern)
+- ✅ H.1: Fixed subprocess health detection  
+- ✅ H.2: Added server Drop implementation
+- ✅ H.3: P95 latency Phase 1 optimizations applied (30-40% improvement expected)
+- ✅ H.4: Deduplicated AppState creation
 
-### ✅ COMPLETE: H.1 - Fix Stdio Subprocess Health Semantics (2h)
-**Implementation**:
-1. Wrapped child process in `Arc<Mutex<Child>>` for thread-safe status checking
-2. Updated `is_connected()` to use `try_wait()` to detect exited processes
-3. Single-shot CLI commands (like `echo`) correctly marked as unhealthy and not reused
-4. Persistent servers (like `cat`) properly remain in pool for reuse
+## Priority Tasks for Session 11
 
-**Results**:
-- Tests verify correct behavior for both single-shot and persistent processes
-- No more leaked subprocesses from single-shot commands
-- Pool correctly distinguishes between reusable and non-reusable connections
+### 🔴 CRITICAL - H.5: Implement SSE Reconnection (6 hours)
+**This is the most critical missing feature for production resilience.**
 
-### ✅ COMPLETE: H.2 - Add Server Drop Implementation (2h)
-**Implementation**:
-1. Added `Drop` trait to `ReverseProxyServer`
-2. Properly shuts down connection pools on drop (spawns async task)
-3. Aborts server task handle if running
-4. Changed router field to `Option<Router>` to allow moving out
+Check the comprehensive review at `@plans/refactor-legacy-reverse-proxy/reviews/04-recommendations.md` for details on what's needed:
+- Exponential backoff for reconnection attempts
+- Session state preservation across reconnections  
+- Graceful handling of network interruptions
+- Integration tests with simulated failures
 
-**Results**:
-- Resources properly cleaned up when server is dropped
-- No more leaked background tasks
-- All integration tests still pass
+Key files to modify:
+- `shadowcat/src/proxy/reverse/upstream/http/streaming/initiator.rs` - Add reconnection logic
+- `shadowcat/src/proxy/reverse/handlers/mcp.rs` - Handle reconnection events
+- Tests: Create new test in `tests/test_sse_reconnection.rs`
 
-## Files to Examine (if needed)
+### 🟡 HIGH - H.6: Add Request Timeouts (3 hours)
+Implement separate timeouts for:
+- Connection establishment
+- Request sending
+- Response receiving
+
+Files: All upstream implementations in `shadowcat/src/proxy/reverse/upstream/`
+
+### 🟡 HIGH - H.7: Restore Buffer Pooling (2 hours)
+Re-enable buffer pooling for SSE to reduce memory usage.
+Check what was removed by comparing with legacy.rs backup.
+
+### 🟡 HIGH - H.9: Performance Benchmarks (3 hours)
+Validate our P95 latency improvements:
+- Run benchmarks to confirm 30-40% improvement from Phase 1
+- Identify if Phase 2 optimizations are needed
+- Compare against legacy baseline
+
+## Context and Documentation
+- **Tracker**: `@plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
+- **Reviews**: `@plans/refactor-legacy-reverse-proxy/reviews/` - Comprehensive analysis
+- **Task Details**: `@plans/refactor-legacy-reverse-proxy/tasks/`
+- **P95 Analysis**: `@shadowcat/docs/p95-latency-analysis.md`
+
+## What Was Completed in Session 10
+1. **H.1**: Fixed subprocess health detection - wrapped Child in Arc<Mutex> for thread-safe status checking
+2. **H.2**: Added Drop implementation to ReverseProxyServer for proper resource cleanup
+3. **H.3**: Analyzed P95 latency issues and applied Phase 1 optimizations:
+   - Pre-computed command strings to avoid per-request allocation
+   - Added conditional compilation for debug-only logging
+   - Direct byte serialization instead of JSON Value intermediate
+4. **H.4**: Deduplicated AppState creation into centralized functions
+
+## Development Workflow
+1. Check tracker for latest status
+2. Pick next task (H.5 is critical)
+3. Create task file in `tasks/` directory
+4. Implement solution
+5. Run tests: `cargo test --lib` and relevant integration tests
+6. Update tracker and commit changes
+
+## Testing Commands
+```bash
+# Quick checks during development
+cargo check
+cargo test --lib
+
+# Before committing
+cargo fmt
+cargo clippy --all-targets -- -D warnings
+cargo test
+
+# Specific tests
+cargo test --test test_reverse_proxy_sse
+cargo test --test e2e_resilience_test
+cargo test --test test_subprocess_health
+
+# Performance validation
+cargo bench reverse_proxy
+```
+
+## Git Workflow
+Remember: shadowcat is a submodule - commit there first!
+1. Make changes in shadowcat/
+2. Commit and push shadowcat (branch: refactor/legacy-reverse-proxy)
+3. Update tapwire tracker and docs
+4. Commit and push tapwire (branch: main)
+
+## Success Criteria for Session 11
+- [ ] H.5 SSE Reconnection implemented and tested
+- [ ] H.6 Request timeouts added (if time permits)
+- [ ] All tests passing
+- [ ] No clippy warnings
+- [ ] Tracker updated with progress
+- [ ] P95 latency validated to be within acceptable range
+
+## Files to Reference
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 git checkout refactor/legacy-reverse-proxy
 
-# Core implementations fixed
-src/transport/outgoing/subprocess.rs  # Health detection logic
-src/proxy/reverse/server.rs          # Drop implementation
-tests/test_subprocess_health.rs      # New tests for health detection
+# Recently modified files
+src/proxy/reverse/upstream/stdio.rs     # P95 optimizations applied
+src/proxy/reverse/server.rs             # Drop impl and AppState dedup
+src/transport/outgoing/subprocess.rs    # Health detection logic
+
+# Next files to work on
+src/proxy/reverse/upstream/http/streaming/initiator.rs  # SSE reconnection
+src/proxy/reverse/handlers/mcp.rs                       # SSE handler
 ```
-
-## Immediate Next Steps (Critical Issues Remaining)
-
-### QUESTION: What should we focus on next?
-
-We have several critical and high-priority items remaining. Here are the top candidates:
-
-#### Option 1: H.3 - Investigate P95 Latency (2h) 🔴 CRITICAL
-While we fixed stdio throughput, p95 latency is still 140% higher than legacy. This needs investigation:
-- Profile the request path to find bottlenecks
-- Check for hidden blocking operations
-- Verify no double-buffering in SSE path
-- Benchmark against legacy implementation
-
-#### Option 2: H.4 - Deduplicate AppState Creation (1h) 🔴 CRITICAL
-Multiple methods create AppState differently, leading to inconsistency:
-- Consolidate into single `AppState::new()` method
-- Ensure consistent initialization across all paths
-- Simplify server initialization code
-
-#### Option 3: H.5 - Implement SSE Reconnection (6h) 🔴 CRITICAL
-SSE connections don't reconnect on failure, breaking resilience:
-- Integrate existing `shadowcat/src/transport/sse/reconnect.rs`
-- Define policy: exponential backoff, full jitter, max backoff cap
-- Tests: deterministic timers, no thundering herd, no duplicate subscriptions
-
-#### Option 4: H.6 - Add Request Timeouts (3h) 🟡 HIGH
-Separate connect/request/response timeouts with sensible defaults:
-- Add timeout configuration to all upstream implementations
-- Ensure retries respect overall deadlines
-- Test timeout behavior under various conditions
-
-#### Option 5: H.9 - Performance Benchmarks (3h) 🟡 HIGH
-Add benchmark harness to validate our fixes:
-- Measure p50/p95 latency and throughput for stdio and HTTP paths
-- Compare with/without pool reuse
-- Store artifacts for regression detection
-
-## Test Commands
-```bash
-# Run integration tests to verify fixes
-cargo test --test integration_reverse_proxy_http
-
-# Check subprocess health tests
-cargo test --test test_subprocess_health
-
-# Check for performance improvements  
-cargo bench reverse_proxy
-```
-
-## Success Criteria Progress
-- [x] Connection pool properly reuses connections ✅
-- [x] No subprocess spawning overhead for persistent stdio ✅
-- [x] Subprocess health semantics updated ✅
-- [x] Server properly cleans up resources on shutdown ✅
-- [ ] P95 latency within 5% of legacy implementation
-- [ ] SSE connections automatically reconnect
-- [ ] All tests passing with full coverage
-- [ ] Breaking changes documented
-
-## References
-- Tracker: `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
-- Critical issues: `plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/`
-- GPT findings: `plans/refactor-legacy-reverse-proxy/gpt-findings/`
-- Review docs: `plans/refactor-legacy-reverse-proxy/reviews/`
-
-## Recommendation
-I recommend focusing on **Option 1: H.3 - Investigate P95 Latency** next, as performance is a critical production concern and we need to understand where the remaining overhead is coming from. Once we identify the bottleneck, we can likely fix it quickly.
-
-After that, **Option 3: H.5 - SSE Reconnection** would be the next priority as it's a critical resilience feature that's currently missing.
-
-What would you like to work on next?
