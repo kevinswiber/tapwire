@@ -14,7 +14,12 @@ Open items / future enhancements:
 - Close event helper implemented: `Pool::close_event()` and acquire now cancels
   promptly when close starts (sqlx-style behavior). Added unit test to verify
   pending acquires resolve with error after `close()` begins.
-- (Optional) Health hooks (before/after acquire) if needed by consumers.
+- Health hooks implemented (SQLx-style):
+  - `after_create` for new resources, fail acquire on error.
+  - `before_acquire` for idle resources, return false/Err to close-and-retry.
+  - `after_release` on drop, false/Err closes instead of requeue.
+  Includes `PoolConnectionMetadata { age, idle_for }` and examples.
 - (Optional) Lock-free idle queue + atomic counters if profiling shows contention.
 
-Integration is intentionally deferred; existing proxy still uses old pool. Migration will follow once API is locked.
+Pilot integration started: added adapter and `process_via_stdio_pooled_v2` for
+stdio upstream using the new pool (keeping existing paths intact for now).
