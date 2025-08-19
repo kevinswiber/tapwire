@@ -1,126 +1,113 @@
 # Next Session Prompt - Continue Critical Fixes
 
 ## Context
-We’ve fixed the most critical performance regression in the reverse proxy refactor. The connection pool now properly reuses connections, resolving the 90% throughput loss for stdio transport.
+We've made significant progress on the critical issues from the reverse proxy refactor review. The connection pool now properly reuses connections, subprocess health detection works correctly, and the server has proper resource cleanup.
 
-## What We've Completed (Session 9)
+## What We've Completed (Session 10)
 
-### ✅ COMPLETE: Connection Pool Fix (sqlx-style)
-**Journey**:
-1. Found root cause: Drop impl shutting down on ANY clone drop
-2. Initial fix: Removed Drop (worked but no cleanup)
-3. GPT-5 review: Suggested inner Arc pattern for proper cleanup
-4. Intermediate: Inner Arc pattern with last-reference Drop
-5. **Final implementation**: Inner-Arc + weak-backed maintenance loop, plus last-ref async cleanup backstop
+### ✅ COMPLETE: H.1 - Fix Stdio Subprocess Health Semantics (2h)
+**Implementation**:
+1. Wrapped child process in `Arc<Mutex<Child>>` for thread-safe status checking
+2. Updated `is_connected()` to use `try_wait()` to detect exited processes
+3. Single-shot CLI commands (like `echo`) correctly marked as unhealthy and not reused
+4. Persistent servers (like `cat`) properly remain in pool for reuse
 
 **Results**:
-- Pool correctly reuses connections (1 subprocess for N sequential requests for persistent stdio servers)
-- Maintenance loop owns the return channel and uses Weak<..> - no circular reference
-- Drop correctly detects last user reference and triggers async cleanup (best-effort)
-- Backpressure-safe return path: on return-channel error, close connection with timeout, then decrement active
-- Follows industry best practices from sqlx
+- Tests verify correct behavior for both single-shot and persistent processes
+- No more leaked subprocesses from single-shot commands
+- Pool correctly distinguishes between reusable and non-reusable connections
 
-### Applied All GPT-5 and SQLx Best Practices
-1. **✅ Inner-Arc Pattern** – Clean last-reference detection
-2. **✅ Weak-backed Maintenance** – No circular dependencies
-3. **✅ OwnedSemaphorePermit** – Prevents semaphore leaks
-4. **✅ Receiver Ownership** – Direct ownership in maintenance task (no Arc<Mutex<Receiver>>)
-5. **⚠️ Subprocess Health Follow-up** – Still needed: mark disconnected on stdout EOF; optional child.try_wait()
-6. **✅ No Await-in-Lock** – Idle cleanup drains, processes off-lock
-7. **✅ Async Cleanup Backstop** – Best-effort shutdown on last Drop
-8. **✅ Backpressure-safe Return** – Close with timeout if return channel full/closed
-9. **Docs** – Clarify Drop vs. shutdown() semantics; document stdio single-shot CLI limitation
+### ✅ COMPLETE: H.2 - Add Server Drop Implementation (2h)
+**Implementation**:
+1. Added `Drop` trait to `ReverseProxyServer`
+2. Properly shuts down connection pools on drop (spawns async task)
+3. Aborts server task handle if running
+4. Changed router field to `Option<Router>` to allow moving out
+
+**Results**:
+- Resources properly cleaned up when server is dropped
+- No more leaked background tasks
+- All integration tests still pass
 
 ## Files to Examine (if needed)
 ```bash
 cd /Users/kevin/src/tapwire/shadowcat
 git checkout refactor/legacy-reverse-proxy
 
-# Core pool implementation
-src/proxy/pool.rs           # Latest pool implementation (fixed)
-src/transport/outgoing/subprocess.rs  # Update health semantics (see below)
-
-# Test showing the issue
-tests/test_pool_reuse_integration.rs  # Simple test that should reuse
+# Core implementations fixed
+src/transport/outgoing/subprocess.rs  # Health detection logic
+src/proxy/reverse/server.rs          # Drop implementation
+tests/test_subprocess_health.rs      # New tests for health detection
 ```
 
-git checkout refactor/legacy-reverse-proxy
-```
+## Immediate Next Steps (Critical Issues Remaining)
 
-## Immediate Next Steps (Critical Issues)
+### QUESTION: What should we focus on next?
 
-### H.1: Fix Stdio Subprocess Spawning – Health Semantics (2h) 🔴 CRITICAL
-Persistent stdio servers can now be reused via the pool; ensure subprocess health is accurate so dead connections aren’t returned to idle.
+We have several critical and high-priority items remaining. Here are the top candidates:
 
-Actions:
-- In `shadowcat/src/transport/outgoing/subprocess.rs`:
-  - In `receive_response()`, set `self.connected = false` when `rx.recv().await` returns `None` (stdout closed).
-  - Optionally check `child.try_wait()` in `is_connected()`; if the process has exited, return `false`.
-- Tests: Persistent server reuse with `max_connections=1`; single-shot CLI returns should not be added to idle and should not leak.
-
-### H.2: Add Server Drop/Shutdown Implementation (2h) 🔴 CRITICAL
-The reverse proxy server lacks a Drop trait implementation. Without it:
-- Connection pools won't call shutdown() (though inner Arc provides safety net)
-- Background tasks continue after server drops
-- Potential resource leaks in production
-
-**Implementation needed**:
-```rust
-impl Drop for ReverseProxyServer {
-    fn drop(&mut self) {
-        // 1. Call pool.shutdown() for all pools
-        // 2. Cancel/abort background tasks
-        // 3. Close session store connections
-        // 4. Wait for graceful shutdown
-    }
-}
-```
-
-### H.3: Investigate P95 Latency (2h) 🔴 CRITICAL
-While we fixed stdio throughput, p95 latency is still 140% higher. Need to:
-- Profile the request path
+#### Option 1: H.3 - Investigate P95 Latency (2h) 🔴 CRITICAL
+While we fixed stdio throughput, p95 latency is still 140% higher than legacy. This needs investigation:
+- Profile the request path to find bottlenecks
 - Check for hidden blocking operations
 - Verify no double-buffering in SSE path
 - Benchmark against legacy implementation
 
-### H.4: Deduplicate AppState Creation (1h) 🟡 HIGH
-Multiple methods create AppState differently:
+#### Option 2: H.4 - Deduplicate AppState Creation (1h) 🔴 CRITICAL
+Multiple methods create AppState differently, leading to inconsistency:
 - Consolidate into single `AppState::new()` method
 - Ensure consistent initialization across all paths
+- Simplify server initialization code
 
-### H.5: Implement SSE Reconnection (6h) 🟡 HIGH
-SSE connections don't reconnect on failure.
+#### Option 3: H.5 - Implement SSE Reconnection (6h) 🔴 CRITICAL
+SSE connections don't reconnect on failure, breaking resilience:
+- Integrate existing `shadowcat/src/transport/sse/reconnect.rs`
+- Define policy: exponential backoff, full jitter, max backoff cap
+- Tests: deterministic timers, no thundering herd, no duplicate subscriptions
 
-Actions:
-- Integrate existing module `shadowcat/src/transport/sse/reconnect.rs` instead of re-implementing reconnection in reverse-stream layer.
-- Define policy: exponential backoff, full jitter, max backoff cap, reset on success.
-- Tests: Use deterministic timers; ensure no thundering herd and no duplicate subscriptions.
+#### Option 4: H.6 - Add Request Timeouts (3h) 🟡 HIGH
+Separate connect/request/response timeouts with sensible defaults:
+- Add timeout configuration to all upstream implementations
+- Ensure retries respect overall deadlines
+- Test timeout behavior under various conditions
 
-### H.6: Add Request Timeouts (3h) 🟡 HIGH
-Separate connect/request/response timeouts with sensible defaults and overrides. Ensure retries respect overall deadlines.
-
-### H.9: Performance Benchmarks (3h) 🟡 HIGH
-Add a lightweight benchmark harness (wrk/k6 or a Rust microbench) to measure p50/p95 latency and throughput for stdio and HTTP paths with/without pool reuse. Store artifacts for diffs.
+#### Option 5: H.9 - Performance Benchmarks (3h) 🟡 HIGH
+Add benchmark harness to validate our fixes:
+- Measure p50/p95 latency and throughput for stdio and HTTP paths
+- Compare with/without pool reuse
+- Store artifacts for regression detection
 
 ## Test Commands
 ```bash
 # Run integration tests to verify fixes
-cargo test --test integration_reverse_proxy
+cargo test --test integration_reverse_proxy_http
 
-# Check for performance improvements
+# Check subprocess health tests
+cargo test --test test_subprocess_health
+
+# Check for performance improvements  
 cargo bench reverse_proxy
 ```
 
-## Success Criteria
+## Success Criteria Progress
 - [x] Connection pool properly reuses connections ✅
 - [x] No subprocess spawning overhead for persistent stdio ✅
-- [ ] Subprocess health semantics updated; single-shot CLIs not reused
-- [ ] Server properly cleans up resources on shutdown
+- [x] Subprocess health semantics updated ✅
+- [x] Server properly cleans up resources on shutdown ✅
 - [ ] P95 latency within 5% of legacy implementation
-- [ ] SSE connections automatically reconnect (policy + tests)
-- [ ] All tests passing
+- [ ] SSE connections automatically reconnect
+- [ ] All tests passing with full coverage
+- [ ] Breaking changes documented
 
 ## References
 - Tracker: `plans/refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md`
 - Critical issues: `plans/refactor-legacy-reverse-proxy/tasks/phase-h-fixes/`
 - GPT findings: `plans/refactor-legacy-reverse-proxy/gpt-findings/`
+- Review docs: `plans/refactor-legacy-reverse-proxy/reviews/`
+
+## Recommendation
+I recommend focusing on **Option 1: H.3 - Investigate P95 Latency** next, as performance is a critical production concern and we need to understand where the remaining overhead is coming from. Once we identify the bottleneck, we can likely fix it quickly.
+
+After that, **Option 3: H.5 - SSE Reconnection** would be the next priority as it's a critical resilience feature that's currently missing.
+
+What would you like to work on next?

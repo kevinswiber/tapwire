@@ -4,9 +4,9 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-08-19 (Post pool fix)  
+**Last Updated**: 2025-08-19 (H.1 & H.2 complete)  
 **Total Estimated Duration**: 30-35 hours (extended due to critical issues)  
-**Status**: 🔧 FIXING - Critical production issues discovered
+**Status**: 🔧 FIXING - Critical issues being resolved
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
 
 ## Goals
@@ -131,8 +131,8 @@ Address all critical issues identified in comprehensive review.
 | ID | Task | Duration | Status | Priority | Notes |
 |----|------|----------|--------|----------|-------|
 | H.0 | **Fix Connection Pool Leak** | 2h | ✅ Complete | 🔴 Critical | Fixed semaphore, try_send, capacity check |
-| H.1 | **Fix Stdio Subprocess Spawning (Health semantics)** | 4h | ⏳ Pending | 🔴 Critical | Mark disconnected on EOF; optional try_wait(); tests + docs |
-| H.2 | **Add Server Drop Implementation** | 2h | ⏳ Pending | 🔴 Critical | Clean up resources |
+| H.1 | **Fix Stdio Subprocess Health Semantics** | 2h | ✅ Complete | 🔴 Critical | Wrapped in Arc<Mutex>, proper is_connected() |
+| H.2 | **Add Server Drop Implementation** | 2h | ✅ Complete | 🔴 Critical | Drop trait cleans up pools & tasks |
 | H.3 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
 | H.4 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
 | H.5 | **Add Request Timeouts** | 3h | ⏳ Pending | 🟡 High | All upstream impls |
@@ -211,7 +211,7 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
 
 ### Critical Issues (From Review - Progress)
 - [x] No resource leaks in connection pool ✅ (inner Arc pattern)
-- [ ] No resource leaks in server (needs Drop impl)
+- [x] No resource leaks in server ✅ (Drop impl added)
 - [x] Stdio transport performance restored ✅ (connection reuse working)
 - [ ] Overall performance within 5% of legacy (p95 latency still high)
 - [ ] SSE reconnection implemented
@@ -252,6 +252,15 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
     - Drop implementation now correctly detects last user reference
     - Async cleanup happens automatically without requiring explicit shutdown()
     - Follows industry best practices from sqlx connection pool
+- Session 10 (2025-08-19): Fixed subprocess health and server cleanup
+  - **H.1 Complete**: Subprocess health semantics fixed
+    - Wrapped child process in Arc<Mutex> for thread-safe status checking
+    - Single-shot CLI commands correctly not reused
+    - Persistent servers properly reused
+  - **H.2 Complete**: Server Drop implementation added
+    - Properly shuts down connection pools
+    - Aborts server tasks on drop
+    - All integration tests still pass
 
 ### Review Findings
 - Architecture is excellent but implementation has critical flaws
