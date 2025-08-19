@@ -2,29 +2,27 @@
 
 Date: 2025-08-19
 
-## H.0 Fix Connection Pool Leak
+## H.0 Fix Connection Pool Leak (implemented)
 
 - Plan path reference: `src/proxy/reverse/upstream/pool.rs` (mismatch)
   - Actual file: `shadowcat/src/proxy/pool.rs`
 - Current code status:
-  - `PooledConnection::Drop` uses `try_send` and spawns cleanup on failure (non-blocking). Good.
-  - Semaphore uses `OwnedSemaphorePermit` held by `PooledConnection` (good).
-  - Return channel is bounded with configurable multiplier (good).
-  - Maintenance loop still locks `Arc<Mutex<mpsc::Receiver<T>>>` and holds guard across awaits (needs change).
-  - `cleanup_idle_connections` awaits while holding `idle_connections` lock (could be improved).
+  - Maintenance loop owns `mpsc::Receiver<T>` and consumes first interval tick; no `Arc<Mutex<Receiver>>` guards.
+  - `PooledConnection::Drop` handles backpressure: on `try_send` error extracts connection, closes with timeout, then decrements active.
+  - Idle cleanup avoids awaits while holding locks; last-reference Drop spawns async cleanup backstop.
+  - Semaphore uses `OwnedSemaphorePermit` held by `PooledConnection`.
 - Plan delta required:
-  - Explicitly require moving `Receiver<T>` ownership into the maintenance task.
-  - Add acceptance checks for return processing and idle reuse.
+  - Mark H.0 as done; keep regression tests for reuse and return-path safety.
 
-## H.1 Fix Stdio Subprocess Spawning
+## H.1 Fix Stdio Subprocess Spawning (pending)
 
 - Plan file paths:
   - References `src/transport/subprocess.rs` (mismatch)
   - Actual file: `shadowcat/src/transport/outgoing/subprocess.rs`
 - Current code status:
-  - Upstream stdio uses pool with factory that calls `Subprocess::connect()` (reuses only if pool returns idle).
-  - `Subprocess::is_connected()` returns a bool field; not updated on stdout EOF; no `try_wait()` child check.
-  - `receive_response()` does not set `connected=false` on channel close.
+  - Upstream stdio uses pool with factory that calls `Subprocess::connect()` (reuses if pool returns idle).
+  - `Subprocess::is_connected()` toggling on stdout EOF not yet verified; optional `try_wait()` child check recommended.
+  - Ensure `receive_response()` sets `connected=false` on channel close.
 - Plan delta required:
   - Implement “mark disconnected on EOF” and optional child status check.
   - Add a persistent stdio test server to validate actual reuse through the pool.
@@ -53,4 +51,3 @@ Date: 2025-08-19
 - Pool: use `shadowcat/src/proxy/pool.rs`.
 - Subprocess: use `shadowcat/src/transport/outgoing/subprocess.rs`.
 - Traits: `shadowcat/src/transport/traits.rs`.
-

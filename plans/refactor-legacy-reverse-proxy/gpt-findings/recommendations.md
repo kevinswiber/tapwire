@@ -2,15 +2,14 @@
 
 ## Task-Level Additions/Edits
 
-- H.0 Fix Connection Pool Leak
-  - Add: Refactor maintenance loop to own `mpsc::Receiver<T>` (remove `Arc<Mutex<Receiver<_>>>`).
-  - Add: Remove awaits while holding `idle_connections` lock; collect and then act.
-  - Acceptance: Return channel drain verified via test; `idle_connections` increases after first request; active/total counters stable; no deadlocks in stress test.
+- H.0 Fix Connection Pool Leak (completed)
+  - Implemented: Receiver ownership moved into maintenance; backpressure-safe return path (close with timeout); idle cleanup avoids await-in-lock; last-ref async cleanup backstop.
+  - Keep: Acceptance tests to prevent regressions (return channel drain, reuse, counters stable).
 
-- H.1 Fix Stdio Subprocess Spawning
-  - Add: Update `Subprocess` to set `connected = false` on stdout EOF / `recv()==None`; optionally check `child.try_wait()` in `is_connected()`.
-  - Add: Document stdio pooling limitation for single-shot CLIs and recommend persistent servers/HTTP for throughput.
-  - Acceptance: With a persistent test server and `max_connections=1`, N requests spawn exactly one process and reuse; with a single-shot CLI, pool does not reuse and does not leak.
+- H.1 Fix Stdio Subprocess Spawning (updated)
+  - Do: Update `Subprocess` to set `connected = false` on stdout EOF / `recv()==None`; optionally check `child.try_wait()` in `is_connected()`.
+  - Document: Stdio pooling limitation for single-shot CLIs; recommend persistent servers/HTTP for throughput.
+  - Acceptance: Persistent server reuses with `max_connections=1`; single-shot CLIs are not reused and do not leak.
 
 - H.2 Add Server Drop Implementation
   - Clarify: Ensure server shutdown signals pool shutdown, drains return channel briefly, and cleans up sessions/SSE if applicable.

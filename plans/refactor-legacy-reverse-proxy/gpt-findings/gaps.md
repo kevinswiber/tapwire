@@ -2,20 +2,18 @@
 
 ## Critical (Address in Phase H)
 
-1. Connection Pool Maintenance Loop Ownership (still outstanding)
-   - Gap: Plan does not explicitly require moving `mpsc::Receiver<T>` ownership into the maintenance task (removing `Arc<Mutex<Receiver<_>>>`).
-   - Impact: Returned connections may never be processed; pooling remains ineffective; continued respawns.
-   - Action: Add a subtask to H.0/H.1 to refactor receiver ownership and remove the guard-across-await pattern.
+1. Connection Pool Maintenance Loop Ownership (resolved)
+   - Status: Implemented. Maintenance loop owns `mpsc::Receiver<T>`; no `Arc<Mutex<Receiver<_>>>` guards remain. First interval tick is consumed.
+   - Follow-up: Keep acceptance tests to guard against regressions.
 
 2. Subprocess Health Semantics (still outstanding)
    - Gap: No explicit item to correct `Subprocess::is_connected()`/health when stdout closes or process exits.
    - Impact: Dead connections may be considered healthy; pool may retain unusable entries; reuse fails.
    - Action: Add to H.1: set `connected = false` on stdout EOF/`recv() == None`, optionally check `child.try_wait()` in `is_connected()`.
 
-3. Await-in-Lock Patterns
-   - Gap: `cleanup_idle_connections()` awaits while holding `idle_connections` lock.
-   - Impact: Risk of lock contention/deadlocks if health checks evolve; latent perf hit under load.
-   - Action: Add to H.0: refactor to collect candidates under lock, release, then perform async checks.
+3. Await-in-Lock Patterns (resolved)
+   - Status: Idle cleanup drains under lock, performs async checks/close off-lock, then repopulates.
+   - Follow-up: None beyond tests.
 
 4. Documentation of Stdio Pooling Limitations
    - Gap: No explicit doc task calling out that single-shot CLIs (e.g., `echo`) cannot be reused.
