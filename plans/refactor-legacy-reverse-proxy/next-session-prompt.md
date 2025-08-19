@@ -1,24 +1,30 @@
 # Next Session Prompt - Continue Critical Fixes
 
 ## Context
-We've been fixing critical issues in the reverse proxy refactor that were causing severe performance regressions (140% p95 latency, 90% throughput loss).
+We've successfully fixed the most critical performance regression in the reverse proxy refactor. The connection pool now properly reuses connections, resolving the 90% throughput loss for stdio transport.
 
-## What We've Completed (Sessions 8-9)
+## What We've Completed (Session 9)
 
-### ✅ SOLVED: Connection Pool Not Reusing Connections
-**Root Cause Found**: The Drop implementation was triggering shutdown on ANY clone drop, not just the last reference. This caused the maintenance loop to shut down immediately, preventing connection reuse.
+### ✅ COMPLETE: Connection Pool Fix with Inner Arc Pattern
+**Journey**:
+1. Found root cause: Drop impl shutting down on ANY clone drop
+2. Initial fix: Removed Drop (worked but no cleanup)
+3. GPT-5 review: Suggested inner Arc pattern for proper cleanup
+4. **Final implementation**: Perfect inner Arc pattern with last-reference Drop
 
-**Fix Applied**: Removed the problematic Drop implementation. The pool now correctly reuses connections.
+**Results**:
+- Pool correctly reuses connections (1 subprocess for N requests)
+- Drop only triggers on last ConnectionPool reference
+- Automatic cleanup as safety net
+- All tests pass including new last-reference tests
 
-**Verified**: Tests confirm only 1 subprocess is created for N requests (was N subprocesses before).
-
-### Applied GPT-5's Architectural Fixes
-1. **✅ Fixed Semaphore Leak** - Now uses `OwnedSemaphorePermit` tied to connection lifetime
-2. **✅ Fixed Receiver Pattern** - Moved from `Arc<Mutex<Receiver>>` to direct ownership in maintenance task
-3. **✅ Fixed Subprocess Health** - Marks disconnected when stdout closes or send fails
-4. **✅ Fixed Lock Contention** - No more await while holding locks
-5. **✅ Fixed Pool Capacity** - Was rejecting at wrong threshold
-6. **✅ Fixed Drop Implementation** - Removed premature shutdown trigger
+### Applied All GPT-5 Recommendations
+1. **✅ Inner Arc Pattern** - Clean last-reference detection
+2. **✅ Fixed Semaphore Leak** - OwnedSemaphorePermit
+3. **✅ Fixed Receiver Pattern** - Direct ownership in maintenance task
+4. **✅ Fixed Subprocess Health** - Disconnection detection
+5. **✅ Fixed Lock Contention** - No await while holding locks
+6. **✅ Added comprehensive tests** - Reuse and cleanup verification
 
 ## Files to Examine
 ```bash
@@ -39,33 +45,41 @@ git checkout refactor/legacy-reverse-proxy
 
 ## Immediate Next Steps (Critical Issues)
 
-### H.2: Add Server Drop Implementation (2h)
-The reverse proxy server lacks a Drop trait implementation for proper resource cleanup. This causes:
-- Tasks continue running after shutdown
-- Connection pools not properly closed
+### H.2: Add Server Drop Implementation (2h) 🔴 CRITICAL
+The reverse proxy server lacks a Drop trait implementation. Without it:
+- Connection pools won't call shutdown() (though inner Arc provides safety net)
+- Background tasks continue after server drops
 - Potential resource leaks in production
 
 **Implementation needed**:
 ```rust
 impl Drop for ReverseProxyServer {
     fn drop(&mut self) {
-        // Shutdown all pools
-        // Cancel background tasks
-        // Close database connections
+        // 1. Call pool.shutdown() for all pools
+        // 2. Cancel/abort background tasks
+        // 3. Close session store connections
+        // 4. Wait for graceful shutdown
     }
 }
 ```
 
-### H.3: Deduplicate AppState Creation (1h)
-Multiple methods create AppState differently, causing inconsistency.
-- Consolidate into single `AppState::new()` method
-- Ensure all components use same initialization
+### H.3: Investigate P95 Latency (2h) 🔴 CRITICAL
+While we fixed stdio throughput, p95 latency is still 140% higher. Need to:
+- Profile the request path
+- Check for hidden blocking operations
+- Verify no double-buffering in SSE path
+- Benchmark against legacy implementation
 
-### H.4: Implement SSE Reconnection (6h)
-SSE connections don't reconnect on failure. Need:
-- Exponential backoff retry logic
-- Connection state tracking
-- Proper error recovery
+### H.4: Deduplicate AppState Creation (1h) 🟡 HIGH
+Multiple methods create AppState differently:
+- Consolidate into single `AppState::new()` method
+- Ensure consistent initialization across all paths
+
+### H.5: Implement SSE Reconnection (6h) 🟡 HIGH
+SSE connections don't reconnect on failure:
+- Add exponential backoff retry logic
+- Track connection state properly
+- Implement proper error recovery
 
 ## Test Commands
 ```bash
@@ -77,8 +91,10 @@ cargo bench reverse_proxy
 ```
 
 ## Success Criteria
+- [x] Connection pool properly reuses connections ✅
+- [x] No subprocess spawning overhead ✅ 
 - [ ] Server properly cleans up resources on shutdown
-- [ ] Performance within 5% of legacy implementation
+- [ ] P95 latency within 5% of legacy implementation
 - [ ] SSE connections automatically reconnect
 - [ ] All tests passing
 

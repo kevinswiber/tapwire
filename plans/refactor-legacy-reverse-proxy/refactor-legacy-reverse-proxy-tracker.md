@@ -28,23 +28,27 @@ Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation i
 ## ⚠️ CRITICAL ISSUES DISCOVERED (Session 8)
 
 ### Connection Pool Not Reusing Connections
-**Status**: ✅ FIXED (Session 9)
+**Status**: ✅ FIXED (Session 9 - Complete with inner Arc pattern)
 - **Root Cause**: Drop implementation was shutting down maintenance loop prematurely
-- **GPT-5 Analysis**: Identified multiple architectural issues
+- **Evolution of Fix**:
+  1. Initial: Removed Drop entirely (worked but no cleanup)
+  2. Attempted: Check Arc::strong_count on shutdown field (wrong Arc)
+  3. **Final**: Inner Arc pattern per GPT-5 recommendation (perfect!)
+- **GPT-5 Analysis**: Validated our fix and suggested improvements
 - **Fixes Applied**:
   1. ✅ Fixed semaphore leak - now uses OwnedSemaphorePermit
   2. ✅ Removed Arc<Mutex> from receiver - moved ownership to maintenance task
   3. ✅ Fixed subprocess disconnection detection
   4. ✅ Fixed lock-held-across-await in cleanup_idle_connections
   5. ✅ Fixed pool capacity check logic
-  6. ✅ **CRITICAL FIX**: Removed Drop impl that was triggering shutdown on ANY clone drop
-- **Verified Working**: Pool now correctly reuses connections (1 subprocess for N requests)
-- **Tests Added**: test_simple_pool_reuse, test_stdio_subprocess_pool_reuse
+  6. ✅ **Implemented inner Arc pattern** - proper last-reference Drop semantics
+- **Verified Working**: Pool correctly reuses connections (1 subprocess for N requests)
+- **Tests Added**: test_simple_pool_reuse, test_stdio_subprocess_pool_reuse, test_last_reference_drop_cleanup
 
 ### Performance Regressions
-- **140% latency increase** at p95
-- **90% throughput loss** for stdio transport
-- Every request spawns new subprocess (10ms overhead)
+- **140% latency increase** at p95 - Still needs investigation
+- ~~**90% throughput loss** for stdio transport~~ ✅ FIXED by connection pool fix
+- ~~Every request spawns new subprocess (10ms overhead)~~ ✅ FIXED by connection pool fix
 
 ### Missing Drop Implementation
 - Server lacks Drop trait for resource cleanup
@@ -127,7 +131,7 @@ Address all critical issues identified in comprehensive review.
 | ID | Task | Duration | Status | Priority | Notes |
 |----|------|----------|--------|----------|-------|
 | H.0 | **Fix Connection Pool Leak** | 2h | ✅ Complete | 🔴 Critical | Fixed semaphore, try_send, capacity check |
-| H.1 | **Fix Stdio Subprocess Spawning** | 10h | ✅ Complete | 🔴 Critical | Fixed Drop impl, pool now reuses connections |
+| H.1 | **Fix Stdio Subprocess Spawning** | 12h | ✅ Complete | 🔴 Critical | Implemented inner Arc pattern, perfect solution |
 | H.2 | **Add Server Drop Implementation** | 2h | ⏳ Pending | 🔴 Critical | Clean up resources |
 | H.3 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
 | H.4 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
@@ -205,9 +209,11 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
 - [x] No module > 500 lines ✅
 - [x] Clear module boundaries ✅
 
-### Critical Issues (From Review - MUST FIX)
-- [ ] No resource leaks (connection pool, tasks)
-- [ ] Performance within 5% of legacy
+### Critical Issues (From Review - Progress)
+- [x] No resource leaks in connection pool ✅ (inner Arc pattern)
+- [ ] No resource leaks in server (needs Drop impl)
+- [x] Stdio transport performance restored ✅ (connection reuse working)
+- [ ] Overall performance within 5% of legacy (p95 latency still high)
 - [ ] SSE reconnection implemented
 - [ ] Full test coverage restored
 - [ ] Breaking changes documented
@@ -236,7 +242,11 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
 - Session 6: Cleanup and consolidation
 - Session 7: Completed refactoring, deleted legacy.rs
 - Session 8 (2025-08-18): Comprehensive review revealed critical issues, started fixing pool
-- Session 9 (2025-08-19): Fixed critical pool issue - Drop impl was shutting down maintenance
+- Session 9 (2025-08-19): Complete pool fix with inner Arc pattern per GPT-5 recommendation
+  - Fixed Drop implementation causing premature shutdown
+  - Implemented proper last-reference Drop semantics
+  - Resolved 90% throughput loss for stdio transport
+  - Added comprehensive tests for connection reuse and cleanup
 
 ### Review Findings
 - Architecture is excellent but implementation has critical flaws

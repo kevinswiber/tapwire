@@ -1,8 +1,8 @@
 # H.1: Fix Stdio Subprocess Spawning
 
 **Priority**: 🔴 CRITICAL  
-**Duration**: 4 hours  
-**Status**: ⏳ Pending  
+**Duration**: 4 hours estimated, 12 hours actual  
+**Status**: ✅ COMPLETE (Session 9)  
 
 ## Problem
 
@@ -255,3 +255,48 @@ If full reuse is not feasible, at minimum:
 2. Use process pool with pre-spawned processes
 3. Add spawn rate limiting
 4. Document performance limitations clearly
+
+## Resolution (Session 9)
+
+### Root Cause Discovered
+The connection pool's Drop implementation was calling `shutdown.notify_one()` on ANY clone drop, not just the last reference. This caused the maintenance loop to shut down immediately after construction, preventing connection reuse.
+
+### Fix Evolution
+1. **Initial**: Removed Drop entirely (worked but no cleanup)
+2. **Attempted**: Check `Arc::strong_count(&self.shutdown)` (wrong Arc)
+3. **Final**: Inner Arc pattern per GPT-5 recommendation
+
+### Implementation
+Restructured ConnectionPool to use inner Arc pattern:
+```rust
+pub struct ConnectionPool<T> {
+    inner: Arc<ConnectionPoolInner<T>>,
+}
+
+impl<T> Drop for ConnectionPool<T> {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.inner) == 1 {
+            // Last reference - do cleanup
+        }
+    }
+}
+```
+
+### Results
+- ✅ Pool correctly reuses connections (1 subprocess for N requests)
+- ✅ Drop only triggers on last ConnectionPool reference
+- ✅ Automatic cleanup as safety net
+- ✅ All tests pass including new last-reference tests
+- ✅ 90% throughput loss RESOLVED
+- ✅ No more subprocess spawning overhead
+
+### Tests Added
+- `test_simple_pool_reuse` - Unit test for basic reuse
+- `test_stdio_subprocess_pool_reuse` - Integration test with real subprocesses
+- `test_last_reference_drop_cleanup` - Verifies Drop semantics
+- `test_pool_returns_connections` - Verifies return mechanism
+
+### Files Modified
+- `src/proxy/pool.rs` - Complete restructure with inner Arc
+- `src/transport/outgoing/subprocess.rs` - Added disconnection detection
+- `tests/test_stdio_pool_reuse.rs` - New integration test
