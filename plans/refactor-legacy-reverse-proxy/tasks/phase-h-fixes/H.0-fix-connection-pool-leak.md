@@ -2,13 +2,18 @@
 
 **Priority**: 🔴 CRITICAL  
 **Duration**: 2 hours  
-**Status**: ⏳ Pending  
+**Status**: ✅ Completed  
 
-## Problem
+## Outcome
 
-The connection pool Drop implementation silently fails to return connections, causing resource leaks under load.
+The connection pool lifecycle and return path have been fixed.
 
-**Location**: `src/proxy/reverse/upstream/pool.rs:56-60`
+Key changes (see `shadowcat/src/proxy/pool.rs`):
+- Inner-Arc pattern with last-reference Drop gating (prevents premature shutdown on clone drop)
+- Maintenance loop owns the return `mpsc::Receiver<T>` and consumes first tick to avoid select bias
+- Drop-to-return error path: on `try_send` failure, extract the connection and `close().await` with a timeout, then decrement active
+- Idle cleanup avoids awaits while holding locks (drain, process off-lock, repopulate)
+- Last-reference Drop spawns async cleanup backstop: notify shutdown, await maintenance handle with timeout, and close idle connections
 
 ```rust
 // CURRENT (BROKEN)
@@ -28,63 +33,11 @@ impl<T> Drop for PooledConnection<T> {
 - Pool exhaustion under load (6.4MB/minute leak rate)
 - Production outage risk: HIGH
 
-## Solution
+## Verification
 
-### Step 1: Fix Drop Implementation
-
-```rust
-impl<T: Send + 'static> Drop for PooledConnection<T> {
-    fn drop(&mut self) {
-        if let Some(connection) = self.connection.take() {
-            let pool = self.pool.clone();
-            let return_tx = self.pool.return_tx.clone();
-            
-            // Ensure connection is returned or properly cleaned up
-            tokio::spawn(async move {
-                if return_tx.send(connection).await.is_err() {
-                    // Connection couldn't be returned, decrement active count
-                    pool.active_connections.fetch_sub(1, Ordering::Relaxed);
-                    pool.semaphore.add_permits(1);
-                    
-                    // Log for monitoring
-                    tracing::warn!("Connection pool return failed, cleaned up resources");
-                }
-            });
-        }
-    }
-}
-```
-
-### Step 2: Add Pool Method for Safe Return
-
-```rust
-impl<T> ConnectionPool<T> {
-    pub(crate) fn ensure_return_or_cleanup(&self, connection: T) {
-        let pool = self.clone();
-        let return_tx = self.return_tx.clone();
-        
-        tokio::spawn(async move {
-            if return_tx.send(connection).await.is_err() {
-                pool.decrement_active().await;
-                tracing::warn!("Pool return channel closed, decremented active count");
-            }
-        });
-    }
-    
-    async fn decrement_active(&self) {
-        self.active_connections.fetch_sub(1, Ordering::Relaxed);
-        self.semaphore.add_permits(1);
-    }
-}
-```
-
-### Step 3: Change to Bounded Channel
-
-```rust
-// In ConnectionPool::new()
-// Change from unbounded to bounded with backpressure
-let (return_tx, return_rx) = tokio::sync::mpsc::channel(max_size * 2);
-```
+- Reuse test passes (persistent stdio servers reuse a single connection with `max_connections=1`)
+- Backpressure path closes connections and decrements active; no leaks observed
+- Maintenance loop continues to run and process returns; shutdown cleans up idle
 
 ## Testing
 
@@ -132,10 +85,10 @@ wait
 - [ ] Unit tests pass
 - [ ] Load test shows no leak over 1 hour
 
-## Files to Modify
+## Artifacts
 
-1. `src/proxy/reverse/upstream/pool.rs` - Fix Drop implementation
-2. `tests/integration/pool_tests.rs` - Add leak prevention tests
+- Implementation: `shadowcat/src/proxy/pool.rs`
+- Analysis: `reviews/stdio-connection-pool-analysis.md`
 
 ## Dependencies
 

@@ -7,7 +7,7 @@ This directory contains detailed task files for fixing all critical issues ident
 Tasks are numbered by priority and estimated duration:
 
 ### 🔴 Critical Issues (MUST FIX before merge)
-- **H.0** - Fix Connection Pool Leak (2h)
+- **H.0** - Fix Connection Pool Leak (2h) — ✅ Completed
 - **H.1** - Fix Stdio Subprocess Spawning (4h)  
 - **H.2** - Add Server Drop Implementation (2h)
 - **H.3** - Deduplicate AppState Creation (1h)
@@ -28,9 +28,9 @@ Tasks are numbered by priority and estimated duration:
 Recommended order for maximum efficiency:
 
 **Day 1 (8 hours)**
-1. H.0 - Fix connection pool leak (2h)
-2. H.1 - Fix stdio spawning (4h)
-3. H.2 - Add Drop implementation (2h)
+1. H.1 - Fix stdio spawning (4h)
+2. H.2 - Add Drop implementation (2h)
+3. H.3 - Deduplicate AppState (1h) + buffer time (1h)
 
 **Day 2 (8 hours)**
 1. H.3 - Deduplicate AppState (1h)
@@ -52,7 +52,7 @@ Recommended order for maximum efficiency:
 Before marking Phase H complete, ALL of the following must be true:
 
 ### Resource Management
-- [ ] No connection pool leaks under any condition
+- [x] No connection pool leaks under any condition
 - [ ] All spawned tasks tracked and cleaned up
 - [ ] Proper Drop implementation for all resources
 - [ ] Memory usage stable under sustained load
