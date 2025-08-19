@@ -25,7 +25,9 @@
 - Closed → `ShadowcatError::Protocol("Pool closed")` (consider a dedicated error in follow-up)
 
 ## Open Questions / Follow-ups
-- Add close event helper to cancel/short-circuit waiters predictably.
+- DONE: Close event helper to cancel/short-circuit waiters predictably. We
+  added a shared `Notify`-based close event; `acquire()` races the semaphore
+  against `shutdown.notified()`, so close cancels waiters deterministically.
 - Introduce health hooks if consumers need gating.
 - Optional: lock-free idle queue + atomic `num_idle` for higher concurrency.
 - Optional: min-connections maintenance if we need proactive warmup.

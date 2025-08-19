@@ -11,7 +11,9 @@
 - Tests added cover reuse, close semantics, idle timeout cleanup, and fairness.
 
 Open items / future enhancements:
-- (Optional) Close event helper to cancel waiters predictably (sqlx-style).
+- Close event helper implemented: `Pool::close_event()` and acquire now cancels
+  promptly when close starts (sqlx-style behavior). Added unit test to verify
+  pending acquires resolve with error after `close()` begins.
 - (Optional) Health hooks (before/after acquire) if needed by consumers.
 - (Optional) Lock-free idle queue + atomic counters if profiling shows contention.
 
