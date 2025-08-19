@@ -1,7 +1,7 @@
-# Next Session Prompt - Session 11
+# Next Session Prompt - Session 12
 
 ## Quick Start
-Continue the refactor-legacy-reverse-proxy plan by implementing critical fixes H.5 through H.10.
+Continue the refactor-legacy-reverse-proxy plan by implementing critical fixes H.6 through H.10.
 
 ## Current Status (Session 11 Complete)
 - ✅ H.0: Fixed connection pool (inner Arc pattern)
@@ -9,7 +9,7 @@ Continue the refactor-legacy-reverse-proxy plan by implementing critical fixes H
 - ✅ H.2: Added server Drop implementation
 - ✅ H.3: P95 latency Phase 1 optimizations applied (30-40% improvement expected)
 - ✅ H.4: Deduplicated AppState creation
-- ✅ H.5: Implemented SSE reconnection with exponential backoff
+- ✅ H.5: Implemented SSE reconnection with exponential backoff (with architectural research)
 
 ## Priority Tasks for Session 12
 
@@ -47,6 +47,15 @@ Validate our P95 latency improvements:
    - Added event deduplication to handle duplicate events after reconnection
    - Integrated reconnection into reverse proxy handlers
    - Created integration tests (test compilation issues remain but lib tests pass)
+
+2. **Architectural Research**: Deep analysis of interceptor architecture
+   - Discovered fundamental issues with Sync requirement for streams
+   - Identified performance bottleneck: processing SSE streams as individual events (50-100μs per event)
+   - Clarified MCP transport model: 2 transports (stdio and Streamable HTTP), not 3
+   - Documented that interceptors should remain transport-agnostic
+   - Created comprehensive research documentation in `docs/research/interceptor-streams/`
+   - Key insight: Performance issue is not transport awareness but event-by-event processing
+   - Solution: Optimize stream processing at transport layer while keeping interceptors protocol-focused
 
 ## What Was Completed in Session 10
 1. **H.1**: Fixed subprocess health detection - wrapped Child in Arc<Mutex> for thread-safe status checking
@@ -92,13 +101,13 @@ Remember: shadowcat is a submodule - commit there first!
 3. Update tapwire tracker and docs
 4. Commit and push tapwire (branch: main)
 
-## Success Criteria for Session 11
-- [ ] H.5 SSE Reconnection implemented and tested
-- [ ] H.6 Request timeouts added (if time permits)
+## Success Criteria for Session 12
+- [ ] H.6 Request timeouts implemented
+- [ ] H.7 Buffer pooling restored (if time permits)
 - [ ] All tests passing
 - [ ] No clippy warnings
 - [ ] Tracker updated with progress
-- [ ] P95 latency validated to be within acceptable range
+- [ ] Performance benchmarks started (H.9)
 
 ## Files to Reference
 ```bash
