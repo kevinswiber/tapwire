@@ -4,7 +4,7 @@
 
 Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation into a clean, modular architecture with proper separation of concerns.
 
-**Last Updated**: 2025-08-19 (Session 8 - CRITICAL FIXES IN PROGRESS)  
+**Last Updated**: 2025-08-19 (Post pool fix)  
 **Total Estimated Duration**: 30-35 hours (extended due to critical issues)  
 **Status**: 🔧 FIXING - Critical production issues discovered
 **Working Branch**: `refactor/legacy-reverse-proxy` in shadowcat repo
@@ -25,30 +25,30 @@ Refactoring the monolithic 3,465-line `legacy.rs` reverse proxy implementation i
 - **Modules Created**: 22 well-organized files
 - **Achievement**: 100% reduction - complete modularization!
 
-## ⚠️ CRITICAL ISSUES DISCOVERED (Session 8)
+## ⚠️ CRITICAL ISSUES (Updated)
 
 ### Connection Pool Not Reusing Connections
-**Status**: ✅ FIXED (Session 9 - Complete with inner Arc pattern)
+**Status**: ✅ FIXED (inner-Arc + weak maintenance + backpressure-safe return)
 - **Root Cause**: Drop implementation was shutting down maintenance loop prematurely
 - **Evolution of Fix**:
   1. Initial: Removed Drop entirely (worked but no cleanup)
   2. Attempted: Check Arc::strong_count on shutdown field (wrong Arc)
-  3. **Final**: Inner Arc pattern per GPT-5 recommendation (perfect!)
+  3. **Final**: Inner-Arc + weak-backed maintenance; last-ref async cleanup backstop
 - **GPT-5 Analysis**: Validated our fix and suggested improvements
 - **Fixes Applied**:
   1. ✅ Fixed semaphore leak - now uses OwnedSemaphorePermit
   2. ✅ Removed Arc<Mutex> from receiver - moved ownership to maintenance task
-  3. ✅ Fixed subprocess disconnection detection
+  3. ⚠️ Subprocess disconnection detection – pending (H.1)
   4. ✅ Fixed lock-held-across-await in cleanup_idle_connections
   5. ✅ Fixed pool capacity check logic
   6. ✅ **Implemented inner Arc pattern** - proper last-reference Drop semantics
 - **Verified Working**: Pool correctly reuses connections (1 subprocess for N requests)
 - **Tests Added**: test_simple_pool_reuse, test_stdio_subprocess_pool_reuse, test_last_reference_drop_cleanup
 
-### Performance Regressions
+### Performance
 - **140% latency increase** at p95 - Still needs investigation
 - ~~**90% throughput loss** for stdio transport~~ ✅ FIXED by connection pool fix
-- ~~Every request spawns new subprocess (10ms overhead)~~ ✅ FIXED by connection pool fix
+- ~~Every request spawns new subprocess (10ms overhead)~~ ✅ FIXED (for persistent servers; document CLI limitation)
 
 ### Missing Drop Implementation
 - Server lacks Drop trait for resource cleanup
@@ -131,7 +131,7 @@ Address all critical issues identified in comprehensive review.
 | ID | Task | Duration | Status | Priority | Notes |
 |----|------|----------|--------|----------|-------|
 | H.0 | **Fix Connection Pool Leak** | 2h | ✅ Complete | 🔴 Critical | Fixed semaphore, try_send, capacity check |
-| H.1 | **Fix Stdio Subprocess Spawning** | 12h | ✅ Complete | 🔴 Critical | Implemented inner Arc pattern, perfect solution |
+| H.1 | **Fix Stdio Subprocess Spawning (Health semantics)** | 4h | ⏳ Pending | 🔴 Critical | Mark disconnected on EOF; optional try_wait(); tests + docs |
 | H.2 | **Add Server Drop Implementation** | 2h | ⏳ Pending | 🔴 Critical | Clean up resources |
 | H.3 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
 | H.4 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
