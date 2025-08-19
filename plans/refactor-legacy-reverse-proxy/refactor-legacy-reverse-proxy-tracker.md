@@ -247,6 +247,11 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
   - Implemented proper last-reference Drop semantics
   - Resolved 90% throughput loss for stdio transport
   - Added comprehensive tests for connection reuse and cleanup
+  - **Final improvement**: Implemented weak reference pattern (sqlx-style)
+    - Maintenance loop now uses Weak<ConnectionPoolInner> to avoid circular references
+    - Drop implementation now correctly detects last user reference
+    - Async cleanup happens automatically without requiring explicit shutdown()
+    - Follows industry best practices from sqlx connection pool
 
 ### Review Findings
 - Architecture is excellent but implementation has critical flaws

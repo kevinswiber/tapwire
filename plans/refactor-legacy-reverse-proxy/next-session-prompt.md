@@ -5,26 +5,32 @@ We've successfully fixed the most critical performance regression in the reverse
 
 ## What We've Completed (Session 9)
 
-### ✅ COMPLETE: Connection Pool Fix with Inner Arc Pattern
+### ✅ COMPLETE: Connection Pool Fix with Weak Reference Pattern
 **Journey**:
 1. Found root cause: Drop impl shutting down on ANY clone drop
 2. Initial fix: Removed Drop (worked but no cleanup)
 3. GPT-5 review: Suggested inner Arc pattern for proper cleanup
-4. **Final implementation**: Perfect inner Arc pattern with last-reference Drop
+4. Intermediate: Inner Arc pattern with last-reference Drop
+5. **Final implementation**: Weak reference pattern (sqlx-style)
 
 **Results**:
 - Pool correctly reuses connections (1 subprocess for N requests)
-- Drop only triggers on last ConnectionPool reference
-- Automatic cleanup as safety net
-- All tests pass including new last-reference tests
+- Maintenance loop uses Weak<ConnectionPoolInner> - no circular reference
+- Drop correctly detects last user reference and triggers async cleanup
+- Automatic cleanup without requiring explicit shutdown()
+- All tests pass including async cleanup verification
+- Follows industry best practices from sqlx
 
-### Applied All GPT-5 Recommendations
+### Applied All GPT-5 and SQLx Best Practices
 1. **✅ Inner Arc Pattern** - Clean last-reference detection
-2. **✅ Fixed Semaphore Leak** - OwnedSemaphorePermit
-3. **✅ Fixed Receiver Pattern** - Direct ownership in maintenance task
-4. **✅ Fixed Subprocess Health** - Disconnection detection
-5. **✅ Fixed Lock Contention** - No await while holding locks
-6. **✅ Added comprehensive tests** - Reuse and cleanup verification
+2. **✅ Weak Reference Pattern** - No circular dependencies (sqlx-style)
+3. **✅ Fixed Semaphore Leak** - OwnedSemaphorePermit
+4. **✅ Fixed Receiver Pattern** - Direct ownership in maintenance task
+5. **✅ Fixed Subprocess Health** - Disconnection detection
+6. **✅ Fixed Lock Contention** - No await while holding locks
+7. **✅ Async Cleanup on Drop** - Automatic without explicit shutdown
+8. **✅ Added comprehensive tests** - Reuse and cleanup verification
+9. **✅ Documentation** - Clear Drop vs shutdown() semantics
 
 ## Files to Examine
 ```bash
