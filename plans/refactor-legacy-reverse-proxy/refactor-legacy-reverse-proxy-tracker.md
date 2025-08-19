@@ -134,7 +134,7 @@ Address all critical issues identified in comprehensive review.
 | H.1 | **Fix Stdio Subprocess Health Semantics** | 2h | ✅ Complete | 🔴 Critical | Wrapped in Arc<Mutex>, proper is_connected() |
 | H.2 | **Add Server Drop Implementation** | 2h | ✅ Complete | 🔴 Critical | Drop trait cleans up pools & tasks |
 | H.3 | **Investigate P95 Latency** | 2h | ✅ Complete | 🔴 Critical | Phase 1 optimizations applied (30-40% improvement) |
-| H.4 | **Deduplicate AppState Creation** | 1h | ⏳ Pending | 🔴 Critical | Single create method |
+| H.4 | **Deduplicate AppState Creation** | 1h | ✅ Complete | 🔴 Critical | Centralized in create_app_state_sync |
 | H.5 | **Implement SSE Reconnection** | 6h | ⏳ Pending | 🔴 Critical | With exponential backoff |
 | H.6 | **Add Request Timeouts** | 3h | ⏳ Pending | 🟡 High | All upstream impls |
 | H.7 | **Restore Buffer Pooling** | 2h | ⏳ Pending | 🟡 High | SSE memory reduction |
@@ -262,6 +262,15 @@ Based on comprehensive review (2025-08-18), critical issues must be addressed:
     - Properly shuts down connection pools
     - Aborts server tasks on drop
     - All integration tests still pass
+  - **H.3 Complete**: P95 latency analysis and Phase 1 optimizations
+    - Identified hot path allocations and debug logging
+    - Applied conditional compilation for debug-only code
+    - Pre-computed command strings, direct byte serialization
+    - Expected 30-40% improvement from Phase 1 optimizations
+  - **H.4 Complete**: AppState creation deduplicated
+    - Created create_app_state_sync() for sync contexts
+    - Updated all constructors to use centralized function
+    - Removed ~50 lines of duplicated code
 
 ### Review Findings
 - Architecture is excellent but implementation has critical flaws
