@@ -27,7 +27,7 @@ Extract the generic connection pool from `proxy` into a top-level `shadowcat::po
 
 **Last Updated**: 2025-08-19  
 **Total Estimated Duration**: 16–22 hours  
-**Status**: Planning
+**Status**: Implementation (Phase D complete) → Pilot Integration (C.*)
 
 ## Goals
 
@@ -79,9 +79,9 @@ Move pool implementation and update a first consumer.
 
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
-| C.1 | Move generic pool | 3h | B.* | ⬜ Not Started | tasks/C.1-move-generic-pool.md |
-| C.2 | Update stdio upstream | 2h | C.1 | ⬜ Not Started | tasks/C.2-update-stdio-upstream.md |
-| C.3 | Type aliases & deprecations | 1h | C.1 | ⬜ Not Started | tasks/C.3-type-aliases-and-deprecations.md |
+| C.1 | Wire new pool in repo | 1h | B.* | ✅ Complete | New pool lives under `shadowcat::pool` in this worktree |
+| C.2 | Update stdio upstream | 2h | C.1 | 🔄 In Progress | tasks/C.2-update-stdio-upstream.md |
+| C.3 | Type aliases & deprecations | 1h | C.2 | ⬜ Not Started | tasks/C.3-type-aliases-and-deprecations.md |
 
 **Phase C Total**: 6h
 
@@ -90,10 +90,10 @@ Adopt sqlx-like refinements if valuable.
 
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
-| D.1 | Add is_closed + CloseEvent | 2h | C.* | ⬜ Not Started | tasks/D.1-add-close-event-and-is-closed.md |
+| D.1 | Add is_closed + CloseEvent | 2h | C.* | ✅ Complete | Implemented: `Pool::is_closed()`, close event; acquire races shutdown |
 | D.2 | RAII capacity guard / fairness | 2h | C.* | ⬜ Not Started | tasks/D.2-raii-capacity-guard.md |
 | D.3 | ArrayQueue + atomics (scale) | 3h | C.* | ⬜ Not Started | tasks/D.3-arrayqueue-and-atomics.md |
-| D.4 | Health hooks | 2h | C.* | ⬜ Not Started | tasks/D.4-health-hooks.md |
+| D.4 | Health hooks | 2h | C.* | ✅ Complete | Implemented SQLx-style hooks: after_create, before_acquire, after_release + metadata |
 
 **Phase D Total**: 9h (optional)
 
@@ -117,12 +117,19 @@ Adopt sqlx-like refinements if valuable.
 ## Progress Tracking
 
 ### Week 1 (Aug 19–23)
-- [ ] A.0: Current State Analysis
-- [ ] A.1: sqlx Patterns Review
-- [ ] A.2: Design Proposal & API
+- [x] A.0: Current State Analysis
+- [x] A.1: sqlx Patterns Review
+- [x] A.2: Design Proposal & API
+- [x] C.1: Wire new pool in repo
 
 ### Completed Tasks
 - [x] H.0 pool reliability improvements (pre-refactor) - Completed Aug 19
+- [x] D.1 Close event + is_closed — Completed Aug 19
+- [x] D.4 Health hooks (SQLx-style) — Completed Aug 19
+
+## Notes
+- Integration path: no feature flag; we are on the pool-refactor branch. Use existing `PoolableOutgoingTransport` in `src/proxy/pool.rs` as the resource type for `shadowcat::pool::Pool<T>`.
+- Stdio pilot scope: adapt reverse/stdio upstream acquisition to use the new pool API; keep old pool code present until migration is complete.
 
 ## Success Criteria
 

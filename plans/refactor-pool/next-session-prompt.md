@@ -1,4 +1,4 @@
-# Next Session: Phase A — Analysis & Design
+# Next Session: Phase B/C — Pilot Integration
 
 ## Project Context
 
@@ -6,49 +6,48 @@ Extract the generic connection pool into `shadowcat::pool`, align with sqlx patt
 
 **Project**: Refactor Pool to shadowcat::pool  
 **Tracker**: `plans/refactor-pool/refactor-pool-tracker.md`  
-**Status**: Phase A — Analysis & Design (0% Complete)
+**Status**: Phase D enhancements complete; ready for pilot integration
 
 ## Current Status
 
 ### What Has Been Completed
-- **Pre-work** (✅ Completed Aug 19)
-  - Stabilized current pool (receiver ownership, first-tick handling)
-  - Backpressure-safe return path (close with timeout)
-  - Last-reference async cleanup backstop
+- Generic pool implemented in `shadowcat-connection-pooling/src/pool` with:
+  - Cancel-aware close event; `acquire()` races shutdown
+  - SQLx-style hooks: `after_create`, `before_acquire`, `after_release` (+ metadata)
+  - Idle/lifetime cleanup; fairness (release after requeue)
+  - Module docs and unit tests (reuse, cleanup, fairness, close-cancel, hooks)
 
-### What's In Progress
-- **A.0**: Current State Analysis (⬜ Not Started)
-  - Duration: 2h
-  - Dependencies: None
+### What's Next (Pilot)
+- Decide integration path:
+  - Option 1: Add pool crate as dependency in `shadowcat` and introduce a feature-gated stdio pilot path (no behavior change by default).
+  - Option 2: Move finalized pool module into `shadowcat/src/pool` and adapt stdio upstream incrementally.
+
+- Implement stdio adapter (pilot):
+  - Define `PoolableOutgoingResource` that implements `pool::traits::PoolableResource` wrapping `Box<dyn OutgoingTransport>`.
+  - Factory connects `SubprocessOutgoing` and returns wrapped resource.
+  - Use `pool::Pool<PoolableOutgoingResource>::acquire()` in a pilot function/path.
+
+- Validation tasks:
+  - Add a minimal integration test (behind a feature) verifying acquire/send/receive/return.
+  - Observe hook behavior (e.g., `before_acquire` idle gating) with a simple counter or ping.
 
 ## Your Mission
 
 Focus on analysis deliverables to de-risk design/implementation.
 
-### Priority 1: A.0 Current State Analysis (2h)
+### Priority 1: Implement stdio pilot (2–3h)
+- Use `shadowcat::pool::Pool<PoolableOutgoingTransport>` in reverse/stdio upstream.
+- Construct pool in AppState; call `pool.close().await` on shutdown.
 
-1. Inventory components in `shadowcat/src/proxy/pool.rs`
-   - Deliverable: list of generic vs transport-specific items
-   - Success: Clear separation plan (what moves to `shadowcat::pool`, what stays near consumers)
-
-2. Identify migration touch points
-   - Deliverable: list of import sites to be updated; re-export plan from old path
-   - Success: Low-churn migration strategy
-
-### Priority 2: A.1 sqlx Patterns Review (1h)
-- Deliverable: succinct checklist of sqlx features we want now vs. later (CloseEvent, is_closed, RAII guard, ArrayQueue, hooks)
-- Success: Prioritized adoption plan
-
-### Priority 3: A.2 Design Proposal & API (2h)
-- Deliverable: proposed `shadowcat::pool` module layout and public API (`Pool`, `PoolOptions`, `PoolConnection`, `PoolStats`, `PoolableResource`)
-- Success: Signed-off API and file structure; ready for scaffolding
+### Priority 2: Tests and docs (1h)
+- Add/adapt a deterministic integration test for stdio with new pool; brief docs.
 
 ## Essential Context Files to Read
 
 1. **Primary Tracker**: `plans/refactor-pool/refactor-pool-tracker.md`
-2. **Findings**: `research/connection-pool-cleanup-gpt5/*`
-3. **Current Implementation**: `shadowcat/src/proxy/pool.rs`
-4. **sqlx Reference**: `~/src/sqlx/sqlx-core/src/pool/*`
+2. **Findings**: `plans/refactor-pool/analysis/findings.md`
+3. **Design Decisions**: `plans/refactor-pool/analysis/design-decisions.md`
+4. **Pool Implementation**: `shadowcat-connection-pooling/src/pool/*`
 
 ## Working Directory
 

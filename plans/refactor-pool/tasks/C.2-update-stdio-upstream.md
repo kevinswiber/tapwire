@@ -1,27 +1,22 @@
-# Task {ID}: {Task Name}
+# Task C.2: Update stdio upstream to use new pool
 
 ## Objective
-
-{Clear, concise statement of what this task aims to accomplish and why it's important}
+Replace reverse proxy stdio upstream’s use of the legacy proxy pool with the new generic `shadowcat::pool::Pool<T>` for `PoolableOutgoingTransport`.
 
 ## Background
-
-{Context about the current state and why this task is needed. Include:
-- Current problems or limitations
-- How this task fits into the larger project
-- What benefits this will provide}
+The new pool provides better correctness (cancel-aware close, SQLx-style hooks) and clarity. Reverse proxy currently depends on `src/proxy/pool.rs`. We will adapt the stdio path to `shadowcat::pool` with minimal churn.
 
 ## Key Questions to Answer
-
-1. {Important question that needs resolution during this task}
-2. {Design decision that needs to be made}
-3. {Technical challenge to solve}
-4. {Integration consideration}
+1. Integration path: use in-branch module (`shadowcat::pool`) with no feature flag — decided.
+2. Options mapping: map reverse proxy pool settings to `PoolOptions` sensible defaults.
+3. Shutdown sequencing: call `pool.close().await` on server shutdown.
+4. Test strategy: keep tests deterministic (avoid flakiness with short timeouts).
 
 ## Step-by-Step Process
 
-### 1. Analysis Phase ({X} min)
-{Description of initial analysis needed}
+### 1. Analysis (20 min)
+- Locate stdio upstream acquisition sites (reverse/upstream/stdio.rs) and pool construction (reverse/server.rs AppState).
+- Confirm `PoolableOutgoingTransport` implements the required trait methods for the new pool.
 
 ```bash
 # Commands to understand current state
@@ -30,60 +25,45 @@ cd {working_directory}
 {command to find relevant patterns}
 ```
 
-### 2. Design Phase ({X} min)
-{Description of design decisions to make}
+### 2. Design (20 min)
+- Define `type OutgoingPool = shadowcat::pool::Pool<PoolableOutgoingTransport>`.
+- Select PoolOptions: `max_connections`, `acquire_timeout`; keep idle/lifetime defaults initially.
+- Hooks disabled for pilot (can add later if needed).
 
-Key design considerations:
-- {Consideration 1}
-- {Consideration 2}
-- {Consideration 3}
+### 3. Implementation (60–90 min)
+- Create `OutgoingPool` in AppState instead of legacy pool for stdio.
+- Replace `ConnectionPool<PoolableOutgoingTransport>::acquire` with `pool::Pool<..>::acquire(factory)`.
+- Factory: build `SubprocessOutgoing`, connect, wrap in `PoolableOutgoingTransport`.
+- Ensure shutdown path calls `pool.close().await`.
 
-### 3. Implementation Phase ({X} hours)
-
-#### 3.1 {First Component}
-```rust
-// Example code structure or pseudo-code
-{code_example}
-```
-
-#### 3.2 {Second Component}
-```rust
-// Example code structure or pseudo-code
-{code_example}
-```
-
-### 4. Testing Phase ({X} min)
+### 4. Testing (45–60 min)
 ```bash
 # Commands to test implementation
-cargo test {specific_tests}
+cargo test reverse -- --nocapture
 cargo clippy --all-targets -- -D warnings
 cargo fmt
 ```
 
 Test cases to implement:
-- [ ] {Test case 1}
-- [ ] {Test case 2}
-- [ ] {Test case 3}
+- [ ] Stdio upstream acquire/send/receive path works with new pool.
+- [ ] Pool closes on server shutdown; no leaked processes.
+- [ ] Acquire cancel behaves as expected when server shuts down.
 
-### 5. Documentation Phase ({X} min)
-- Update module documentation
-- Add usage examples
-- Update tracker with completion status
+### 5. Documentation (15 min)
+- Update tracker status and add a brief note in reverse proxy docs if needed.
 
 ## Expected Deliverables
 
 ### New Files
-- `{path/to/new/file.rs}` - {Description of what this file contains}
-- `{path/to/another/file.rs}` - {Description}
+- None expected.
 
 ### Modified Files
-- `{path/to/existing/file.rs}` - {What changes are made}
-- `{path/to/another/existing.rs}` - {What changes}
+- `shadowcat/src/proxy/reverse/upstream/stdio.rs` — switch to new pool in acquire path.
+- `shadowcat/src/proxy/reverse/server.rs` — construct and close new pool in AppState.
 
 ### Tests
-- `{tests/test_file.rs}` - {What is tested}
-- Minimum {X}% code coverage for new code
-- All tests passing
+- Adapt existing reverse stdio tests; add one deterministic case for acquire/return.
+- All tests passing; no clippy warnings.
 
 ### Documentation
 - Rustdoc comments for all public APIs
@@ -92,15 +72,10 @@ Test cases to implement:
 
 ## Success Criteria Checklist
 
-- [ ] {Primary functional requirement met}
-- [ ] {Secondary functional requirement met}
-- [ ] All tests passing
-- [ ] No clippy warnings
-- [ ] Code formatted with cargo fmt
-- [ ] Documentation complete
-- [ ] Performance targets met (if applicable)
-- [ ] Backward compatibility maintained (if applicable)
-- [ ] Tracker updated with completion status
+- [ ] Stdio path uses `shadowcat::pool` in reverse proxy.
+- [ ] Tests pass; clippy clean.
+- [ ] Clean shutdown closes idle resources.
+- [ ] Tracker updated (C.2 complete).
 
 ## Risk Assessment
 
@@ -111,35 +86,32 @@ Test cases to implement:
 
 ## Duration Estimate
 
-**Total: {X} hours**
-- Analysis: {X} minutes
-- Design: {X} minutes
-- Implementation: {X} hours
-- Testing: {X} minutes
-- Documentation: {X} minutes
+**Total: 2–3 hours**
+- Analysis: 20 min
+- Design: 20 min
+- Implementation: 60–90 min
+- Testing: 45–60 min
+- Documentation: 15 min
 
 ## Dependencies
 
-- {Dependency 1 - must be completed first}
-- {Dependency 2 - required component}
-- None (if no dependencies)
+- C.1 new pool present in repo (complete)
 
 ## Integration Points
 
-- **{Component A}**: {How this task integrates}
-- **{Component B}**: {Integration considerations}
+- `reverse/upstream/stdio.rs` acquire path
+- `reverse/server.rs` AppState construction + shutdown
 
 ## Performance Considerations
 
-- {Performance requirement or consideration}
-- {Memory usage consideration}
-- {Latency requirement}
+- Fairness preserved; hook overhead disabled initially.
 
 ## Notes
 
-- {Important implementation note}
-- {Design decision rationale}
-- {Future consideration}
+- No feature flag; work happens on refactor branch.
+
+**Task Status**: 🔄 In Progress
+**Last Modified**: 2025-08-19
 
 ## Commands Reference
 

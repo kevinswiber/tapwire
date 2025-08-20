@@ -1,4 +1,4 @@
-# Task {ID}: {Task Name}
+# Task E.2: Integration tests for stdio with new pool
 
 ## Objective
 
@@ -13,15 +13,14 @@
 
 ## Key Questions to Answer
 
-1. {Important question that needs resolution during this task}
-2. {Design decision that needs to be made}
-3. {Technical challenge to solve}
-4. {Integration consideration}
+1. Can we run a minimal echo subprocess deterministically in CI? If not, consider a mock transport.
+2. Where to host the test: keep it in existing reverse proxy integration test locations.
+3. How to assert no leaks: check pool stats and process exit.
 
 ## Step-by-Step Process
 
-### 1. Analysis Phase ({X} min)
-{Description of initial analysis needed}
+### 1. Analysis (20 min)
+- Identify existing reverse stdio tests to adapt (integration_api.rs, test_stdio_pool_reuse.rs).
 
 ```bash
 # Commands to understand current state
@@ -30,8 +29,9 @@ cd {working_directory}
 {command to find relevant patterns}
 ```
 
-### 2. Design Phase ({X} min)
-{Description of design decisions to make}
+### 2. Design (20 min)
+- Prefer a trivial echo command (e.g., `cat`) for round-trip.
+- Keep timeouts generous enough to avoid flakes.
 
 Key design considerations:
 - {Consideration 1}
@@ -52,12 +52,12 @@ Key design considerations:
 {code_example}
 ```
 
-### 4. Testing Phase ({X} min)
+### 4. Testing (20–30 min)
 ```bash
 # Commands to test implementation
 cargo test {specific_tests}
 cargo clippy --all-targets -- -D warnings
-cargo fmt
+cargo fmt --all
 ```
 
 Test cases to implement:
@@ -65,7 +65,7 @@ Test cases to implement:
 - [ ] {Test case 2}
 - [ ] {Test case 3}
 
-### 5. Documentation Phase ({X} min)
+### 5. Documentation (10–15 min)
 - Update module documentation
 - Add usage examples
 - Update tracker with completion status
@@ -73,17 +73,15 @@ Test cases to implement:
 ## Expected Deliverables
 
 ### New Files
-- `{path/to/new/file.rs}` - {Description of what this file contains}
-- `{path/to/another/file.rs}` - {Description}
+- None expected.
 
 ### Modified Files
-- `{path/to/existing/file.rs}` - {What changes are made}
-- `{path/to/another/existing.rs}` - {What changes}
+- Reverse stdio integration tests under `shadowcat/tests` as needed.
 
 ### Tests
-- `{tests/test_file.rs}` - {What is tested}
-- Minimum {X}% code coverage for new code
-- All tests passing
+- Acquire/send/receive via stdio with new pool.
+- Acquire cancel on shutdown.
+- All tests passing.
 
 ### Documentation
 - Rustdoc comments for all public APIs
@@ -96,7 +94,7 @@ Test cases to implement:
 - [ ] {Secondary functional requirement met}
 - [ ] All tests passing
 - [ ] No clippy warnings
-- [ ] Code formatted with cargo fmt
+- [ ] Code formatted with cargo fmt --all
 - [ ] Documentation complete
 - [ ] Performance targets met (if applicable)
 - [ ] Backward compatibility maintained (if applicable)
@@ -157,7 +155,7 @@ cd {working_directory}
 
 # Validation
 cargo clippy --all-targets -- -D warnings
-cargo fmt --check
+cargo fmt --all --check
 cargo test --quiet
 ```
 
