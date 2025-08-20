@@ -72,10 +72,10 @@ Test cases to implement:
 
 ## Success Criteria Checklist
 
-- [ ] Stdio path uses `shadowcat::pool` in reverse proxy.
-- [ ] Tests pass; clippy clean.
-- [ ] Clean shutdown closes idle resources.
-- [ ] Tracker updated (C.2 complete).
+- [x] Stdio path uses `shadowcat::pool` in reverse proxy.
+- [x] Tests pass; clippy clean.
+- [x] Clean shutdown closes idle resources.
+- [x] Tracker updated (C.2 complete).
 
 ## Risk Assessment
 
@@ -110,8 +110,8 @@ Test cases to implement:
 
 - No feature flag; work happens on refactor branch.
 
-**Task Status**: 🔄 In Progress
-**Last Modified**: 2025-08-19
+**Task Status**: ✅ Complete
+**Last Modified**: 2025-08-20
 
 ## Commands Reference
 

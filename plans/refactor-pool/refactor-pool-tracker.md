@@ -25,9 +25,9 @@ END OF INSTRUCTIONS -->
 
 Extract the generic connection pool from `proxy` into a top-level `shadowcat::pool` module, align with sqlx patterns, and integrate with current reverse proxy usage with minimal churn.
 
-**Last Updated**: 2025-08-19  
+**Last Updated**: 2025-08-20  
 **Total Estimated Duration**: 16–22 hours  
-**Status**: Implementation (Phase D complete) → Pilot Integration (C.*)
+**Status**: Core impl + reverse stdio migrated; Cleanup & tests in progress
 
 ## Goals
 
@@ -36,19 +36,18 @@ Extract the generic connection pool from `proxy` into a top-level `shadowcat::po
 3. **Reliability** - Close semantics, maintenance shut down, backpressure-safe returns
 4. **Low Churn Migration** - Re-export old path temporarily; update imports incrementally
 
-## Architecture Vision
+## Architecture (Actual)
 
 ```
 shadowcat::pool
-  ├── mod.rs           // re-exports, public API
-  ├── inner.rs         // PoolInner<T>; Weak-backed maintenance; close event
-  ├── connection.rs    // PoolConnection<T>; drop/return semantics
-  ├── options.rs       // PoolOptions; knobs and (optional) hooks
-  └── traits.rs        // PoolableResource
+  ├── mod.rs           // Main implementation: Pool, PoolConnection, PoolOptions, PoolHooks
+  └── traits.rs        // PoolableResource trait
 
 proxy/reverse/upstream/stdio.rs
-  └── PoolableOutgoingTransport (adapter implementing PoolableResource)
+  └── OutgoingResource (wrapper implementing PoolableResource)
 ```
+
+**Note**: Old `proxy::pool` module still exists but deprecated - to be removed.
 
 ## Work Phases
 
@@ -57,9 +56,9 @@ High-level design and API decisions.
 
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
-| A.0 | Current State Analysis | 2h | None | ⬜ Not Started | tasks/A.0-current-state-analysis.md |
-| A.1 | sqlx Patterns Review | 1h | None | ⬜ Not Started | tasks/A.1-sqlx-patterns-review.md |
-| A.2 | Design Proposal & API | 2h | A.0–A.1 | ⬜ Not Started | tasks/A.2-design-proposal.md |
+| A.0 | Current State Analysis | 2h | None | ✅ Complete | Analyzed proxy pool patterns |
+| A.1 | sqlx Patterns Review | 1h | None | ✅ Complete | Reviewed sqlx pool design |
+| A.2 | Design Proposal & API | 2h | A.0–A.1 | ✅ Complete | API designed and implemented |
 
 **Phase A Total**: 5h
 
@@ -68,9 +67,9 @@ Create module skeleton and plan migration.
 
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
-| B.1 | Scaffold shadowcat::pool module | 1h | A.2 | ⬜ Not Started | tasks/B.1-scaffold-shadowcat-pool-module.md |
-| B.2 | Adapter Strategy for transports | 1h | A.2 | ⬜ Not Started | tasks/B.2-adapter-strategy.md |
-| B.3 | Migration Plan & Re-exports | 1h | A.2 | ⬜ Not Started | tasks/B.3-migration-plan-and-reexports.md |
+| B.1 | Scaffold shadowcat::pool module | 1h | A.2 | ✅ Complete | Module created at src/pool/ |
+| B.2 | Adapter Strategy for transports | 1h | A.2 | ✅ Complete | OutgoingResource wrapper impl |
+| B.3 | Migration Plan & Re-exports | 1h | A.2 | ⚫ N/A | No backward compat needed |
 
 **Phase B Total**: 3h
 
@@ -80,8 +79,8 @@ Move pool implementation and update a first consumer.
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
 | C.1 | Wire new pool in repo | 1h | B.* | ✅ Complete | New pool lives under `shadowcat::pool` in this worktree |
-| C.2 | Update stdio upstream | 2h | C.1 | 🔄 In Progress | tasks/C.2-update-stdio-upstream.md |
-| C.3 | Type aliases & deprecations | 1h | C.2 | ⬜ Not Started | tasks/C.3-type-aliases-and-deprecations.md |
+| C.2 | Update stdio upstream | 2h | C.1 | ✅ Complete | ReverseProxyServer now uses shadowcat::pool::Pool |
+| C.3 | Type aliases & deprecations | 1h | C.2 | ⚫ Not Needed | No backward compatibility required |
 
 **Phase C Total**: 6h
 
@@ -91,7 +90,7 @@ Adopt sqlx-like refinements if valuable.
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
 | D.1 | Add is_closed + CloseEvent | 2h | C.* | ✅ Complete | Implemented: `Pool::is_closed()`, close event; acquire races shutdown |
-| D.2 | RAII capacity guard / fairness | 2h | C.* | ⬜ Not Started | tasks/D.2-raii-capacity-guard.md |
+| D.2 | RAII capacity guard / fairness | 2h | C.* | ⬜ Not Started | Current design has fairness via drop task; consider if spawn overhead observed |
 | D.3 | ArrayQueue + atomics (scale) | 3h | C.* | ⬜ Not Started | tasks/D.3-arrayqueue-and-atomics.md |
 | D.4 | Health hooks | 2h | C.* | ✅ Complete | Implemented SQLx-style hooks: after_create, before_acquire, after_release + metadata |
 
@@ -101,9 +100,9 @@ Adopt sqlx-like refinements if valuable.
 
 | ID  | Task | Duration | Dependencies | Status | Notes |
 |-----|------|----------|--------------|--------|-------|
-| E.1 | Unit tests | 2h | C.* | ⬜ Not Started | tasks/E.1-unit-tests.md |
-| E.2 | Integration tests (stdio) | 2h | C.* | ⬜ Not Started | tasks/E.2-integration-tests-stdio.md |
-| E.3 | Benchmark harness | 2h | C.* | ⬜ Not Started | tasks/E.3-benchmark-harness.md |
+| E.1 | Unit tests | 2h | C.* | 🔄 In Progress | Basic tests exist; need exhaustion/concurrency tests |
+| E.2 | Integration tests (stdio) | 2h | C.* | 🔄 In Progress | test_stdio_new_pool.rs exists; need stress tests |
+| E.3 | Benchmark harness | 2h | C.* | ⬜ Not Started | Old bench needs migration |
 
 **Phase E Total**: 6h
 
@@ -121,39 +120,59 @@ Adopt sqlx-like refinements if valuable.
 - [x] A.1: sqlx Patterns Review
 - [x] A.2: Design Proposal & API
 - [x] C.1: Wire new pool in repo
+- [x] C.2: Update stdio upstream - Completed Aug 20
 
 ### Completed Tasks
 - [x] H.0 pool reliability improvements (pre-refactor) - Completed Aug 19
 - [x] D.1 Close event + is_closed — Completed Aug 19
 - [x] D.4 Health hooks (SQLx-style) — Completed Aug 19
+- [x] C.2 Update stdio upstream to use shadowcat::pool::Pool - Completed Aug 20
+
+## Old Pool Removal Checklist
+
+- [ ] Remove `shadowcat/src/proxy/pool.rs`
+- [ ] Stop exporting pool in `shadowcat/src/proxy/mod.rs`
+- [ ] Migrate files still using `proxy::pool`:
+  - [ ] `tests/test_stdio_pool_reuse.rs`
+  - [ ] `tests/test_pool_reuse_integration.rs`
+  - [ ] `tests/test_subprocess_health.rs`
+  - [ ] `examples/test_pool_shutdown.rs`
+  - [ ] `benches/reverse_proxy_latency.rs`
 
 ## Notes
-- Integration path: no feature flag; we are on the pool-refactor branch. Use existing `PoolableOutgoingTransport` in `src/proxy/pool.rs` as the resource type for `shadowcat::pool::Pool<T>`.
-- Stdio pilot scope: adapt reverse/stdio upstream acquisition to use the new pool API; keep old pool code present until migration is complete.
+- **Migration Policy**: Breaking changes acceptable; no deprecation window required
+- **Forward Proxy**: Does not use pooling (N/A for this refactor)
+- **Metadata Bug**: `PoolConnectionMetadata.age` always 0 - needs fix or removal
 
 ## Success Criteria
 
 ### Functional Requirements
-- ✅ {Requirement 1}
-- ✅ {Requirement 2}
-- ✅ {Requirement 3}
+- ✅ Idle resource reuse working
+- ✅ Acquire timeout enforced (2s default)
+- ✅ Close cancels pending acquires
+- ✅ SQLx-style hooks implemented
+- ⬜ Pool exhaustion handling verified
+- ⬜ Heavy concurrency stress tested
 
 ### Performance Requirements
-- ✅ Preserve throughput and latency vs. current pool
-- ✅ No additional allocations in hot path (no regressions)
-- ✅ Support fairness or document behavior
+- ⬜ p95 acquire latency < 1ms at 100 concurrent
+- ⬜ < 5% end-to-end overhead for stdio echo
+- ⬜ Memory < 1KB per idle connection
 
 ### Quality Requirements
-- ✅ {X}% test coverage
 - ✅ No clippy warnings
-- ✅ Full documentation
-- ✅ Integration tests passing
+- ✅ Public API documented
+- 🔄 Integration tests (partial coverage)
+- ⬜ Edge case test coverage > 80%
 
 ## Risk Mitigation
 
 | Risk | Impact | Mitigation | Status |
 |------|--------|------------|--------|
-| {Risk description} | {HIGH/MEDIUM/LOW} | {Mitigation strategy} | {Active/Planned/Resolved} |
+| Spawn storm on drop path | MEDIUM | Bounded executor or sync close | Active |
+| Idle queue contention under load | LOW | Consider lock-free queue (D.3) | Monitored |
+| Hook misconfiguration causes hangs | MEDIUM | Timeout hooks, clear docs | Planned |
+| Metadata.age always 0 | LOW | Remove or implement properly | Active |
 
 ## Session Planning Guidelines
 
@@ -239,25 +258,21 @@ If context window becomes limited:
 
 ## Next Actions
 
-1. **{Immediate next step}**
-2. **{Following step}**
-3. **{Additional steps as needed}**
-
-## Notes
-
-- {Important notes about the project}
-- {Any special considerations}
-- {Dependencies or constraints}
+1. **Fix Metadata.age** - Either track creation timestamp or remove from API
+2. **Remove Old Pool** - Delete proxy::pool.rs and migrate 5 remaining files  
+3. **Stress Testing** - Add 100-500 concurrent acquire/drop tests
+4. **Benchmarks** - Measure p95 overhead vs no-pool baseline
 
 ---
 
-**Document Version**: {X.Y}  
-**Created**: {DATE}  
-**Last Modified**: {DATE}  
-**Author**: {Author/Team}
+**Document Version**: 2.0  
+**Created**: 2025-08-19  
+**Last Modified**: 2025-08-20  
+**Author**: Pool Refactor Team
 
 ## Revision History
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
-| {DATE} | {X.Y} | {Description of changes} | {Author} |
+| 2025-08-19 | 1.0 | Initial tracker creation | Pool Team |
+| 2025-08-20 | 2.0 | Updated to reflect actual implementation status, added concrete criteria | Review Update |
