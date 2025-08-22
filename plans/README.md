@@ -11,12 +11,12 @@ The following plans are currently being worked on or are ready for implementatio
 #### 🔥 **IMMEDIATE PRIORITY** - Critical Infrastructure
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
-| **[Refactor Legacy Reverse Proxy](refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md)** | 🟢 **ACTIVE** | 25-35 hours | Extract 3,465-line monolith into clean modules |
 | **[Reverse Proxy Session Mapping](reverse-proxy-session-mapping/reverse-proxy-session-mapping-tracker.md)** | 🟡 **Ready** | 8-12 hours | Dual session ID tracking for better routing |
 
 #### ✅ **RECENTLY COMPLETED** 
 | Plan | Status | Completion Date | Description |
 |------|--------|----------------|-------------|
+| **[Refactor Legacy Reverse Proxy](archive/completed-2025-08-22-refactor-legacy-reverse-proxy/refactor-legacy-reverse-proxy-tracker.md)** | ✅ **COMPLETE** | 2025-08-22 | Deleted 3,465-line monolith, created 22 clean modules |
 | **[Error Boundary Fix](archive/completed-2025-08-22-error-boundary-fix/error-fix-tracker.md)** | ✅ **COMPLETE** | 2025-08-22 | Fixed all module boundary violations (zero crate::Error refs remaining!) |
 | **[Reverse Proxy Refactor](reverse-proxy-refactor/reverse-proxy-refactor-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | SSE resilience with EventTracker integration |
 | **[Event Tracking Refactor](refactor-event-tracking/refactor-event-tracking-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | Consolidated event tracking with lazy persistence |
@@ -29,8 +29,8 @@ The following plans are currently being worked on or are ready for implementatio
 #### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
+| **[E2E Testing Framework](e2e-testing-framework/e2e-testing-framework-tracker.md)** | 🟡 **Planning** | 82 hours | Comprehensive end-to-end testing with real servers and clients |
 | **[Config Validation Enhancement](config-validation-enhancement/config-validation-enhancement-tracker.md)** | 🟡 **Planning** | 16-24 hours | Rich error types, workload defaults, and user guidance |
-| **[Traffic Recording Refactor](traffic-recording/traffic-recording-tracker.md)** | Planning | 16-24 hours | Fix SSE metadata handling and remove TransportContext::Sse |
 | **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** | Planning | 16-24 hours | Smart transport detection and improved UX |
 | **[Full Batch Support](full-batch-support/full-batch-support-tracker.md)** | Analysis | 20-30 hours | Complete MCP batch message support |
 | **[LLM Help Documentation](llm-help-documentation/llm-help-documentation-tracker.md)** | ✅ **COMPLETE** | 8-10 hours | Built-in help command with LLM-friendly output |

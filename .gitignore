@@ -2,3 +2,24 @@
 # Git worktrees
 shadowcat-*/
 wassette-*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+env/
+ENV/
+
+# MCP Validator submodule
+tools/mcp-validator/.venv/
+tools/mcp-validator/**/__pycache__/
+tools/mcp-validator/**/*.pyc
+
+# Test outputs
+tests/mcp-validator/*.log
+tests/mcp-validator/*.md

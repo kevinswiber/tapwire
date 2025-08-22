@@ -4,3 +4,6 @@
 [submodule "specs/mcp"]
 	path = specs/mcp
 	url = https://github.com/modelcontextprotocol/modelcontextprotocol.git
+[submodule "tools/mcp-validator"]
+	path = tools/mcp-validator
+	url = https://github.com/Janix-ai/mcp-validator.git
