@@ -17,6 +17,7 @@ The following plans are currently being worked on or are ready for implementatio
 #### ✅ **RECENTLY COMPLETED** 
 | Plan | Status | Completion Date | Description |
 |------|--------|----------------|-------------|
+| **[Error Boundary Fix](archive/completed-2025-08-22-error-boundary-fix/error-fix-tracker.md)** | ✅ **COMPLETE** | 2025-08-22 | Fixed all module boundary violations (zero crate::Error refs remaining!) |
 | **[Reverse Proxy Refactor](reverse-proxy-refactor/reverse-proxy-refactor-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | SSE resilience with EventTracker integration |
 | **[Event Tracking Refactor](refactor-event-tracking/refactor-event-tracking-tracker.md)** | ✅ **COMPLETE** | 2025-08-18 | Consolidated event tracking with lazy persistence |
 
