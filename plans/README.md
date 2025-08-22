@@ -29,6 +29,7 @@ The following plans are currently being worked on or are ready for implementatio
 #### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
+| **[Config Validation Enhancement](config-validation-enhancement/config-validation-enhancement-tracker.md)** | 🟡 **Planning** | 16-24 hours | Rich error types, workload defaults, and user guidance |
 | **[Traffic Recording Refactor](traffic-recording/traffic-recording-tracker.md)** | Planning | 16-24 hours | Fix SSE metadata handling and remove TransportContext::Sse |
 | **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** | Planning | 16-24 hours | Smart transport detection and improved UX |
 | **[Full Batch Support](full-batch-support/full-batch-support-tracker.md)** | Analysis | 20-30 hours | Complete MCP batch message support |
