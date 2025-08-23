@@ -29,6 +29,7 @@ The following plans are currently being worked on or are ready for implementatio
 #### Other Active Plans
 | Plan | Status | Estimated Duration | Description |
 |------|--------|-------------------|-------------|
+| **[XTask Lint Enhancements](xtask-lint-enhancements/xtask-lint-enhancements-tracker.md)** | 🔄 **In Progress** | 31 hours | Dylint migration for IDE integration, production safety lints |
 | **[E2E Testing Framework](e2e-testing-framework/e2e-testing-framework-tracker.md)** | 🟡 **Planning** | 82 hours | Comprehensive end-to-end testing with real servers and clients |
 | **[Config Validation Enhancement](config-validation-enhancement/config-validation-enhancement-tracker.md)** | 🟡 **Planning** | 16-24 hours | Rich error types, workload defaults, and user guidance |
 | **[Better CLI Interface](better-cli-interface/better-cli-interface-tracker.md)** | Planning | 16-24 hours | Smart transport detection and improved UX |
