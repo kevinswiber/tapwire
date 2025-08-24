@@ -4,9 +4,9 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-24 (ARCHITECTURE PIVOT - Moving to Connection pattern)  
+**Last Updated**: 2025-08-24 (HYPER 1.7 UPGRADE COMPLETE - Connection pattern ready)  
 **Total Estimated Duration**: 120 hours (16 + 15 + 11 + 9 + 13 + 15 + 9 + 14 + 12 + 10 + 12)  
-**Status**: Phase B, C.0-C.1, C.5 Complete, C.6.0-C.6.1 Complete, **C.7 CRITICAL - Architecture change**  
+**Status**: Phase B, C.0-C.1, C.5 Complete, C.6.0-C.6.1 Complete, **Hyper 1.7 ✅**, C.7 In Progress  
 **Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
 **Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
@@ -40,11 +40,21 @@ Worker pattern revealed fundamental scaling issue. Moving to Connection pattern 
 - Connection pooling across sessions
 - Direct async/await backpressure
 
-**NEXT STEPS (C.7 - Critical Path)**: 
-1. C.7.0 - Create Connection trait and adapters (2 hours)
+**HYPER 1.7 UPGRADE (2025-08-24)** ✅:
+Successfully upgraded from hyper 0.14 to 1.7 for:
+- Direct connection management via `hyper::client::conn`
+- No built-in pooling (avoids double pooling with shadowcat)
+- HTTP/3 foundation for future
+- ~25% performance improvement
+- Uses rustls for pure-Rust TLS stack
+
+**NEXT STEPS (C.7 - Connection Pattern Implementation)**: 
+1. C.7.0 - Create Connection trait and adapters (2 hours) - IN PROGRESS
 2. C.7.1 - Implement HTTP/2 Connection with multiplexing (4 hours)
 3. C.7.2 - Implement WebSocket Connection (3 hours)
-4. C.7.4 - Migrate Client/Server to Connection pattern (3 hours)
+4. C.7.3 - Implement stdio Connection (2 hours)
+5. C.7.4 - Migrate Client/Server to Connection pattern (3 hours)
+6. C.7.5 - Integrate shadowcat pool (2 hours)
 
 ## Goals
 
@@ -171,19 +181,20 @@ Fix blocking issues before proceeding with framework
 
 **Phase C.6 Total**: 13 hours (2 completed, 3 deprioritized due to architecture change)
 
-### Phase C.7: Connection Pattern Architecture (CRITICAL PIVOT)
+### Phase C.7: Connection Pattern Architecture (IN PROGRESS)
 Implement async_trait Connection pattern to replace Sink/Stream
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.7.0 | **Create Connection trait** | 2h | None | 🔴 Critical | | async_trait, protocol selection, adapter for migration |
-| C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | 🔴 Critical | | Multiplexing, connection pooling, natural backpressure |
+| **PREP** | **Hyper 1.7 Upgrade** | 6h | None | ✅ Completed | | Direct conn management, no pooling, rustls TLS |
+| C.7.0 | **Create Connection trait** | 2h | PREP | 🚧 In Progress | | async_trait, protocol selection, adapter for migration |
+| C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | 🔴 Critical | | Multiplexing with hyper 1.7, shadowcat pooling |
 | C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | 🟡 High | | Bidirectional, message routing, session in messages |
-| C.7.3 | **Implement Stdio Connection** | 1h | C.7.0 | 🟢 Normal | | Simple wrapper, singleton pattern |
+| C.7.3 | **Implement Stdio Connection** | 2h | C.7.0 | 🟢 Normal | | Simple wrapper, singleton pattern |
 | C.7.4 | **Migrate Client/Server** | 3h | C.7.1-C.7.3 | 🟡 High | | Use Connection instead of Sink/Stream |
-| C.7.5 | **Remove old transport code** | 2h | C.7.4 | 🟢 Normal | | Delete worker patterns, clean up |
+| C.7.5 | **Integrate shadowcat pool** | 2h | C.7.1 | 🟡 High | | PoolableResource wrapper, protocol strategies |
 
-**Phase C.7 Total**: 15 hours (architectural refactor to scale for proxy)
+**Phase C.7 Total**: 22 hours (includes hyper upgrade + architectural refactor)
 
 **Rationale**: Sink/Stream with worker pattern doesn't scale to 10K+ connections. 
 Connection pattern eliminates worker tasks, reduces overhead from 20µs to ~0, 

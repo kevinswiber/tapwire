@@ -2,246 +2,169 @@
 
 ## Executive Summary
 
-We're building a comprehensive MCP (Model Context Protocol) compliance testing framework for Shadowcat, our MCP proxy. After analyzing the existing Python-based mcp-validator and finding it covers only ~12% of spec requirements, we're creating a Rust-native solution that will:
+We're building a comprehensive MCP (Model Context Protocol) compliance testing framework for Shadowcat, our MCP proxy. After analyzing the existing Python-based mcp-validator and finding it covers only ~12% of spec requirements, we're creating a Rust-native solution.
 
-1. **Extract MCP protocol into shared libraries** (mcp-core, mcp-client, mcp-server)
-2. **Build a compliance testing framework** with ~250 tests covering all spec requirements
-3. **Create a compatibility matrix** testing our implementation against reference implementations
-4. **Support three MCP versions**: 2025-03-26, 2025-06-18, and draft (living spec)
+**Current Architecture**: Connection trait pattern with hyper 1.7 for zero-overhead async communication  
+**Status**: Hyper 1.7 upgrade ✅ COMPLETE, Connection trait implementation IN PROGRESS  
+**Estimated effort**: 120+ hours total  
+**Work location**: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
-**Estimated effort**: 108 hours total  
-**Current status**: Phase B complete, Phase C.0-C.1 complete, Transport architecture finalized (v2). Ready for C.5.4 implementation.
+## 🔥 Current Status (2025-08-24)
+
+### Just Completed
+- ✅ **Hyper 1.7 Upgrade** - Direct connection management, no pooling conflicts
+- ✅ **Architecture Consolidation** - Single source of truth in `analysis/CONSOLIDATED-ARCHITECTURE.md`
+- ✅ **GPT-5 Bug Fixes** - Client deadlock and HTTP worker issues resolved
+
+### In Progress
+- 🚧 **C.7.0** - Creating Connection trait to replace Sink/Stream
+- 🚧 **Protocol Adapters** - HTTP/2, WebSocket, stdio implementations
+
+### Next Steps
+1. Complete Connection trait implementation (C.7.0)
+2. Implement HTTP/2 connection with shadowcat pooling (C.7.1)
+3. WebSocket and stdio connections (C.7.2-C.7.3)
+4. Migrate Client/Server to use Connection (C.7.4)
 
 ## Quick Start for New Developers
 
-### Understanding the Project
+### Essential Reading Order
+1. **[analysis/CONSOLIDATED-ARCHITECTURE.md](analysis/CONSOLIDATED-ARCHITECTURE.md)** - 🎯 Current architecture and decisions
+2. **[mcp-compliance-check-tracker.md](mcp-compliance-check-tracker.md)** - Project progress and phases
+3. **[tasks/C.7-connection-trait-tasks.md](tasks/C.7-connection-trait-tasks.md)** - Current implementation work
+4. **[analysis/HYPER-1.7-UPGRADE-COMPLETE.md](analysis/HYPER-1.7-UPGRADE-COMPLETE.md)** - Recent hyper migration
 
-1. **Start here**: Read [mcp-compliance-check-tracker.md](mcp-compliance-check-tracker.md) for the full project overview
-2. **Understand the problem**: Review [analysis/mcp-validator-findings.md](analysis/mcp-validator-findings.md) to see why we're building this
-3. **Architecture**: Study [analysis/architectural-decisions.md](analysis/architectural-decisions.md) for key design decisions
-4. **Transport Design**: See [analysis/transport-architecture-final-v2.md](analysis/transport-architecture-final-v2.md) for CURRENT Framed/Sink/Stream architecture
-5. **Next steps**: Check Phase C.5.4 in tracker - implement Framed/Sink/Stream transports
+### Key Architecture Decisions
 
-### Key Decisions Made
+#### Transport Evolution
+1. ~~AsyncRead/AsyncWrite~~ - Too low-level
+2. ~~Sink/Stream with workers~~ - Too much overhead for 10K connections
+3. **✅ Connection trait** - Direct async methods, zero overhead
 
-1. **Build our own MCP implementation** - Not depend on external libraries for core functionality
-2. **Framed/Sink/Stream architecture** - Message-level unification using standard async traits
-3. **Test separation** - Client tests (60) + Server tests (60) + Proxy tests (50) + Protocol tests (80)
-4. **Support draft spec** - Stay ahead by testing against in-progress specifications
-5. **Performance over ergonomics** - Fast, compliant, low-level implementation first
-6. **Streaming results** - Real-time test progress for better UX
+#### Why Connection Pattern?
+- **Zero worker overhead** - No channels, no task spawning
+- **Natural multiplexing** - HTTP/2 and WebSocket multiplex natively
+- **Connection pooling** - Shadowcat's pool manages all connections
+- **Direct backpressure** - async/await provides flow control
+
+#### Hyper 1.7 Benefits
+- **No double pooling** - Using `hyper::client::conn` directly
+- **~25% performance gain** - Lower overhead than 0.14
+- **HTTP/3 ready** - Foundation for QUIC support
+- **Pure Rust TLS** - rustls instead of OpenSSL
 
 ## Project Structure
 
 ```
-mcp-compliance-check/
-├── README.md                    # You are here
-├── mcp-compliance-check-tracker.md  # Main project tracker
-├── next-session-prompt.md       # What to work on next
+shadowcat-mcp-compliance/        # Git worktree
+├── crates/
+│   ├── mcp/                    # MCP library (extracting)
+│   │   ├── src/
+│   │   │   ├── connection/     # NEW: Connection trait pattern
+│   │   │   ├── transport/      # Transport implementations
+│   │   │   ├── client.rs       # MCP client
+│   │   │   └── server.rs       # MCP server
+│   │   └── Cargo.toml          # Hyper 1.7, rustls, etc.
+│   └── compliance/              # Testing framework (planned)
 │
-├── analysis/                    # Research and design documents
-│   ├── README.md               # Analysis overview
-│   ├── mcp-validator-findings.md  # Why mcp-validator is insufficient
-│   ├── shadowcat-proxy-validation.md  # Proof Shadowcat works correctly
-│   ├── test-requirement-coverage-matrix.md  # Gap analysis (12% coverage!)
-│   ├── mcp-compliance-checklist.md  # 233 spec requirements
-│   ├── validator-test-catalog.md  # 54 tests from mcp-validator
-│   ├── protocol-version-matrix.md  # Version differences
-│   ├── library-architecture-design.md  # Initial library design
-│   ├── client-server-proxy-separation.md  # Three-way test separation
-│   ├── compliance-independence-design.md  # Streaming + independence
-│   ├── mcp-core-extraction-architecture.md  # Shared libraries design
-│   ├── build-vs-buy-analysis.md  # Our MCP implementation approach
-│   └── architectural-decisions.md  # Key architecture decisions
-│
-└── tasks/                       # Detailed task descriptions
-    ├── A.0-extract-validator-tests.md  # ✅ Completed
-    └── A.1-analyze-mcp-specs.md       # ✅ Completed
+└── plans/mcp-compliance-check/
+    ├── README.md                # You are here
+    ├── mcp-compliance-check-tracker.md  # Main tracker
+    ├── analysis/
+    │   ├── CONSOLIDATED-ARCHITECTURE.md  # 🎯 Current architecture
+    │   └── (historical docs)    # Evolution of thinking
+    └── tasks/
+        └── C.7-connection-trait-tasks.md  # Current work
 ```
+
+## Implementation Phases
+
+### ✅ Completed Phases
+- **Phase A**: Analysis & Knowledge Capture (16 hours)
+- **Phase B**: MCP Library Extraction (15 hours)
+- **Phase C.0-C.1**: HTTP transport + Interceptors (7 hours)
+- **Phase C.5**: Transport Architecture Investigation (4 hours)
+- **Phase C.6**: Critical bug fixes (4 hours)
+- **Hyper 1.7 Upgrade**: Migration to modern hyper (6 hours)
+
+### 🚧 Current Phase: C.7 - Connection Pattern (22 hours)
+- C.7.0: Create Connection trait (2h) - IN PROGRESS
+- C.7.1: HTTP/2 Connection (4h)
+- C.7.2: WebSocket Connection (3h)
+- C.7.3: Stdio Connection (2h)
+- C.7.4: Migrate Client/Server (3h)
+- C.7.5: Integrate shadowcat pool (2h)
+
+### 📋 Upcoming Phases
+- **Phase D**: Compliance Framework (9 hours)
+- **Phase E**: Protocol Compliance Tests (14 hours)
+- **Phase F**: Proxy & Advanced Tests (12 hours)
+- **Phase G**: Reference Implementation Tests (10 hours)
+- **Phase H**: Integration & Polish (12 hours)
+
+## Technical Highlights
+
+### Connection Trait Pattern
+```rust
+#[async_trait]
+pub trait Connection: Send + Sync {
+    async fn send(&mut self, message: Value) -> Result<()>;
+    async fn receive(&mut self) -> Result<Value>;
+    async fn close(&mut self) -> Result<()>;
+}
+```
+
+### Protocol-Specific Pooling
+- **HTTP/2**: Per-origin pools with multiplexing
+- **WebSocket**: Per-session dedicated connections
+- **Stdio**: Global singleton
+
+### Performance Targets
+- Latency overhead: < 5% p95
+- Memory per session: < 100KB
+- Connection reuse: > 95% for HTTP/2
+- Startup time: < 50ms
 
 ## The Problem We're Solving
 
 ### Why Not Use mcp-validator?
-
-The Python-based mcp-validator has critical issues:
-- **Only 12% coverage** of MCP specification requirements
-- **Critical bugs** preventing it from working (HTTP transport, SSE handling, protocol mismatches)
-- **Missing areas**: Security (0% coverage), Transport (4% coverage), Proxy scenarios (0% coverage)
+- **Only 12% coverage** of MCP specification
+- **Critical bugs** preventing operation
 - **Not designed for proxies** like Shadowcat
-
-Details: [analysis/test-requirement-coverage-matrix.md](analysis/test-requirement-coverage-matrix.md)
+- **Missing security, transport, proxy scenarios**
 
 ### Why Build Our Own?
-
-1. **Shadowcat is both client AND server** - needs comprehensive testing of both roles
-2. **Proxy-specific behaviors** - 50+ scenarios not covered by spec
+1. **Shadowcat is both client AND server** - needs comprehensive testing
+2. **Proxy-specific behaviors** - 50+ scenarios not in spec
 3. **Performance critical** - Need fast, low-level implementation
-4. **Draft spec support** - Stay ahead with early testing
+4. **Future-proof** - HTTP/3 and draft spec support
 
-## Architecture Overview
+## Success Metrics
 
-### Workspace Structure (Final)
+1. ✅ 250+ compliance tests covering all spec requirements
+2. ✅ Support for MCP versions 2025-03-26, 2025-06-18, and draft
+3. ✅ < 5% latency overhead in proxy mode
+4. ✅ Integration with shadowcat's existing infrastructure
+5. ✅ Automated CI/CD with `cargo test`
 
-```
-shadowcat/                   # Workspace root
-├── src/                    # Shadowcat lib/CLI
-├── Cargo.toml             # Workspace + shadowcat package
-├── crates/
-│   ├── mcp/              # Shared MCP implementation (NEW)
-│   └── compliance/       # Compliance testing framework (NEW)
-└── xtask/                # Build automation
-```
+## For Contributors
 
-### Three-Way Test Separation
+### Current Focus
+Work on tasks in `tasks/C.7-connection-trait-tasks.md`. The Connection trait implementation is critical path.
 
-Instead of mixed proxy tests, we separate concerns:
+### Key Files
+- **Architecture**: `analysis/CONSOLIDATED-ARCHITECTURE.md`
+- **Progress**: `mcp-compliance-check-tracker.md`
+- **Current Tasks**: `tasks/C.7-connection-trait-tasks.md`
 
-1. **Client Compliance** - Does our MCP client behave correctly?
-2. **Server Compliance** - Does our MCP server behave correctly?
-3. **Proxy Compliance** - Does Shadowcat correctly bridge client/server?
-
-This provides precise diagnostics when tests fail.
-
-Details: [analysis/client-server-proxy-separation.md](analysis/client-server-proxy-separation.md)
-
-### Compliance Matrix
-
-We test all combinations for maximum compatibility:
-
-```
-                    | Our Server | rmcp Server | Reference JS
---------------------|------------|-------------|---------------
-Our Client          |     ✅     |     ✅      |      ✅
-rmcp Client         |     ✅     |     ✅      |      ✅
-Reference JS Client |     ✅     |     ✅      |      ✅
-```
-
-Details: [analysis/mcp-core-extraction-architecture.md](analysis/mcp-core-extraction-architecture.md)
-
-## Implementation Strategy
-
-### Phase A: Analysis ✅ COMPLETE
-- Extracted 54 test cases from mcp-validator
-- Identified 233 spec requirements
-- Found only 12% coverage in existing validator
-- Designed comprehensive architecture
-
-### Phase B: Core MCP Extraction ✅ COMPLETE
-- Extracted types, messages, constants, version modules
-- Built MessageBuilder and Parser with validation
-- Created Transport trait with stdio and subprocess
-- Implemented symmetric Client<T,H> and Server<T,H>
-
-### Phase C: Advanced Components (IN PROGRESS)
-- ✅ C.0: HTTP transport with SSE and reconnection
-- ✅ C.1: Full interceptor system with chain
-- ✅ C.5.0-C.5.3: Transport architecture investigation
-- 🔄 C.5.4: Refactor to StreamTransport<R,W> (NEXT)
-- ⬜ C.2: Add batch support for v2025-03-26
-- ⬜ C.3: Test MCP crate independently
-
-### Phase D: Integration
-- Compliance matrix testing
-- CI/CD integration
-- Performance benchmarks
-
-Details: [mcp-compliance-check-tracker.md](mcp-compliance-check-tracker.md)
-
-## Key Technical Decisions
-
-### 1. Independent MCP Implementation
-- **NO dependency on rmcp** (official Rust SDK)
-- **Direct, explicit code** - no macro magic like `#[tool_router]`
-- **Performance focused** - optimize for proxy use cases
-- **Full control** - we own our core infrastructure
-
-Details: [analysis/mcp-implementation-strategy.md](analysis/mcp-implementation-strategy.md)
-
-### 2. Version Support
-- **2025-03-26** - Current stable
-- **2025-06-18** - Latest release
-- **draft** - Living spec for early testing
-
-Specs location: `~/src/modelcontextprotocol/modelcontextprotocol/docs/specification/`
-
-### 3. Streaming Results
-- Real-time test progress
-- Multiple output formats (CLI, JSON stream, SSE)
-- Better CI/CD integration
-
-Details: [analysis/independent-streaming-architecture.md](analysis/independent-streaming-architecture.md)
-
-## Getting Started (Next Session)
-
-### Immediate Tasks
-
-1. **Extract MCP library** (4 hours)
-   - Create single `crates/mcp/` crate
-   - Extract protocol, client, and server from Shadowcat
-   - Make reusable and independent
-
-2. **Create compliance framework** (3 hours)
-   - Set up `crates/compliance/` crate
-   - Binary named `mcpspec` (like h2spec, h3spec)
-   - Implement basic test runner with JSON Lines streaming
-
-See [next-session-prompt.md](next-session-prompt.md) for detailed instructions.
-
-### Commands to Run
-
+### Testing
 ```bash
-# Navigate to project
-cd /Users/kevin/src/tapwire/shadowcat
-
-# Create crates directory and new crates
-mkdir -p crates
-cargo new --lib crates/mcp
-cargo new --lib crates/compliance
-
-# Update workspace
-vim Cargo.toml  # Add crates/mcp and crates/compliance to workspace.members
+cd shadowcat-mcp-compliance
+cargo test --package mcp
+cargo clippy --all-targets -- -D warnings
 ```
-
-## Success Criteria
-
-Our MCP implementation and compliance framework should be:
-
-1. **Faster** than rmcp for proxy use cases
-2. **100% compliant** with all spec versions including draft
-3. **Compatible** with rmcp and reference implementations
-4. **Independent** - no external MCP dependencies
-5. **Comprehensive** - 250+ tests covering all requirements
-
-## Resources
-
-### MCP Specifications
-- Location: `~/src/modelcontextprotocol/modelcontextprotocol/docs/specification/`
-- Versions: 2025-03-26, 2025-06-18, draft
-
-### Reference Implementations
-- TypeScript SDK: `~/src/modelcontextprotocol/typescript-sdk/`
-- Rust SDK (rmcp): `~/src/modelcontextprotocol/rust-sdk/`
-- Example servers: `~/src/modelcontextprotocol/servers/`
-
-### Existing Code
-- Shadowcat: `/Users/kevin/src/tapwire/shadowcat/`
-- mcp-validator: `/Users/kevin/src/tapwire/tools/mcp-validator/`
-
-## Questions This Plan Answers
-
-1. **Why not use mcp-validator?** Only 12% coverage, critical bugs - [analysis/mcp-validator-findings.md](analysis/mcp-validator-findings.md)
-2. **Why not depend on rmcp?** Need control, performance, proxy optimization - [analysis/mcp-implementation-strategy.md](analysis/mcp-implementation-strategy.md)
-3. **How many tests needed?** ~250 total - [analysis/test-requirement-coverage-matrix.md](analysis/test-requirement-coverage-matrix.md)
-4. **What's the architecture?** Shared MCP libs + compliance framework - [analysis/final-architecture-summary.md](analysis/final-architecture-summary.md)
-5. **What's next?** Extract MCP libraries, build framework - [next-session-prompt.md](next-session-prompt.md)
-
-## Contact & Status
-
-- **Created**: 2025-08-23
-- **Last Updated**: 2025-08-24
-- **Status**: Planning complete, ready for Phase B implementation
-- **Estimated Remaining Work**: 80-100 hours
 
 ---
 
-*This README is the entry point for understanding the MCP Compliance Framework project. Start here, then dive into specific documents as needed.*
+*Last Updated: 2025-08-24*  
+*Status: Hyper 1.7 complete, Connection trait in progress*

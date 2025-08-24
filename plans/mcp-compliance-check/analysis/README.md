@@ -1,112 +1,102 @@
 # MCP Compliance Analysis Documents
 
-## 🔥 Active Documents (Use These)
+This directory contains architecture analysis and design documents for MCP compliance implementation.
 
-### Core Architecture & Decisions
-- **[../TRANSPORT-ARCHITECTURE-FINAL.md](../TRANSPORT-ARCHITECTURE-FINAL.md)** - ⭐ **FINAL transport architecture decision**
-- **[../CURRENT-ARCHITECTURE.md](../CURRENT-ARCHITECTURE.md)** - Overall system architecture
-- **[../DECISION-LOG.md](../DECISION-LOG.md)** - Historical decision record
-- **[websocket-separation-decision.md](websocket-separation-decision.md)** - WebSocket as separate transport
-- **[gpt-findings-analysis.md](gpt-findings-analysis.md)** - Critical bugs and fixes needed
+## 📍 Primary Documents (Active)
 
-### Implementation Guides
-- **[mcp-core-extraction-architecture.md](mcp-core-extraction-architecture.md)** - How to build the MCP library
-- **[shadowcat-mcp-extraction-inventory.md](shadowcat-mcp-extraction-inventory.md)** - What code to extract
-- **[shadowcat-transport-session-inventory.md](shadowcat-transport-session-inventory.md)** - Transport/session code
-- **[implementation-considerations.md](implementation-considerations.md)** - Risks and mitigation
-- **[compliance-independence-design.md](compliance-independence-design.md)** - Testing independence
+### Current Architecture
+- **[CONSOLIDATED-ARCHITECTURE.md](CONSOLIDATED-ARCHITECTURE.md)** - 🎯 **START HERE** - Single source of truth for all architecture decisions
+- **[HYPER-1.7-UPGRADE-COMPLETE.md](HYPER-1.7-UPGRADE-COMPLETE.md)** - Details of successful hyper 1.7 migration
+- **[CONNECTION-POOLING-DESIGN.md](CONNECTION-POOLING-DESIGN.md)** - Shadowcat pool integration design
 
-### Testing & Compliance
-- **[mcp-compliance-checklist.md](mcp-compliance-checklist.md)** - 233 spec requirements
+### External Reviews
+- **[gpt-findings-analysis.md](gpt-findings-analysis.md)** - GPT-5 code review findings (✅ bugs fixed)
+- **[mcp-validator-findings.md](mcp-validator-findings.md)** - MCP validator test results
+
+### Reference Documents
+- **[mcp-compliance-checklist.md](mcp-compliance-checklist.md)** - 233 spec requirements tracking
+- **[protocol-version-matrix.md](protocol-version-matrix.md)** - Protocol version support matrix
 - **[proxy-specific-test-scenarios.md](proxy-specific-test-scenarios.md)** - 50 proxy-specific tests
-- **[test-requirement-coverage-matrix.md](test-requirement-coverage-matrix.md)** - Gap analysis (12% coverage!)
 - **[validator-test-catalog.md](validator-test-catalog.md)** - 54 validator tests + 28 gaps
-- **[client-server-proxy-separation.md](client-server-proxy-separation.md)** - Test separation strategy
 
-### Research & Analysis
-- **[mcp-validator-findings.md](mcp-validator-findings.md)** - Critical bugs in Python validator
-- **[shadowcat-proxy-validation.md](shadowcat-proxy-validation.md)** - Proof Shadowcat works
-- **[protocol-version-matrix.md](protocol-version-matrix.md)** - Version differences
-- **[version-agnostic-architecture.md](version-agnostic-architecture.md)** - Pluggable version design
+## 📚 Historical Documents (Archive)
 
-## 📦 Deprecated Documents (Historical Reference Only)
-
-These documents trace our journey to the final architecture. They're preserved for context but **should NOT be used for implementation**.
+These documents represent the evolution of our thinking but are superseded by the consolidated architecture:
 
 ### Transport Architecture Evolution
-- ~~`transport-architecture-investigation.md`~~ → Initial exploration
-- ~~`transport-architecture-final.md`~~ → First decision (AsyncRead/Write)
-- ~~`transport-architecture-final-v2.md`~~ → Second iteration (early Sink/Stream)
-- ~~`transport-decision-summary.md`~~ → Partial summary
-- ~~`transport-investigation-summary.md`~~ → Investigation notes
-- ~~`transport-patterns-analysis.md`~~ → RMCP pattern exploration
-- ~~`transport-deviation-analysis.md`~~ → Deviation analysis
-- ~~`framed-sink-stream-architecture.md`~~ → Merged into FINAL
-- ~~`rmcp-vs-framed-comparison.md`~~ → Analysis complete
-- ~~`http-sse-unified-transport.md`~~ → Merged into FINAL
-- ~~`http-transport-unified-architecture.md`~~ → Merged into FINAL
-- ~~`websocket-transport-design.md`~~ → Superseded by separation decision
+- `TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md` - Latest before consolidation
+- `transport-architecture-final-v2.md` - Sink/Stream iteration
+- `transport-architecture-final.md` - Initial AsyncRead/Write
+- `framed-sink-stream-architecture.md` - Sink/Stream design (superseded)
+- Other investigation files
 
-### Other Deprecated
-- ~~`build-vs-buy-analysis.md`~~ → Decision made (build our own)
-- ~~`architectural-decisions.md`~~ → Merged into FINAL
-- ~~`library-architecture-design.md`~~ → Implemented in Phase B
+### HTTP/Hyper Analysis
+- `HYPER-1.7-UPGRADE-ANALYSIS.md` - Migration planning
+- `HYPER-POOLING-CONFLICT-ANALYSIS.md` - Double pooling discovery
+- `POOL-COMPARISON.md` - Pool comparison
+- `http-sse-unified-transport.md` - Unified approach
+- `http-transport-unified-architecture.md` - HTTP details
 
-## 📝 Quick Reference
+### Implementation Planning
+- `mcp-core-extraction-architecture.md` - Library extraction plan
+- `shadowcat-mcp-extraction-inventory.md` - Code inventory
+- `shadowcat-transport-session-inventory.md` - Transport code
+- `implementation-considerations.md` - Risks and mitigation
 
-### For New Developers - Start Here
-1. **[../TRANSPORT-ARCHITECTURE-FINAL.md](../TRANSPORT-ARCHITECTURE-FINAL.md)** - Current architecture
-2. **[gpt-findings-analysis.md](gpt-findings-analysis.md)** - Critical bugs to fix
-3. **[mcp-core-extraction-architecture.md](mcp-core-extraction-architecture.md)** - How to build
+### Other Analysis
+- `websocket-separation-decision.md` - WebSocket as separate transport
+- `rmcp-vs-framed-comparison.md` - SDK comparison
+- `build-vs-buy-analysis.md` - Build vs use rmcp
+- Various other analysis files
 
-### For Implementers - Code Locations
-- **Transport code**: `crates/mcp/src/transport/`
-- **Client/Server**: `crates/mcp/src/{client,server}.rs`
-- **Session management**: `src/session/`
-- **Existing transport traits**: `src/transport/`
+## 🎯 Current Status
 
-### For Testers - Test Strategy
-- [mcp-compliance-checklist.md](mcp-compliance-checklist.md) - What to test
-- [proxy-specific-test-scenarios.md](proxy-specific-test-scenarios.md) - Proxy tests
-- [test-requirement-coverage-matrix.md](test-requirement-coverage-matrix.md) - Coverage gaps
+### ✅ Completed
+1. **Architecture Decision**: Connection trait pattern (not Sink/Stream)
+2. **Hyper 1.7 Upgrade**: Direct connection management, no pooling
+3. **GPT-5 Bugs Fixed**: Client deadlock and HTTP worker issues resolved
 
-## 🚨 Critical Issues (from GPT-5 Review)
+### 🚧 In Progress
+1. **Connection Trait**: Implementation in progress (task C.7.0)
+2. **Protocol Adapters**: HTTP, SSE, WebSocket, stdio (tasks C.7.1-C.7.4)
+3. **Pool Integration**: Shadowcat pool wrapper (task C.7.5)
 
-1. **Client Deadlock** - `request()` blocks forever without `run()`, but `run()` consumes self
-2. **HTTP Transport Broken** - Doesn't send actual HTTP requests, just shuffles queues
-3. **WebSocket Needs Separation** - Must be separate transport, not HTTP sub-mode
-4. **Codec Needs Hardening** - JsonLineCodec needs CRLF handling, overlong line support
+### 📋 Next Steps
+1. Complete Connection trait implementation
+2. Create protocol adapters
+3. Integrate shadowcat pool
+4. Run MCP validator tests
+5. Performance benchmarking
 
-See [gpt-findings-analysis.md](gpt-findings-analysis.md) for details.
+## 🔑 Key Insights
 
-## Key Findings Summary
+### Architecture Evolution
+1. **Started**: AsyncRead/AsyncWrite traits (too low-level)
+2. **Tried**: Sink/Stream with worker tasks (too much overhead)
+3. **Final**: Connection trait with direct async methods (just right)
 
-### Architecture Decision ✅
-- **Sink/Stream at message level** - Correct abstraction
-- **Framed for line protocols** - stdio, subprocess, TCP, Unix
-- **HTTP adaptive** - JSON response or SSE stream
-- **WebSocket separate** - Different lifecycle and requirements
+### Critical Decisions
+- **No Double Pooling**: Use shadowcat's pool exclusively
+- **Direct Connections**: Hyper 1.7's `client::conn` for control
+- **Protocol Agnostic**: One Connection trait for all transports
+- **HTTP/3 Ready**: Foundation in place for future upgrade
 
-### What We Have ✅
-- Basic transport structure implemented
-- JsonLineCodec working (needs hardening)
-- StdioTransport and SubprocessTransport functional
-- Good session infrastructure in `src/session/`
+### Performance Gains
+- Hyper 1.7: ~25% lower overhead
+- No worker tasks: Eliminated channel overhead
+- Direct async: Simpler, faster, cleaner
 
-### What's Broken 🔴
-- Client concurrency deadlock
-- HTTP transport doesn't work
-- No WebSocket transport yet
-- Codec not robust enough
+## 📝 Document Management
 
-### Next Steps 📋
-1. Fix Client deadlock (CRITICAL)
-2. Implement HTTP worker pattern (CRITICAL)
-3. Create WebSocket transport
-4. Harden JsonLineCodec
-5. Wire version negotiation
+**Consolidation completed 2025-08-24**: Reduced from 37 to ~10 active documents
+
+**Active documents** are maintained and updated. **Historical documents** are preserved for reference but should not be used for implementation guidance.
+
+For implementation details, see:
+- `../tasks/C.7-connection-trait-tasks.md` - Current implementation tasks
+- `../mcp-compliance-tracker.md` - Overall progress tracking
 
 ---
 
 *Last Updated: 2025-08-24*  
-*Status: Architecture finalized, critical bugs identified*
+*Status: Architecture consolidated, implementation in progress*
