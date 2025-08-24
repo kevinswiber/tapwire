@@ -4,9 +4,9 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-23  
-**Total Estimated Duration**: 80-100 hours (increased for library design)  
-**Status**: Planning - Architecture Defined
+**Last Updated**: 2025-08-24  
+**Total Estimated Duration**: 88 hours (16 + 15 + 12 + 9 + 14 + 12 + 10)  
+**Status**: Phase A Complete - Ready for Implementation
 
 ## Goals
 
@@ -69,65 +69,92 @@ This tracker coordinates the development of a Rust-native MCP compliance testing
 
 ## Work Phases
 
-### Phase A: Analysis & Knowledge Capture (Week 1) - IN PROGRESS
+### Phase A: Analysis & Knowledge Capture (Week 1) - ✅ COMPLETED
 Capture learnings from mcp-validator investigation and design compliance framework
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| A.0 | **Extract mcp-validator test cases** | 4h | None | ✅ Completed | | [Details](tasks/A.0-extract-validator-tests.md) |
-| A.1 | **Analyze MCP spec compliance points** | 3h | None | ✅ Completed | | [Details](tasks/A.1-analyze-mcp-specs.md) |
-| A.2 | **Design Rust compliance architecture** | 4h | A.0, A.1 | ⬜ Not Started | | [Details](tasks/A.2-design-architecture.md) |
-| A.3 | **Create proxy-specific test scenarios** | 3h | A.1 | ⬜ Not Started | | [Details](tasks/A.3-proxy-test-scenarios.md) |
+| A.0 | **Extract mcp-validator test cases** | 4h | None | ✅ Completed | | 54 tests cataloged |
+| A.1 | **Analyze MCP spec compliance points** | 3h | None | ✅ Completed | | 233 requirements found |
+| A.2 | **Design Rust compliance architecture** | 4h | A.0, A.1 | ✅ Completed | | See architectural-decisions.md |
+| A.3 | **Create proxy-specific test scenarios** | 3h | A.1 | ✅ Completed | | 50 proxy tests identified |
+| A.4 | **Inventory existing code for extraction** | 2h | A.2 | ✅ Completed | | ~70% code reusable |
 
-**Phase A Total**: 14 hours
+**Phase A Total**: 16 hours (actual)
 
-### Phase B: Core Framework Implementation (Week 1-2)
-Build the foundational compliance testing infrastructure
-
-| ID | Task | Duration | Dependencies | Status | Owner | Notes |
-|----|------|----------|--------------|--------|-------|-------|
-| B.0 | **Create compliance test module** | 3h | A.2 | ⬜ Not Started | | [Details](tasks/B.0-create-module.md) |
-| B.1 | **Implement test runner** | 4h | B.0 | ⬜ Not Started | | [Details](tasks/B.1-test-runner.md) |
-| B.2 | **Build protocol adapters** | 4h | B.0 | ⬜ Not Started | | [Details](tasks/B.2-protocol-adapters.md) |
-| B.3 | **Create report generator** | 3h | B.1 | ⬜ Not Started | | [Details](tasks/B.3-report-generator.md) |
-
-**Phase B Total**: 14 hours
-
-### Phase C: Protocol Test Implementation (Week 2)
-Implement comprehensive protocol compliance tests
+### Phase B: MCP Library Extraction (Week 1)
+Extract and refactor MCP protocol implementation from shadowcat
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Basic protocol tests** | 4h | B.1, B.2 | ⬜ Not Started | | [Details](tasks/C.0-basic-protocol.md) |
-| C.1 | **Tools compliance tests** | 4h | C.0 | ⬜ Not Started | | [Details](tasks/C.1-tools-tests.md) |
-| C.2 | **Async operations tests** | 4h | C.1 | ⬜ Not Started | | [Details](tasks/C.2-async-tests.md) |
-| C.3 | **SSE transport tests** | 3h | C.0 | ⬜ Not Started | | [Details](tasks/C.3-sse-tests.md) |
+| B.0 | **Extract core types and messages** | 2h | None | ⬜ Not Started | | types.rs, messages.rs, constants.rs |
+| B.1 | **Extract builders and parsers** | 3h | B.0 | ⬜ Not Started | | builder.rs, parser.rs, validation.rs |
+| B.2 | **Create Transport trait and stdio** | 4h | B.0 | ⬜ Not Started | | Transport trait + stdio::Transport |
+| B.3 | **Build Client struct** | 3h | B.2 | ⬜ Not Started | | Client<T: Transport> with handshake |
+| B.4 | **Build Server struct** | 3h | B.2 | ⬜ Not Started | | Server<H: Handler> with handshake |
 
-**Phase C Total**: 15 hours
+**Phase B Total**: 15 hours
 
-### Phase D: Proxy-Specific Testing (Week 2-3)
-Implement tests specific to proxy functionality
-
-| ID | Task | Duration | Dependencies | Status | Owner | Notes |
-|----|------|----------|--------------|--------|-------|-------|
-| D.0 | **Session mapping tests** | 3h | C.0 | ⬜ Not Started | | [Details](tasks/D.0-session-mapping.md) |
-| D.1 | **Multi-upstream failover tests** | 4h | D.0 | ⬜ Not Started | | [Details](tasks/D.1-failover-tests.md) |
-| D.2 | **Connection pooling tests** | 3h | D.0 | ⬜ Not Started | | [Details](tasks/D.2-connection-pooling.md) |
-| D.3 | **OAuth forwarding tests** | 3h | C.0 | ⬜ Not Started | | [Details](tasks/D.3-oauth-tests.md) |
-
-**Phase D Total**: 13 hours
-
-### Phase E: Integration & CI/CD (Week 3)
-Integrate with Shadowcat and set up automated testing
+### Phase C: Additional MCP Components (Week 2)
+Complete MCP library with advanced features
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.0 | **Integrate with cargo test** | 3h | C.0-C.3 | ⬜ Not Started | | [Details](tasks/E.0-cargo-integration.md) |
-| E.1 | **Create GitHub Actions workflow** | 2h | E.0 | ⬜ Not Started | | [Details](tasks/E.1-github-actions.md) |
-| E.2 | **Performance benchmarks** | 3h | E.0 | ⬜ Not Started | | [Details](tasks/E.2-benchmarks.md) |
-| E.3 | **Documentation and examples** | 2h | All | ⬜ Not Started | | [Details](tasks/E.3-documentation.md) |
+| C.0 | **Add HTTP transport with SSE** | 4h | B.2 | ⬜ Not Started | | http::Transport + streaming::sse |
+| C.1 | **Extract interceptor system** | 3h | B.3, B.4 | ⬜ Not Started | | Interceptor trait + Chain |
+| C.2 | **Add batch support** | 2h | B.1 | ⬜ Not Started | | Batch handling from batch.rs |
+| C.3 | **Update shadowcat to use MCP crate** | 3h | C.0-C.2 | ⬜ Not Started | | Replace internal with crate dep |
 
-**Phase E Total**: 10 hours
+**Phase C Total**: 12 hours
+
+### Phase D: Compliance Framework (Week 2)
+Build the compliance testing framework using extracted MCP library
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| D.0 | **Create compliance crate structure** | 2h | B.3, B.4 | ⬜ Not Started | | crates/compliance with mcpspec bin |
+| D.1 | **Implement test runner core** | 3h | D.0 | ⬜ Not Started | | Test orchestration + streaming events |
+| D.2 | **Build version registry** | 2h | D.0 | ⬜ Not Started | | Version detection + feature flags |
+| D.3 | **Create report generator** | 2h | D.1 | ⬜ Not Started | | JSON + Markdown reports |
+
+**Phase D Total**: 9 hours
+
+### Phase E: Protocol Compliance Tests (Week 3)
+Implement the actual compliance test suites
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| E.0 | **Basic protocol tests** | 3h | D.1 | ⬜ Not Started | | Init, version negotiation, capabilities |
+| E.1 | **Tools compliance tests** | 3h | E.0 | ⬜ Not Started | | Tool listing, invocation, params |
+| E.2 | **Resource tests** | 3h | E.0 | ⬜ Not Started | | Resource listing, fetching, subscriptions |
+| E.3 | **Transport tests** | 3h | E.0 | ⬜ Not Started | | stdio, HTTP, SSE behaviors |
+| E.4 | **Error handling tests** | 2h | E.0 | ⬜ Not Started | | Error codes, formats, recovery |
+
+**Phase E Total**: 14 hours
+
+### Phase F: Proxy & Advanced Tests (Week 3)
+Proxy-specific and advanced compliance scenarios
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| F.0 | **Session management tests** | 3h | E.0 | ⬜ Not Started | | Dual session tracking, persistence |
+| F.1 | **SSE reconnection tests** | 3h | E.3 | ⬜ Not Started | | Reconnect, buffering, failover |
+| F.2 | **Security tests** | 3h | E.0 | ⬜ Not Started | | OAuth, headers, token handling |
+| F.3 | **Async operations tests** | 3h | E.1 | ⬜ Not Started | | Async tools, polling, cancellation |
+
+**Phase F Total**: 12 hours
+
+### Phase G: Integration & CI/CD (Week 4)
+Production readiness and automation
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| G.0 | **Integrate with cargo test** | 2h | F.0-F.3 | ⬜ Not Started | | Add to workspace tests |
+| G.1 | **Create GitHub Actions workflow** | 2h | G.0 | ⬜ Not Started | | CI/CD automation |
+| G.2 | **Performance benchmarks** | 3h | G.0 | ⬜ Not Started | | Latency, throughput metrics |
+| G.3 | **Documentation and examples** | 3h | All | ⬜ Not Started | | README, examples, API docs |
+
+**Phase G Total**: 10 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -139,15 +166,22 @@ Integrate with Shadowcat and set up automated testing
 ## Progress Tracking
 
 ### Week 1 (2025-08-23 to 2025-08-30)
-- [ ] A.0: Extract mcp-validator test cases
-- [ ] A.1: Analyze MCP spec compliance points
-- [ ] A.2: Design Rust compliance architecture
-- [ ] A.3: Create proxy-specific test scenarios
-- [ ] B.0: Create compliance test module
-- [ ] B.1: Implement test runner
+- [x] A.0: Extract mcp-validator test cases
+- [x] A.1: Analyze MCP spec compliance points
+- [x] A.2: Design Rust compliance architecture
+- [x] A.3: Create proxy-specific test scenarios
+- [x] A.4: Inventory existing code for extraction
+- [ ] B.0: Extract core types and messages
+- [ ] B.1: Extract builders and parsers
+- [ ] B.2: Create Transport trait and stdio
 
 ### Completed Tasks
-- None yet
+- **Phase A**: All analysis and architecture complete (16 hours)
+  - 54 validator tests cataloged
+  - 233 spec requirements identified
+  - Architecture designed with key decisions documented
+  - 50 proxy-specific tests defined
+  - ~70% existing code inventoried for reuse
 
 ## Success Criteria
 
@@ -372,9 +406,20 @@ See `next-session-prompt.md` for the current session setup.
 
 ## Next Actions
 
-1. **Complete A.0**: Extract and document all test cases from mcp-validator
-2. **Start A.1**: Analyze MCP specifications for compliance points
-3. **Begin framework design**: Create architecture proposal
+1. **Start Phase B**: Begin MCP library extraction
+   - B.0: Extract core types and messages (2h)
+   - B.1: Extract builders and parsers (3h)
+   - B.2: Create Transport trait and stdio implementation (4h)
+
+2. **Key Focus Areas**:
+   - Use extraction inventories as guides
+   - Keep shadowcat working during extraction
+   - Test extraction early with simple examples
+
+3. **Session Planning**:
+   - Each task is sized for one Claude session
+   - Clear inputs/outputs defined
+   - Dependencies mapped for proper sequencing
 
 ## Notes
 
@@ -385,9 +430,9 @@ See `next-session-prompt.md` for the current session setup.
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 2.0  
 **Created**: 2025-08-23  
-**Last Modified**: 2025-08-23  
+**Last Modified**: 2025-08-24  
 **Author**: Development Team
 
 ## Revision History
@@ -395,3 +440,4 @@ See `next-session-prompt.md` for the current session setup.
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-08-23 | 1.0 | Initial plan creation based on mcp-validator analysis | Team |
+| 2025-08-24 | 2.0 | Restructured phases for extraction strategy, completed Phase A | Team |

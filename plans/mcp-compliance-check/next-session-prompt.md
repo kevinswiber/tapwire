@@ -1,176 +1,143 @@
-# Next Session: MCP Compliance Framework - Implementation Phase
+# Next Session: Begin MCP Library Extraction
 
 ## Session Goal
-Begin implementing the shadowcat-compliance library based on the comprehensive architecture design completed in Phase A.
+Start Phase B by extracting core MCP protocol types from shadowcat into a reusable library.
 
 ## Context
 - **Tracker**: `plans/mcp-compliance-check/mcp-compliance-check-tracker.md`
-- **Current Phase**: B - Core Framework Implementation (Ready to start)
-- **Previous Work**: Completed comprehensive analysis, designed library-first architecture
+- **Current Phase**: B - MCP Library Extraction (Ready to start)
+- **Previous Work**: Completed all analysis and architecture (Phase A)
+- **Existing Code**: ~70% of MCP protocol already in shadowcat/src/mcp/
 
-## Critical Findings from Analysis
-1. **mcp-validator only covers ~12% of requirements** - inadequate for compliance
-2. **Need ~250 total tests** (200 spec-based + 50 proxy-specific)
-3. **Focus on versions 2025-03-26 and 2025-06-18 only** (not 2024-11-05)
-4. **Library-first design** for reusability across projects
+## What We've Learned
+1. **Most code is reusable** - shadowcat has mature MCP implementation
+2. **Architecture decided** - Single MCP crate, hybrid Client/Server design
+3. **Transport organization** - `mcp::transports::http::streaming::sse`
+4. **Extraction strategy** - Start with types, then builders/parsers, then transports
 
-## Key Architecture Decisions Made
-1. **Extract MCP libraries**: Create mcp-core, mcp-client, mcp-server crates
-2. **Shared protocol code**: Both shadowcat and compliance use same MCP libraries
-3. **Compliance matrix**: Test our impl vs reference impl in all combinations
-4. **Three-way separation**: Client, server, and proxy tests
-5. **Streaming results**: Real-time test progress feedback
-6. **Version management**: Pluggable adapters for 2025-03-26 and 2025-06-18
+## Primary Task: B.0 - Extract Core Types and Messages (2 hours)
 
-## Tasks for Next Session
+### What to Extract
+From `shadowcat/src/mcp/`:
+- `types.rs` → Core types (JsonRpcId, SessionId, MessageContext)
+- `messages.rs` → Protocol messages (MessageEnvelope, ProtocolMessage)
+- `constants.rs` → Protocol constants and versions
+- `version.rs` → Version negotiation logic
 
-### NEW Task: Extract MCP Libraries (4 hours)
-**Priority**: Must do first - enables everything else
+### Steps
+1. **Create crate structure**:
+   ```bash
+   mkdir -p shadowcat/crates/mcp/src
+   cd shadowcat/crates/mcp
+   ```
 
-1. **Create mcp-core crate**
-   - Protocol types (JsonRpcRequest, JsonRpcResponse)
-   - Transport trait
-   - Capability structures
-   - Protocol versions
+2. **Set up Cargo.toml**:
+   ```toml
+   [package]
+   name = "mcp"
+   version = "0.1.0"
+   edition = "2021"
+   
+   [dependencies]
+   serde = { version = "1.0", features = ["derive"] }
+   serde_json = "1.0"
+   thiserror = "1.0"
+   ```
 
-2. **Create mcp-client crate**
-   - Generic MCP client implementation
-   - Extract from shadowcat's upstream handling
-   - Make reusable for any MCP server
+3. **Extract files** (copy and clean):
+   - Remove shadowcat-specific imports
+   - Keep protocol-pure functionality
+   - Ensure standalone compilation
 
-3. **Create mcp-server crate**
-   - Generic MCP server implementation
-   - Extract from shadowcat's downstream handling
-   - McpHandler trait for implementations
+4. **Add to workspace** in shadowcat/Cargo.toml:
+   ```toml
+   [workspace]
+   members = [".", "crates/mcp", "crates/compliance"]
+   ```
 
-4. **Refactor shadowcat**
-   - Use extracted libraries
-   - Remove duplicate code
-   - Focus on proxy-specific logic
+5. **Test compilation**:
+   ```bash
+   cargo check
+   cargo test
+   ```
 
-### Task B.0: Create Compliance Module (2 hours)
-**File**: `tasks/B.0-create-module.md`
+### If Time Permits: Start B.1 - Extract Builders and Parsers (3 hours)
+From `shadowcat/src/mcp/`:
+- `builder.rs` → Message builders (RequestBuilder, ResponseBuilder)
+- `parser.rs` → Message parsing (McpParser)
+- `validation.rs` → Message validation
 
-1. Create shadowcat-compliance crate
-2. Depend on mcp-core, mcp-client, mcp-server
-3. Implement compliance matrix testing
-4. Define test runner architecture
+These depend on B.0 types but are otherwise independent.
 
-### Task B.1: Implement Test Runner (4 hours)
-**File**: `tasks/B.1-test-runner.md`
+### Success Criteria for This Session
+- [ ] MCP crate created and added to workspace
+- [ ] Core types extracted and compile standalone
+- [ ] No dependencies on shadowcat internals
+- [ ] Basic unit tests pass
+- [ ] Can import types from MCP crate in shadowcat
 
-1. Build test orchestration engine
-2. Create version registry:
-   - v2025_03_26 module
-   - v2025_06_18 module
-3. Implement test execution framework
-4. Add parallel test support
-5. Create test filtering by version/category
+## Key References
+- **Architecture Decisions**: `analysis/architectural-decisions.md` - WHY we made choices
+- **Extraction Guide**: `analysis/mcp-core-extraction-architecture.md` - HOW to build
+- **MCP Inventory**: `analysis/shadowcat-mcp-extraction-inventory.md` - WHAT to extract
+- **Transport Inventory**: `analysis/shadowcat-transport-session-inventory.md` - Infrastructure code
 
-## Implementation Priorities
-Based on coverage gaps:
-1. **Security tests** (0% coverage) - CRITICAL
-2. **Transport tests** (4% coverage) - HIGH  
-3. **Proxy tests** (0% coverage) - HIGH
-4. **Lifecycle tests** (29% coverage) - MEDIUM
-
-## Key Design Documents
-- **Library API**: `analysis/library-architecture-design.md`
-- **Version system**: `analysis/version-agnostic-architecture.md`
-- **Proxy tests**: `analysis/proxy-specific-test-scenarios.md`
-- **Coverage gaps**: `analysis/test-requirement-coverage-matrix.md`
-
-## New Workspace Structure
+## Target Structure (Single MCP Crate)
 
 ```
 shadowcat/
-├── mcp-core/                # Protocol types & traits
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs
-│       ├── protocol.rs     # JsonRpc types
-│       ├── capabilities.rs # Capability structures
-│       └── transport.rs    # Transport trait
-│
-├── mcp-client/              # Generic MCP client
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs
-│       └── client.rs
-│
-├── mcp-server/              # Generic MCP server
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs
-│       ├── server.rs
-│       └── handler.rs      # McpHandler trait
-│
-├── shadowcat/               # Refactored to use MCP libraries
-│   ├── Cargo.toml          # Depends on mcp-core, mcp-client, mcp-server
-│   └── src/
-│       └── proxy.rs        # Proxy-specific logic only
-│
-└── shadowcat-compliance/    # Compliance testing
-    ├── Cargo.toml          # Depends on mcp-core, mcp-client, mcp-server
-    └── src/
-        ├── lib.rs
-        ├── main.rs
-        └── matrix.rs       # Compliance matrix testing
+├── src/                    # Shadowcat (will use MCP crate)
+├── crates/
+│   ├── mcp/               # Extracted MCP library
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── types.rs         # This session: Extract
+│   │       ├── messages.rs      # This session: Extract
+│   │       ├── constants.rs     # This session: Extract
+│   │       ├── version.rs       # This session: Extract
+│   │       ├── builder.rs       # Next: If time
+│   │       ├── parser.rs        # Next: If time
+│   │       ├── client.rs        # Future: B.3
+│   │       ├── server.rs        # Future: B.4
+│   │       ├── interceptor.rs   # Future: C.1
+│   │       └── transports/      # Future: B.2, C.0
+│   │           ├── mod.rs
+│   │           ├── stdio.rs
+│   │           └── http/
+│   │               └── streaming/
+│   │                   └── sse.rs
+│   └── compliance/        # Future: Phase D
+│       └── Cargo.toml
 ```
 
-## Initial API to Implement
+## Important Notes
+- **Start minimal** - Just get types compiling first
+- **No over-engineering** - Simple extraction, refactor later
+- **Test early** - Ensure MCP crate works standalone
+- **Keep shadowcat working** - Don't break existing functionality
+- **Clear commits** - One commit per extraction step
 
-```rust
-// src/lib.rs
-pub struct ComplianceChecker {
-    registry: Arc<VersionRegistry>,
-    config: CheckerConfig,
-}
-
-impl ComplianceChecker {
-    pub fn new() -> Self;
-    pub async fn test_server(&self, url: &str, version: &str) -> Result<ComplianceReport>;
-    pub fn validate_message(&self, msg: &Value, version: &str) -> ValidationResult;
-}
-```
-
-## Success Criteria
-- [ ] shadowcat-compliance crate created and compiles
-- [ ] Basic ComplianceChecker API implemented
-- [ ] Can import shadowcat modules successfully
-- [ ] Version registry with 2025-03-26 and 2025-06-18
-- [ ] One simple test runs successfully
-- [ ] CLI binary with basic server test command
-
-## Commands Reference
-
-```bash
-# Create new crate
-cd /Users/kevin/src/tapwire/shadowcat
-cargo new --lib shadowcat-compliance
-
-# Update workspace
-vim Cargo.toml  # Add to workspace members
-
-# Build and test
-cd shadowcat-compliance
-cargo build
-cargo test
-
-# Run CLI
-cargo run -- server http://localhost:3000 -v 2025-06-18
-```
+## Definition of Done
+- [ ] Core types extracted and compile in MCP crate
+- [ ] MCP crate added to workspace
+- [ ] No shadowcat dependencies in extracted code  
+- [ ] Shadowcat can import from MCP crate
+- [ ] Basic tests demonstrate functionality
+- [ ] Tracker updated with completion status
 
 ## Next Steps After This Session
-- Task B.2: Build protocol adapters for client/server testing
-- Task B.3: Create report generator (JSON, Markdown, JUnit)
-- Phase C: Start implementing the 250 compliance tests
+- B.1: Extract builders and parsers (3h)
+- B.2: Create Transport trait and stdio (4h)
+- B.3: Build Client struct (3h)
+- B.4: Build Server struct (3h)
+- Then Phase C: Additional components (HTTP/SSE, interceptors, etc.)
 
 ---
 
-**Duration**: 7 hours
-**Focus**: Core framework implementation
-**Deliverables**: Working shadowcat-compliance crate with basic functionality
+**Duration**: 2-3 hours for B.0
+**Focus**: Extract core MCP types
+**Deliverables**: Standalone MCP crate with core types
 
-*Last Updated: 2025-08-23*
-*Ready for: Implementation phase*
+*Last Updated: 2025-08-24*
+*Ready for: MCP library extraction*
