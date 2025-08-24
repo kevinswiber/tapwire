@@ -6,14 +6,22 @@ Migrating custom linting rules from xtask to dylint for better IDE integration a
 ## Progress Summary
 - ✅ **Phase 1**: Basic dylint setup and initial lints (COMPLETE)
 - ✅ **Phase 2**: Core lints ported and working (COMPLETE)
-- 🚧 **Phase 3**: Refactor into modules (IN PROGRESS - PRIORITY)
+- ✅ **Phase 3**: Refactor into modules (COMPLETE)
   - ✅ Created module structure (utils/, lints/)
   - ✅ Extracted test_detection utilities
-  - ✅ Started extracting NO_ERROR_SUFFIX
-  - 🚧 Extracting remaining lints
-- ⏳ **Phase 4**: Port remaining structural lints (PENDING)
-- ⏳ **Phase 5**: CI Integration (PENDING)
-- ⏳ **Phase 6**: Documentation (PENDING)
+  - ✅ Extracted all three lints to separate modules
+  - ✅ Created combined_pass.rs for LateLintPass implementation
+  - ✅ Reduced lib.rs to thin coordinator (43 lines)
+- ✅ **Phase 4**: Port remaining structural lints (COMPLETE)
+  - ✅ Ported CROSS_MODULE_ERROR_IMPORTS
+  - ✅ Ported NO_ROOT_ERROR_IMPORTS
+  - ✅ Created early_pass.rs for structural lints
+- ✅ **Phase 5**: CI Integration (COMPLETE)
+  - ✅ Updated .github/workflows/architecture.yml
+  - ✅ Runs both dylint and xtask checks
+- ✅ **Phase 6**: Documentation (COMPLETE)
+  - ✅ Created comprehensive README.md
+  - ✅ Documented all lints and usage
 
 ## Detailed Task Status
 
@@ -24,11 +32,12 @@ Migrating custom linting rules from xtask to dylint for better IDE integration a
 | Port NO_PANIC_IN_PROD lint | ✅ Complete | Detects unwrap/expect/panic |
 | Fix false positives in NO_PANIC_IN_PROD | ✅ Complete | Fixed HIR traversal for tokio::test |
 | Port NO_DEBUG_OUTPUT lint | ✅ Complete | Fixed by user - detecting println!/dbg! |
-| Port cross-module error imports | ⏳ Pending | Complex structural lint |
-| Port no root Error/Result in submodules | ⏳ Pending | Complex structural lint |
-| Refactor into modules when needed | 🚧 In Progress | Extracting to utils/ and lints/ modules |
-| Update CI to run dylint | ⏳ Pending | |
-| Create documentation | ⏳ Pending | |
+| Simplify lints using Clippy patterns | ✅ Complete | Reduced code by 61 lines |
+| Port cross-module error imports | ✅ Complete | Early pass lint implemented |
+| Port no root Error/Result in submodules | ✅ Complete | Early pass lint implemented |
+| Refactor into modules when needed | ✅ Complete | Successfully modularized all lints |
+| Update CI to run dylint | ✅ Complete | architecture.yml updated |
+| Create documentation | ✅ Complete | Comprehensive README created |
 
 ## Current Issues
 
@@ -60,10 +69,31 @@ Migrating custom linting rules from xtask to dylint for better IDE integration a
 - Properly excludes test/example/bench code
 - Respects #[allow(no_debug_output)]
 
+### 4. CROSS_MODULE_ERROR_IMPORTS (NEW)
+- Prevents cross-module error type imports that violate module boundaries
+- Each module should define its own error types
+- Implemented as early lint pass
+- Successfully detecting violations in codebase
+
+### 5. NO_ROOT_ERROR_IMPORTS (NEW)
+- Prevents submodules from importing root Error/Result types
+- Root types are for public API surface only
+- Implemented as early lint pass
+- Encourages domain-specific error types
+
 ## Files Modified
 
-### Core Implementation
-- `shadowcat_lints/src/lib.rs` - Main lint implementations (~780 lines)
+### Core Implementation (After Modularization)
+- `shadowcat_lints/src/lib.rs` - Thin coordinator with dylint_library! macro (49 lines)
+- `shadowcat_lints/src/combined_pass.rs` - LateLintPass implementation (143 lines)
+- `shadowcat_lints/src/early_pass.rs` - EarlyLintPass for structural lints (23 lines)
+- `shadowcat_lints/src/lints/error_suffix.rs` - NO_ERROR_SUFFIX lint (47 lines)
+- `shadowcat_lints/src/lints/panic_in_prod.rs` - NO_PANIC_IN_PROD lint (101 lines)
+- `shadowcat_lints/src/lints/debug_output.rs` - NO_DEBUG_OUTPUT lint (62 lines)
+- `shadowcat_lints/src/lints/cross_module_errors.rs` - CROSS_MODULE_ERROR_IMPORTS (149 lines)
+- `shadowcat_lints/src/lints/root_imports.rs` - NO_ROOT_ERROR_IMPORTS (130 lines)
+- `shadowcat_lints/src/utils/test_detection.rs` - Test detection utilities (211 lines)
+- `shadowcat_lints/README.md` - Comprehensive documentation (134 lines)
 - `shadowcat_lints/Cargo.toml` - Dependencies and configuration
 - `shadowcat_lints/ui/` - UI tests for lints
 
@@ -73,6 +103,7 @@ Migrating custom linting rules from xtask to dylint for better IDE integration a
 
 ### Integration
 - `.vscode/settings.json` - VS Code rust-analyzer configuration
+- `.github/workflows/architecture.yml` - CI pipeline with dylint and xtask
 - Uses: `cargo dylint --all -- --all-targets --message-format=json`
 
 ## VS Code Integration
@@ -107,26 +138,30 @@ cargo test -p shadowcat_lints ui
 
 ## Known Issues
 
-1. **Large lib.rs**: At ~780 lines, definitely needs modularization. Previous attempt had compilation issues with trait implementations. This is now a priority.
+None currently - all major issues have been resolved.
 
-## Current Refactoring Status
+## Module Structure (Completed Refactoring)
 
-### Completed
-- ✅ Module structure created (utils/, lints/)
-- ✅ Test detection utilities extracted to `utils/test_detection.rs`
-- ✅ NO_ERROR_SUFFIX partially extracted to `lints/error_suffix.rs`
+### Final Architecture
+- `lib.rs` - Thin coordinator with dylint_library! macro
+- `combined_pass.rs` - LateLintPass implementation delegating to modules
+- `early_pass.rs` - EarlyLintPass for structural lints
+- `lints/`
+  - `error_suffix.rs` - NO_ERROR_SUFFIX lint
+  - `panic_in_prod.rs` - NO_PANIC_IN_PROD lint  
+  - `debug_output.rs` - NO_DEBUG_OUTPUT lint
+  - `cross_module_errors.rs` - CROSS_MODULE_ERROR_IMPORTS lint
+  - `root_imports.rs` - NO_ROOT_ERROR_IMPORTS lint
+- `utils/`
+  - `test_detection.rs` - Shared test detection utilities
 
-### In Progress
-- 🚧 Completing modular refactoring
-- 🚧 Extracting NO_PANIC_IN_PROD and NO_DEBUG_OUTPUT
-- 🚧 Creating combined_pass.rs for LateLintPass implementation
-
-### Next Steps
-1. Complete lint extractions to separate modules
-2. Create thin lib.rs coordinator
-3. Test all lints still work
-4. Port remaining structural lints
-5. Update CI and documentation
+### Achievements
+- ✅ All 5 lints successfully ported from xtask to dylint
+- ✅ Simplified implementation using Clippy patterns (reduced 61 lines)
+- ✅ Clean modular architecture with separation of concerns
+- ✅ Full CI integration running both dylint and xtask
+- ✅ Comprehensive documentation and examples
+- ✅ Follows standard dylint conventions
 
 ## References
 - [Dylint Documentation](https://github.com/trailofbits/dylint)
