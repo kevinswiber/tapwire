@@ -24,6 +24,7 @@ This directory contains research, analysis, and design documents for the MCP com
 ### 🎯 Core Architecture Documents
 - **architectural-decisions.md** - Key decisions with rationale (WHY)
 - **mcp-core-extraction-architecture.md** - Implementation guide (HOW)
+- **shadowcat-mcp-extraction-inventory.md** - What to reuse from existing code
 - **compliance-independence-design.md** - Testing independence + streaming
 - **library-architecture-design.md** - Compliance library specifics
 

@@ -60,6 +60,10 @@ This tracker coordinates the development of a Rust-native MCP compliance testing
 │  - Session Manager                                       │
 │  - Interceptor Chain                                     │
 │                                                           │
+│  Leverage Existing Code (~70% reusable):                 │
+│  - shadowcat/src/mcp/* protocol implementation           │
+│  - See shadowcat-mcp-extraction-inventory.md             │
+│                                                           │
 └───────────────────────────────────────────────────────────┘
 ```
 

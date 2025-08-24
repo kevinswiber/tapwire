@@ -212,7 +212,33 @@ pub struct Transport {  // http::Transport
 - Less overhead
 - More flexibility for streaming
 
-## 7. Single MCP Crate Structure
+## 7. Leverage Existing Shadowcat Code
+
+### Decision: Extract and Refactor, Don't Rewrite
+
+We have ~70% of the MCP protocol already implemented in shadowcat/src/mcp/. We'll:
+- **Extract directly** what's protocol-pure (types, parsers, builders)
+- **Refactor** what's proxy-coupled (handlers, correlation)
+- **Keep** what's proxy-specific (event IDs, session bridging)
+
+### Rationale
+
+**Why not rewrite from scratch?**
+- Shadowcat's MCP code is battle-tested with 1290+ tests
+- Already handles edge cases and protocol quirks
+- Would waste months of development effort
+
+**Why not use as-is?**
+- Some code is tightly coupled to proxy patterns
+- Need cleaner client/server abstractions
+- Compliance tester needs independence
+
+**Benefits:**
+- Faster extraction (weeks not months)
+- Proven code with real-world usage
+- Maintain compatibility with shadowcat
+
+## 8. Single MCP Crate Structure
 
 ### Decision: One Crate with Organized Modules
 
