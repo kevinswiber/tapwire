@@ -137,9 +137,22 @@ Re-evaluate transport design based on implementation discoveries
 | C.5.1 | **Analyze Incoming vs Outgoing split** | 1h | C.5.0 | ✅ Completed | | Not needed - unified Transport is correct approach |
 | C.5.2 | **Subprocess management decision** | 1h | C.5.0 | ✅ Completed | | Keep subprocess - RMCP includes TokioChildProcess |
 | C.5.3 | **Document architectural decisions** | 2h | C.5.1, C.5.2 | ✅ Completed | | Created 8+ docs including framed-sink-stream-architecture.md, rmcp-vs-framed-comparison.md, transport-architecture-final-v2.md |
-| C.5.4 | **Implement Framed/Sink/Stream architecture** | 3h | C.5.3 | 🔄 Ready | | Use tokio_util::codec::Framed with futures::{Sink, Stream} for message-level unification |
+| C.5.4 | **Implement Framed/Sink/Stream architecture** | 3h | C.5.3 | ✅ Completed | | Implemented JsonLineCodec, StdioTransport, SubprocessTransport, HttpTransport with Sink+Stream traits |
 
-**Phase C.5 Total**: 9 hours (6 completed, 3 remaining)
+**Phase C.5 Total**: 9 hours (all completed)
+
+### Phase C.6: Critical Bug Fixes (from GPT-5 Review)
+Fix blocking issues before proceeding with framework
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| C.6.0 | **Fix Client concurrency deadlock** | 2h | C.5.4 | 🔴 Critical | | Spawn background receiver, enable request() without run() |
+| C.6.1 | **Implement HTTP worker pattern** | 3h | C.5.4 | 🔴 Critical | | Actually send HTTP requests, manage SSE streams |
+| C.6.2 | **Create WebSocket transport** | 4h | C.6.1 | ⬜ Not Started | | Separate module with GET+Upgrade, session enforcement |
+| C.6.3 | **Harden JsonLineCodec** | 2h | C.6.0 | ⬜ Not Started | | CRLF handling, overlong lines, malformed recovery |
+| C.6.4 | **Wire version negotiation** | 2h | C.6.0 | ⬜ Not Started | | Connect to version module, test negotiation |
+
+**Phase C.6 Total**: 13 hours (5 critical, 8 improvements)
 
 ### Phase D: Compliance Framework (Week 2)
 Build the compliance testing framework using extracted MCP library

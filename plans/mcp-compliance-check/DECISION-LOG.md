@@ -2,6 +2,23 @@
 
 ## Transport Architecture (2025-08-24)
 
+### Decision: WebSocket as Separate Transport
+
+**What**: WebSocket is a completely separate transport, not an HTTP sub-mode
+
+**Why**:
+- Different handshake (GET + Upgrade vs POST)
+- Different auth (subprotocol vs headers)
+- Different session model (required in messages vs optional headers)
+- Different lifecycle (persistent connection vs request/response)
+
+**Details**:
+- Separate `transport/websocket.rs` module
+- Feature-gated for optional compilation
+- Sessions in every message (data layer)
+- Single connection per session enforcement
+- Based on MCP proposal #1288 and GPT-5 analysis
+
 ### Decision: Framed/Sink/Stream Architecture
 
 **What**: All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`
