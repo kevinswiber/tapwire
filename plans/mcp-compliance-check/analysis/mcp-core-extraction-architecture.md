@@ -18,6 +18,10 @@ shadowcat/                 # Workspace root
 
 ## What Gets Extracted
 
+> **Note**: See inventory documents for existing code to leverage:
+> - `shadowcat-mcp-extraction-inventory.md` - ~70% of MCP protocol ready to extract
+> - `shadowcat-transport-session-inventory.md` - Transport, session, interceptor components
+
 ### Single MCP Crate (Protocol, Client, and Server)
 
 ```rust
