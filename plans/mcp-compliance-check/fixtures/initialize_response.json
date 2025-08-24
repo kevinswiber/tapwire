@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "tools": {
+        "listChanged": false
+      },
+      "resources": {
+        "subscribe": true,
+        "listChanged": true
+      }
+    },
+    "serverInfo": {
+      "name": "test-server",
+      "version": "1.0.0"
+    }
+  },
+  "id": 1
+}
