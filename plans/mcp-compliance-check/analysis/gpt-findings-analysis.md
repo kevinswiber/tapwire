@@ -163,3 +163,32 @@ pub async fn run(mut self) -> Result<(), Error> {
 ## Conclusion
 
 GPT-5's findings validate our architectural direction while identifying critical implementation gaps. The separation of WebSocket as its own transport is correct. The main issues are implementation completeness rather than architectural flaws. We have good existing code in `src/` that can be leveraged once we fix the blocking issues in the new `crates/mcp/` implementation.
+
+---
+
+## Post-Implementation Update (2025-08-24)
+
+After implementing the fixes for the critical bugs, we discovered a fundamental scaling issue with the worker pattern:
+
+### The Problem with Worker Pattern at Scale
+- **10K connections = 10K worker tasks** (unacceptable for proxy)
+- **20-30µs overhead per message** (20 CPU cores at 1M msg/sec!)
+- **Unbounded channels risk OOM** under load
+- **No natural backpressure** (indirect through channels)
+
+### Architecture Pivot: Connection Pattern
+We're moving from Sink/Stream to async_trait Connection pattern because:
+
+1. **Shadowcat is THE consumer**, not A consumer - optimize for proxy scale
+2. **Direct async/await** eliminates worker overhead completely
+3. **HTTP/2 multiplexing** - 10K connections share ~100 actual connections
+4. **Natural backpressure** from async/await, not channels
+5. **Simpler code** - no workers, no channels, no polling
+
+### Key Insight
+The Sink/Stream pattern is designed for **individual streams**, not **connection pools**. 
+For a proxy handling thousands of connections, we need connection management, not message pipes.
+
+**Decision**: Implement C.7 tasks (Connection pattern) before proceeding with compliance framework.
+
+**See**: [TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md](TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md) for full architectural analysis.

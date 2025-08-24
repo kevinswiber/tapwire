@@ -4,30 +4,47 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-24 (Transport Architecture Finalized v2 - Framed/Sink/Stream)  
-**Total Estimated Duration**: 108 hours (16 + 15 + 11 + 9 + 9 + 14 + 12 + 10 + 12)  
-**Status**: Phase B, C.0-C.1, & C.5.0-C.5.3 Complete - Ready for C.5.4 (implementation)  
+**Last Updated**: 2025-08-24 (ARCHITECTURE PIVOT - Moving to Connection pattern)  
+**Total Estimated Duration**: 120 hours (16 + 15 + 11 + 9 + 13 + 15 + 9 + 14 + 12 + 10 + 12)  
+**Status**: Phase B, C.0-C.1, C.5 Complete, C.6.0-C.6.1 Complete, **C.7 CRITICAL - Architecture change**  
 **Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
 **Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
-**TRANSPORT ARCHITECTURE FINALIZED (v2)**: 
-After investigating RMCP and reconsidering abstraction level:
-1. ✅ **Message-level unification** - Sink/Stream traits, not AsyncRead/AsyncWrite
-2. ✅ **Framed for line protocols** - tokio_util::codec::Framed for stdio/subprocess
-3. ✅ **Keep subprocess management** - RMCP validates this approach
-4. ✅ **Arc<Mutex> for concurrent sends** - Validated by RMCP pattern
-5. ✅ **Custom Sink/Stream for HTTP/SSE** - Different protocol semantics
-6. 📝 **WebSocket future-ready** - Already implements Sink/Stream!
+**TRANSPORT ARCHITECTURE v3 (Connection Pattern)**: 
+After implementing worker pattern and analyzing proxy scale requirements:
 
-**Architecture**: All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`
-- **Framed**: Only for line-delimited JSON (stdio, subprocess)  
-- **HTTP**: ONE transport with THREE response modes:
-  - JSON (200 OK + application/json)
-  - SSE (200 OK + text/event-stream)  
-  - WebSocket (101 Switching Protocols)
-**Documentation**: See [transport-architecture-final-v2.md](analysis/transport-architecture-final-v2.md) and [http-transport-unified-architecture.md](analysis/http-transport-unified-architecture.md)
+**Previous approaches (deprecated)**:
+- ~~v1: AsyncRead/AsyncWrite~~ - Wrong abstraction level
+- ~~v2: Sink/Stream with Framed~~ - Works but complex  
+- ~~v2.5: Worker pattern for HTTP~~ - Doesn't scale (10K tasks for 10K connections!)
 
-**NEXT STEP**: Phase C.5.4 - Implement Framed/Sink/Stream architecture (3 hours)
+**New Architecture (v3)**: `async_trait Connection` pattern
+1. ✅ **Direct async/await** - No workers, no channels, no overhead
+2. ✅ **Protocol-native multiplexing** - HTTP/2 and WebSocket multiplex naturally
+3. ✅ **Connection pooling** - Share connections across sessions
+4. ✅ **Natural backpressure** - async/await provides flow control
+5. ✅ **Shadowcat pool integration** - Leverage existing resource management
+
+**Key Insight**: Shadowcat is THE consumer, not A consumer. Optimize for proxy scale.
+
+**Documentation**: See [TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md](analysis/TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md)
+
+**CRITICAL BUGS FIXED**: 
+- C.6.0 - Client deadlock resolved with background receiver task ✅
+- C.6.1 - HTTP worker pattern implemented with real HTTP requests ✅
+
+**ARCHITECTURE PIVOT DECISION**:
+Worker pattern revealed fundamental scaling issue. Moving to Connection pattern for:
+- Zero overhead (no workers, no channels)
+- Natural HTTP/2 multiplexing
+- Connection pooling across sessions
+- Direct async/await backpressure
+
+**NEXT STEPS (C.7 - Critical Path)**: 
+1. C.7.0 - Create Connection trait and adapters (2 hours)
+2. C.7.1 - Implement HTTP/2 Connection with multiplexing (4 hours)
+3. C.7.2 - Implement WebSocket Connection (3 hours)
+4. C.7.4 - Migrate Client/Server to Connection pattern (3 hours)
 
 ## Goals
 
@@ -146,15 +163,33 @@ Fix blocking issues before proceeding with framework
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.6.0 | **Fix Client concurrency deadlock** | 2h | C.5.4 | 🔴 Critical | | Spawn background receiver, enable request() without run() |
-| C.6.1 | **Implement HTTP worker pattern** | 3h | C.5.4 | 🔴 Critical | | Actually send HTTP requests, manage SSE streams |
+| C.6.0 | **Fix Client concurrency deadlock** | 2h | C.5.4 | ✅ Completed | | Spawn background receiver, enable request() without run() |
+| C.6.1 | **Implement HTTP worker pattern** | 3h | C.5.4 | ✅ Completed | | Actually send HTTP requests, manage SSE streams |
 | C.6.2 | **Create WebSocket transport** | 4h | C.6.1 | ⬜ Not Started | | Separate module with GET+Upgrade, session enforcement |
 | C.6.3 | **Harden JsonLineCodec** | 2h | C.6.0 | ⬜ Not Started | | CRLF handling, overlong lines, malformed recovery |
 | C.6.4 | **Wire version negotiation** | 2h | C.6.0 | ⬜ Not Started | | Connect to version module, test negotiation |
 
-**Phase C.6 Total**: 13 hours (5 critical, 8 improvements)
+**Phase C.6 Total**: 13 hours (2 completed, 3 deprioritized due to architecture change)
 
-### Phase D: Compliance Framework (Week 2)
+### Phase C.7: Connection Pattern Architecture (CRITICAL PIVOT)
+Implement async_trait Connection pattern to replace Sink/Stream
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| C.7.0 | **Create Connection trait** | 2h | None | 🔴 Critical | | async_trait, protocol selection, adapter for migration |
+| C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | 🔴 Critical | | Multiplexing, connection pooling, natural backpressure |
+| C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | 🟡 High | | Bidirectional, message routing, session in messages |
+| C.7.3 | **Implement Stdio Connection** | 1h | C.7.0 | 🟢 Normal | | Simple wrapper, singleton pattern |
+| C.7.4 | **Migrate Client/Server** | 3h | C.7.1-C.7.3 | 🟡 High | | Use Connection instead of Sink/Stream |
+| C.7.5 | **Remove old transport code** | 2h | C.7.4 | 🟢 Normal | | Delete worker patterns, clean up |
+
+**Phase C.7 Total**: 15 hours (architectural refactor to scale for proxy)
+
+**Rationale**: Sink/Stream with worker pattern doesn't scale to 10K+ connections. 
+Connection pattern eliminates worker tasks, reduces overhead from 20µs to ~0, 
+leverages HTTP/2 multiplexing, integrates with shadowcat's pools.
+
+### Phase D: Compliance Framework (Week 3)
 Build the compliance testing framework using extracted MCP library
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |

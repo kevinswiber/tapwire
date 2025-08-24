@@ -1,8 +1,19 @@
 # Transport Architecture - FINAL CONSOLIDATED DECISION
 
-**Status**: FINAL - This supersedes all previous transport architecture documents  
+> ⚠️ **DEPRECATED**: This architecture has been superseded by the Connection pattern.
+> 
+> **See**: [TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md](analysis/TRANSPORT-ARCHITECTURE-FINAL-V3-CONNECTION-PATTERN.md)
+> 
+> **Reason**: Sink/Stream pattern doesn't scale for proxy use case (10K+ connections).
+> Worker pattern adds unacceptable overhead. Moving to async_trait Connection pattern.
+>
+> **This document is preserved for historical context only.**
+
+---
+
+**Original Status**: ~~FINAL~~ DEPRECATED  
 **Date**: 2025-08-24  
-**Decision**: Framed/Sink/Stream with WebSocket as separate transport
+**Original Decision**: Framed/Sink/Stream with WebSocket as separate transport
 
 ## Architecture Decision
 
