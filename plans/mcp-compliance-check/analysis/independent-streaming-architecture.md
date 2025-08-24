@@ -37,12 +37,13 @@ pub struct McpServer {
 // crates/compliance/src/lib.rs
 
 // Import shared MCP types
-use mcp::{JsonRpcRequest, McpClient, McpServer};
+use mcp::{JsonRpcRequest, Client, Server};
+use mcp::transports::{stdio, http};
 
 // Test through network interfaces only
 pub struct ComplianceChecker {
-    // Uses the shared MCP client to test servers
-    client: McpClient,
+    // Can create clients with different transports
+    // No direct dependency on shadowcat internals
 }
 
 impl ComplianceChecker {
@@ -65,9 +66,10 @@ async fn test_shadowcat_compliance() {
         .args(&["forward", "http", "--port", "8080"])
         .spawn()?;
     
-    // Test it through its public interface only
+    // Test it through its public interface using HTTP transport
+    let client = http::connect("http://localhost:8080")?;
     let checker = ComplianceChecker::new();
-    let report = checker.test_server("http://localhost:8080").await?;
+    let report = checker.test_with_client(client).await?;
     
     // We have no special access to Shadowcat internals
     assert!(report.is_compliant());
@@ -84,9 +86,18 @@ shadowcat/               # Workspace root
 ├── Cargo.toml         # Workspace + shadowcat package
 ├── crates/
 │   ├── mcp/           # Shared MCP implementation
-│   │   └── Cargo.toml # name = "mcp"
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── client.rs
+│   │       ├── server.rs
+│   │       ├── interceptor.rs
+│   │       └── transports/
+│   │           ├── mod.rs    # Transport trait
+│   │           ├── stdio.rs  # stdio::Transport
+│   │           └── http.rs   # http::Transport
 │   └── compliance/    # Compliance testing
-│       └── Cargo.toml # name = "compliance"
+│       └── Cargo.toml # Binary: mcpspec
 └── xtask/             # Build automation
 ```
 
@@ -107,7 +118,8 @@ mcp = { path = "../mcp" }
 # NO shadowcat dependency!
 tokio = { workspace = true }
 serde = { workspace = true }
-reqwest = "0.11"
+hyper = { version = "0.14", features = ["client", "http2"] }
+hyper-tls = "0.5"
 async-trait = "0.1"
 ```
 

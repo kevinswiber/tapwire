@@ -23,6 +23,11 @@ shadowcat/                 # Workspace root
 ```rust
 // crates/mcp/src/lib.rs
 
+pub mod client;
+pub mod server;
+pub mod transports;
+pub mod interceptor;
+
 /// Core protocol types used by both client and server
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct JsonRpcRequest {
@@ -56,6 +61,11 @@ pub struct ServerCapabilities {
     pub logging: Option<LoggingCapability>,
 }
 
+// crates/mcp/src/transports/mod.rs
+
+pub mod stdio;
+pub mod http;
+
 /// Transport trait that both client and server use
 #[async_trait]
 pub trait Transport: Send + Sync {
@@ -67,25 +77,34 @@ pub trait Transport: Send + Sync {
 
 // crates/mcp/src/client.rs
 
-use crate::{JsonRpcRequest, JsonRpcResponse, Transport, ProtocolVersion};
+use crate::{JsonRpcRequest, JsonRpcResponse, ProtocolVersion};
+use crate::transports::Transport;
+use crate::interceptor::{InterceptorChain, Interceptor};
 
 /// A generic MCP client that can connect to any MCP server
-pub struct McpClient {
-    transport: Box<dyn Transport>,
+pub struct Client<T: Transport> {
+    transport: T,
+    interceptors: InterceptorChain,
     session_id: Option<String>,
     protocol_version: Option<ProtocolVersion>,
     server_capabilities: Option<ServerCapabilities>,
 }
 
-impl McpClient {
+impl<T: transports::Transport> Client<T> {
     /// Create a new client with given transport
-    pub fn new(transport: Box<dyn Transport>) -> Self {
+    pub fn new(transport: T) -> Self {
         Self {
             transport,
+            interceptors: InterceptorChain::new(),
             session_id: None,
             protocol_version: None,
             server_capabilities: None,
         }
+    }
+    
+    /// Add an interceptor to the processing chain
+    pub fn add_interceptor(&mut self, interceptor: Box<dyn Interceptor>) {
+        self.interceptors.add(interceptor);
     }
     
     /// Initialize connection with server
@@ -127,6 +146,9 @@ impl McpClient {
     
     /// Send any request
     pub async fn send_request(&mut self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
+        // Process request through interceptors
+        let request = self.interceptors.process_request(request).await?;
+        
         // Serialize and send through transport
         let data = serde_json::to_vec(&request)?;
         self.transport.send(data).await?;
@@ -135,6 +157,9 @@ impl McpClient {
         let response_data = self.transport.receive().await?;
         let response: JsonRpcResponse = serde_json::from_slice(&response_data)?;
         
+        // Process response through interceptors
+        let response = self.interceptors.process_response(response).await?;
+        
         Ok(response)
     }
 }
@@ -142,7 +167,9 @@ impl McpClient {
 
 // crates/mcp/src/server.rs
 
-use crate::{JsonRpcRequest, JsonRpcResponse, Transport, ServerCapabilities};
+use crate::{JsonRpcRequest, JsonRpcResponse, ServerCapabilities};
+use crate::transports::Transport;
+use crate::interceptor::{InterceptorChain, Interceptor};
 
 /// Trait that MCP server implementations must provide
 #[async_trait]
@@ -154,27 +181,36 @@ pub trait McpHandler: Send + Sync {
 }
 
 /// A generic MCP server that can handle any MCP client
-pub struct McpServer {
-    handler: Box<dyn McpHandler>,
+pub struct Server<H: McpHandler> {
+    handler: H,
+    interceptors: InterceptorChain,
     capabilities: ServerCapabilities,
     sessions: HashMap<String, SessionState>,
 }
 
-impl McpServer {
-    pub fn new(handler: Box<dyn McpHandler>, capabilities: ServerCapabilities) -> Self {
+impl<H: McpHandler> Server<H> {
+    pub fn new(handler: H, capabilities: ServerCapabilities) -> Self {
         Self {
             handler,
+            interceptors: InterceptorChain::new(),
             capabilities,
             sessions: HashMap::new(),
         }
     }
     
+    pub fn add_interceptor(&mut self, interceptor: Box<dyn Interceptor>) {
+        self.interceptors.add(interceptor);
+    }
+    
     /// Handle incoming connection
-    pub async fn handle_connection(&mut self, transport: Box<dyn Transport>) -> Result<()> {
+    pub async fn handle_connection<T: Transport>(&mut self, mut transport: T) -> Result<()> {
         loop {
             // Receive request
             let data = transport.receive().await?;
             let request: JsonRpcRequest = serde_json::from_slice(&data)?;
+            
+            // Process through interceptors
+            let request = self.interceptors.process_request(request).await?;
             
             // Route to appropriate handler
             let response = match request.method.as_str() {
@@ -183,6 +219,9 @@ impl McpServer {
                 "tools/call" => self.handle_tools_call(request).await?,
                 _ => self.handle_unknown(request).await?,
             };
+            
+            // Process response through interceptors
+            let response = self.interceptors.process_response(response).await?;
             
             // Send response
             let response_data = serde_json::to_vec(&response)?;
@@ -203,46 +242,138 @@ impl McpServer {
 }
 ```
 
+### Per-Request Streaming Architecture
+
+```rust
+// crates/mcp/src/server.rs
+
+/// Handler decides per-request whether to stream
+#[async_trait]
+pub trait McpHandler: Send + Sync {
+    async fn handle_initialize(&self, params: Value) -> Result<InitializeResult>;
+    async fn handle_tool_call(&self, name: &str, args: Value) -> Result<HandlerResult>;
+    // ... other methods
+}
+
+/// Handler can return single response OR stream
+pub enum HandlerResult {
+    /// Single response - server returns application/json
+    Single(Value),
+    
+    /// Stream of responses - server returns text/event-stream  
+    Stream(Box<dyn Stream<Item = Value> + Send>),
+}
+```
+
+### Transport-Specific Implementations
+
+```rust
+// crates/mcp/src/transports/stdio.rs
+
+use crate::client::Client;
+
+pub struct Transport { /* stdio-specific implementation */ }
+
+impl Transport {
+    pub fn new() -> Self { /* ... */ }
+    pub fn spawn(cmd: &str, args: &[&str]) -> Result<Self> { /* ... */ }
+}
+
+/// Convenience function to create a client with stdio transport
+pub fn connect(cmd: &str, args: &[&str]) -> Result<Client<Transport>> {
+    let transport = Transport::spawn(cmd, args)?;
+    Ok(Client::new(transport))
+}
+
+// crates/mcp/src/transports/http.rs
+
+use hyper::{Client as HyperClient, Body, Request, Response};
+
+pub struct Transport { 
+    client: HyperClient<HttpsConnector<HttpConnector>>,
+    url: String,
+}
+
+impl Transport {
+    pub fn new(url: &str) -> Result<Self> { /* ... */ }
+    
+    /// Client automatically handles both JSON and SSE responses
+    async fn send(&mut self, data: Vec<u8>) -> Result<()> {
+        let request = Request::post(&self.url)
+            .header("Accept", "application/json, text/event-stream")  // MUST support both
+            .body(Body::from(data))?;
+        
+        let response = self.client.request(request).await?;
+        
+        // Server decides via Content-Type
+        match response.headers().get("content-type") {
+            Some(ct) if ct == "text/event-stream" => self.handle_sse_stream(response).await,
+            Some(ct) if ct == "application/json" => self.handle_single_response(response).await,
+            _ => Err(Error::InvalidContentType)
+        }
+    }
+}
+
+/// Convenience function for HTTP client
+pub fn connect(url: &str) -> Result<Client<Transport>> {
+    let transport = Transport::new(url)?;
+    Ok(Client::new(transport))
+}
+```
+
 ## How Shadowcat Uses These
 
 ```rust
 // shadowcat/src/proxy.rs
 
-use mcp::{McpClient, McpServer, Transport, JsonRpcRequest, JsonRpcResponse};
+use mcp::{Client, Server, JsonRpcRequest, JsonRpcResponse};
+use mcp::transports::{stdio, http};
 
 pub struct ShadowcatProxy {
     // Shadowcat IS an MCP server (to downstream clients)
-    server: McpServer,
+    server: Server<ProxyHandler>,
     
-    // Shadowcat IS an MCP client (to upstream servers)
-    client_pool: Vec<McpClient>,
+    // Shadowcat IS an MCP client (to upstream servers)  
+    client_pool: Vec<Box<dyn Any>>,  // Type-erased clients
     
     // Proxy-specific state
     session_mappings: HashMap<String, String>,
 }
 
 impl ShadowcatProxy {
-    pub async fn handle_client_connection(&mut self, transport: Box<dyn Transport>) {
+    pub async fn handle_client_connection<T: Transport>(&mut self, transport: T) {
         // Use MCP server to handle downstream
         self.server.handle_connection(transport).await
     }
     
-    pub async fn connect_upstream(&mut self, url: &str) -> Result<()> {
-        // Use MCP client to connect upstream
-        let transport = HttpTransport::new(url);
-        let mut client = McpClient::new(Box::new(transport));
+    pub async fn connect_upstream_stdio(&mut self, cmd: &str) -> Result<()> {
+        // Use stdio transport
+        let mut client = stdio::connect(cmd, &[])?;
+        client.add_interceptor(Box::new(LoggingInterceptor));
         client.initialize(self.client_info(), self.client_capabilities()).await?;
-        self.client_pool.push(client);
+        self.client_pool.push(Box::new(client));
+        Ok(())
+    }
+    
+    pub async fn connect_upstream_http(&mut self, url: &str) -> Result<()> {
+        // Use HTTP transport (handles SSE automatically)
+        let mut client = http::connect(url)?;
+        client.add_interceptor(Box::new(MetricsInterceptor));
+        client.initialize(self.client_info(), self.client_capabilities()).await?;
+        self.client_pool.push(Box::new(client));
         Ok(())
     }
 }
 
-// Shadowcat implements the handler for its server side
-impl McpHandler for ShadowcatProxy {
+// Shadowcat's handler implementation
+struct ProxyHandler {
+    // Proxy-specific state
+}
+
+impl McpHandler for ProxyHandler {
     async fn handle_tool_call(&self, name: &str, args: Value) -> Result<Value> {
-        // Forward to upstream using client
-        let client = self.select_upstream_client();
-        client.call_tool(name, args).await
+        // Forward to upstream using appropriate client
+        // Type erasure handled here
     }
 }
 ```
@@ -252,14 +383,12 @@ impl McpHandler for ShadowcatProxy {
 ```rust
 // crates/compliance/src/lib.rs
 
-use mcp::{McpClient, McpServer, Transport};
+use mcp::{Client, Server};
+use mcp::transports::{stdio, http};
 
 pub struct ComplianceChecker {
-    // We can test any MCP server (including Shadowcat)
-    test_client: McpClient,
-    
-    // We can test any MCP client (including Shadowcat)
-    test_server: McpServer,
+    // Can create clients with different transports for testing
+    // Can create servers with test handlers
 }
 
 impl ComplianceChecker {
@@ -267,10 +396,13 @@ impl ComplianceChecker {
     pub async fn test_our_client_vs_reference(&mut self) -> ComplianceMatrix {
         let mut matrix = ComplianceMatrix::new();
         
-        // Test our McpClient against official server
-        let transport = connect_to_official_server();
-        let mut our_client = McpClient::new(transport);
+        // Test our Client with stdio transport against official server
+        let mut our_client = stdio::connect("node", &["official-server.js"])?;
         matrix.our_client_vs_reference = self.run_client_tests(&mut our_client).await;
+        
+        // Also test with HTTP transport (handles SSE when server chooses)
+        let mut our_http_client = http::connect("http://official-server:3000")?;
+        matrix.our_http_client_vs_reference = self.run_client_tests(&mut our_http_client).await;
         
         matrix
     }
@@ -279,12 +411,11 @@ impl ComplianceChecker {
     pub async fn test_reference_vs_our_server(&mut self) -> ComplianceMatrix {
         let mut matrix = ComplianceMatrix::new();
         
-        // Start our McpServer
-        let our_server = McpServer::new(TestHandler::new(), test_capabilities());
+        // Start our Server with test handler
+        let our_server = Server::new(TestHandler::new(), test_capabilities());
         
-        // Connect official client to it
-        let official_client = start_official_client(&our_server.url());
-        matrix.reference_vs_our_server = self.run_server_tests(official_client).await;
+        // Server can handle any transport
+        // Test with stdio, HTTP/SSE, etc.
         
         matrix
     }
@@ -365,17 +496,22 @@ Each ✅ represents a full test suite run
 Actually, you've identified the key insight! But here are some additional considerations:
 
 ### 1. Transport Implementations
-Transport implementations can be modules within the mcp crate:
+Transport implementations with streaming modules:
 ```rust
 crates/mcp/src/
 ├── lib.rs
 ├── client.rs
 ├── server.rs
+├── interceptor.rs
 └── transports/
-    ├── mod.rs
-    ├── stdio.rs
-    ├── http.rs
-    └── sse.rs
+    ├── mod.rs         # Transport trait
+    ├── stdio.rs       # stdio::Transport
+    └── http/
+        ├── mod.rs     # http::Transport
+        └── streaming/
+            ├── mod.rs
+            ├── sse.rs       # SSE streaming logic
+            └── websockets.rs # Future WebSocket logic
 ```
 
 ### 2. Test Utilities
@@ -389,49 +525,127 @@ crates/mcp/src/
     └── test_transport.rs
 ```
 
-### 3. Version Management
-How do we handle protocol versions in shared crates?
-```rust
-// Feature flags?
-[features]
-v2025-03-26 = []
-v2025-06-18 = []
+### 3. Interceptor Design
 
-// Or runtime selection?
-impl McpClient {
-    pub fn with_version(version: ProtocolVersion) -> Self { ... }
+```rust
+// crates/mcp/src/interceptor.rs
+
+#[async_trait]
+pub trait Interceptor: Send + Sync {
+    /// Process outgoing request
+    async fn process_request(&self, request: JsonRpcRequest) -> Result<JsonRpcRequest> {
+        Ok(request)  // Default: pass through
+    }
+    
+    /// Process incoming response
+    async fn process_response(&self, response: JsonRpcResponse) -> Result<JsonRpcResponse> {
+        Ok(response)  // Default: pass through
+    }
+}
+
+pub struct InterceptorChain {
+    interceptors: Vec<Box<dyn Interceptor>>,
+}
+
+impl InterceptorChain {
+    pub fn new() -> Self {
+        Self { interceptors: Vec::new() }
+    }
+    
+    pub fn add(&mut self, interceptor: Box<dyn Interceptor>) {
+        self.interceptors.push(interceptor);
+    }
+    
+    pub async fn process_request(&self, mut request: JsonRpcRequest) -> Result<JsonRpcRequest> {
+        for interceptor in &self.interceptors {
+            request = interceptor.process_request(request).await?;
+        }
+        Ok(request)
+    }
+    
+    pub async fn process_response(&self, mut response: JsonRpcResponse) -> Result<JsonRpcResponse> {
+        // Process in reverse order for responses
+        for interceptor in self.interceptors.iter().rev() {
+            response = interceptor.process_response(response).await?;
+        }
+        Ok(response)
+    }
 }
 ```
 
-### 4. Async Trait Complexity
-The async-trait crate adds some overhead. Consider:
+### 4. Version Management
+Runtime version selection with protocol negotiation:
 ```rust
-// Option 1: async-trait (easier but slight overhead)
-#[async_trait]
-pub trait Transport { ... }
+impl<T: transports::Transport> Client<T> {
+    pub fn with_version(mut self, version: ProtocolVersion) -> Self {
+        self.preferred_version = Some(version);
+        self
+    }
+}
+```
 
-// Option 2: manual futures (more complex but zero overhead)
-pub trait Transport {
-    fn send(&mut self, data: Vec<u8>) -> Pin<Box<dyn Future<Output = Result<()>>>>;
+### 5. Why Not Reqwest?
+
+We're using **hyper** directly instead of reqwest because:
+- **SSE Issues**: Reqwest doesn't handle Server-Sent Events well
+- **More Control**: Direct access to HTTP/2 features
+- **Less Overhead**: No unnecessary client features
+- **Shadowcat Proven**: Already working well in shadowcat
+
+```rust
+// Example of http::Transport internally handling SSE
+
+impl http::Transport {
+    async fn handle_sse_stream(&mut self, response: Response<Body>) -> Result<()> {
+        // Parse SSE events from the response body
+        let stream = response.into_body();
+        // Process events...
+    }
+    
+    async fn handle_single_response(&mut self, response: Response<Body>) -> Result<()> {
+        // Parse single JSON response
+        let bytes = hyper::body::to_bytes(response.into_body()).await?;
+        let json: Value = serde_json::from_slice(&bytes)?;
+        // Process response...
+    }
 }
 ```
 
 ## Conclusion
 
-This is a **major architectural improvement** that:
-1. Enables code reuse without compromising independence
-2. Allows comprehensive compliance matrix testing
-3. Creates a reusable MCP implementation in a single crate
-4. Maintains clean separation of concerns
-5. Makes the codebase more maintainable with less overhead
+This **hybrid architecture** provides the best of both worlds:
 
-The single `mcp` crate approach keeps things simple while providing all the benefits of extraction. We avoid the overhead of managing multiple interdependent crates while still achieving modularity through well-organized modules within the crate.
+### Architecture Summary
+1. **Core Protocol Layer**: `mcp::{Client, Server}` handle MCP logic
+2. **Transport Abstraction**: Clean modules `mcp::transports::{stdio, http}`
+3. **Interceptor Chain**: Protocol-level processing with `interceptor::Chain`
+4. **Per-Request Streaming**: Handlers decide streaming per request via `HandlerResult`
+5. **Type-Conscious Naming**: `stdio::Transport` not `StdioTransport`
+6. **Hyper over Reqwest**: Better SSE support, proven in shadowcat
 
-The key insight is that "independence" doesn't mean "no shared code" - it means "no dependency on implementation details". A shared MCP protocol library is perfectly fine and actually better than duplicating code.
+### Key Benefits
+- **DRY Principle**: Protocol logic in one place
+- **Transport Flexibility**: Easy to add new transports
+- **Clean Separation**: Protocol vs transport concerns
+- **Interceptor Integration**: Uniform message processing
+- **Type Safety**: Transport-specific features when needed
+- **Proven Foundation**: Leverages shadowcat's working patterns
+
+### Design Decisions
+- **Hybrid over Pure**: Balance between central logic and transport flexibility
+- **Interceptors at Protocol Layer**: Not in transports, for consistency
+- **Hyper for HTTP/SSE**: Proven in shadowcat, better than reqwest
+- **Convenience Builders**: Each transport provides easy constructors
+
+The architecture enables both simple usage (`stdio::connect()`) and advanced control (custom transports, interceptors, transport-specific features).
 
 ---
 
 *Created: 2025-08-24*
 *Updated: 2025-08-24*
-*Key Insight: Extract MCP protocol into single shared crate*
-*Result: Simpler architecture, easier maintenance, full testing capabilities*
+*Key Decisions:*
+- *Hybrid architecture with protocol/transport separation*
+- *Simplified transport: `mcp::transports::{stdio, http}`*
+- *Per-request streaming via `HandlerResult` enum*
+- *Type-conscious naming: `module::Type` not `ModuleType`*
+- *HTTP Library: Hyper (not reqwest) for SSE support*

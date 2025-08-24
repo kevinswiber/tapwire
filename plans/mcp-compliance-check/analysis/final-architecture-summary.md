@@ -112,12 +112,19 @@ let report = checker.test_server("http://localhost:8080").await?;
 
 ### No Shadowcat Dependencies
 ```toml
-# shadowcat-compliance/Cargo.toml
+# crates/compliance/Cargo.toml
+[package]
+name = "compliance"
+
+[[bin]]
+name = "mcpspec"  # Like h2spec, h3spec
+
 [dependencies]
-# NO shadowcat = { path = "../shadowcat" }  ❌
+mcp = { path = "../mcp" }  # Shared MCP library ✅
 tokio = "1.35"
 serde = "1.0"
-reqwest = "0.11"  # For HTTP testing
+hyper = { version = "0.14", features = ["client", "http2"] }  # For HTTP/SSE
+hyper-tls = "0.5"  # For HTTPS support
 async-trait = "0.1"
 ```
 
@@ -126,7 +133,8 @@ async-trait = "0.1"
 // Connect like any external client
 pub async fn test_server(url: &str) -> Result<Report> {
     // HTTP connection
-    let client = reqwest::Client::new();
+    // Using hyper for HTTP/SSE support
+    let client = sse::connect("http://localhost:8080")?;
     let response = client.post(url)
         .json(&initialize_request())
         .send()

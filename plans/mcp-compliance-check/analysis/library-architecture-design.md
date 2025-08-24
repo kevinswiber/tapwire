@@ -202,9 +202,10 @@ anyhow = { workspace = true }
 // Use shared MCP components
 use mcp::{
     JsonRpcRequest, JsonRpcResponse, ProtocolVersion,
-    McpClient, McpServer, Transport,
-    ServerCapabilities, ClientCapabilities,
+    Client, Server, ServerCapabilities, ClientCapabilities,
 };
+use mcp::transports::{Transport, stdio, http};
+use mcp::interceptor::{Interceptor, Chain};
 ```
 
 ### Components from Shared MCP Crate
@@ -227,10 +228,16 @@ use mcp::{
    - Manage server capabilities
    - Session state tracking
 
-4. **Transport Abstraction** (`mcp::Transport`)
-   - Common transport interface
-   - stdio, HTTP, SSE implementations
-   - Pluggable transport support
+4. **Transport Layer** (`mcp::transports`)
+   - Transport trait abstraction
+   - `stdio::Transport` for subprocess communication
+   - `http::Transport` with internal SSE handling
+   - Future: WebSocket support
+
+5. **Interceptor System** (`mcp::interceptor`)
+   - Message processing pipeline with `Chain`
+   - Request/response modification
+   - Logging, metrics, rate limiting
 
 ## Proxy-Specific Test Scenarios
 
@@ -586,6 +593,9 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 clap = { version = "4.0", features = ["derive"] }
 chrono = "0.4"
+# Using hyper for SSE support (not reqwest)
+hyper = { version = "0.14", features = ["client", "http2"] }
+hyper-tls = "0.5"
 
 [dev-dependencies]
 tempfile = "3.0"
