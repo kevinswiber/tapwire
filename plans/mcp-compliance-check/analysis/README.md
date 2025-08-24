@@ -1,30 +1,47 @@
-# MCP Compliance Check Analysis
+# MCP Compliance Check Analysis Documents
 
-## Overview
+## Document Organization
 
-This directory contains analysis outputs and findings from the MCP compliance check framework development.
+This directory contains research, analysis, and design documents for the MCP compliance framework. Documents are organized by purpose to serve different audiences:
 
-## Contents
+### For New Developers
+- Start with **architectural-decisions.md** - Explains WHY we made key choices
+- Then read **mcp-core-extraction-architecture.md** - Shows HOW to build it
+- Review **compliance-independence-design.md** - Understand testing independence
 
-### Completed Analyses
+### For Implementers
+- **mcp-core-extraction-architecture.md** - Implementation guide with code examples
+- **library-architecture-design.md** - Compliance library specifics
+- **proxy-specific-test-scenarios.md** - Detailed proxy test cases
 
-#### Initial Investigation
-- **mcp-validator-findings.md** - Critical bugs and valuable components from mcp-validator
-- **shadowcat-proxy-validation.md** - Confirmation that Shadowcat works correctly
+### For Researchers
+- **mcp-validator-findings.md** - Analysis of existing Python validator
+- **test-requirement-coverage-matrix.md** - Gap analysis (12% coverage!)
+- **protocol-version-matrix.md** - Version differences and migration
 
-#### Test Coverage Analysis (Task A.0-A.1)
-- **validator-test-catalog.md** - Complete catalog of 54 mcp-validator tests + 28 proxy-specific gaps
-- **mcp-compliance-checklist.md** - 233 compliance requirements from MCP specs
-- **protocol-version-matrix.md** - Comprehensive version comparison and migration guide
-- **test-requirement-coverage-matrix.md** - Critical finding: mcp-validator only covers ~12% of requirements
+## Complete Document List
 
-#### Architecture Design
-- **version-agnostic-architecture.md** - Pluggable design for easy version additions
-- **library-architecture-design.md** - Library-first design with CLI wrapper
-- **proxy-specific-test-scenarios.md** - 50 proxy-specific tests not in MCP spec
-- **client-server-proxy-separation.md** - Three-way test separation for precise diagnostics
-- **independent-streaming-architecture.md** - Complete independence + real-time streaming
-- **final-architecture-summary.md** - Consolidated architecture with all improvements
+### 🎯 Core Architecture Documents
+- **architectural-decisions.md** - Key decisions with rationale (WHY)
+- **mcp-core-extraction-architecture.md** - Implementation guide (HOW)
+- **compliance-independence-design.md** - Testing independence + streaming
+- **library-architecture-design.md** - Compliance library specifics
+
+### 📊 Analysis & Research
+- **mcp-validator-findings.md** - Critical bugs in Python validator
+- **shadowcat-proxy-validation.md** - Proof Shadowcat works correctly
+- **test-requirement-coverage-matrix.md** - Gap analysis (only 12% coverage!)
+- **build-vs-buy-analysis.md** - Why build our own implementation
+
+### 📋 Test Catalogs & Requirements
+- **validator-test-catalog.md** - 54 validator tests + 28 proxy gaps
+- **mcp-compliance-checklist.md** - 233 spec requirements
+- **proxy-specific-test-scenarios.md** - 50 proxy-specific tests
+- **client-server-proxy-separation.md** - Three-way test separation
+
+### 📖 Reference Documents
+- **protocol-version-matrix.md** - Version comparison & migration
+- **version-agnostic-architecture.md** - Pluggable version design
 
 ### Key Findings
 - mcp-validator provides insufficient coverage (12% of requirements)

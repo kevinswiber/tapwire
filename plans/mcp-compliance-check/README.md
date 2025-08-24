@@ -18,7 +18,7 @@ We're building a comprehensive MCP (Model Context Protocol) compliance testing f
 
 1. **Start here**: Read [mcp-compliance-check-tracker.md](mcp-compliance-check-tracker.md) for the full project overview
 2. **Understand the problem**: Review [analysis/mcp-validator-findings.md](analysis/mcp-validator-findings.md) to see why we're building this
-3. **Architecture**: Study [analysis/final-architecture-summary.md](analysis/final-architecture-summary.md) for the complete design
+3. **Architecture**: Study [analysis/architectural-decisions.md](analysis/architectural-decisions.md) for key design decisions
 4. **Next steps**: Check [next-session-prompt.md](next-session-prompt.md) for immediate tasks
 
 ### Key Decisions Made
@@ -47,10 +47,10 @@ mcp-compliance-check/
 │   ├── protocol-version-matrix.md  # Version differences
 │   ├── library-architecture-design.md  # Initial library design
 │   ├── client-server-proxy-separation.md  # Three-way test separation
-│   ├── independent-streaming-architecture.md  # Streaming + independence
+│   ├── compliance-independence-design.md  # Streaming + independence
 │   ├── mcp-core-extraction-architecture.md  # Shared libraries design
-│   ├── mcp-implementation-strategy.md  # Our MCP implementation approach
-│   └── final-architecture-summary.md  # Consolidated architecture
+│   ├── build-vs-buy-analysis.md  # Our MCP implementation approach
+│   └── architectural-decisions.md  # Key architecture decisions
 │
 └── tasks/                       # Detailed task descriptions
     ├── A.0-extract-validator-tests.md  # ✅ Completed

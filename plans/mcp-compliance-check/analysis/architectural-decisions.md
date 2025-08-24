@@ -279,6 +279,15 @@ crates/mcp/
 - **Not pure OOP** - Mix of traits and concrete types
 - **Shadowcat patterns** - Following existing conventions even if not ideal
 
+## Test Coverage Goals
+
+Based on spec analysis, we target ~250 comprehensive tests:
+
+- **Client tests** (60) - Test MCP client behavior
+- **Server tests** (60) - Test MCP server behavior  
+- **Proxy tests** (50) - Test proxy-specific behaviors
+- **Shared protocol tests** (80) - Version-specific tests
+
 ## Validation Approach
 
 The architecture will be validated through:

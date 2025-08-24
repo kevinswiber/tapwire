@@ -639,6 +639,33 @@ This **hybrid architecture** provides the best of both worlds:
 
 The architecture enables both simple usage (`stdio::connect()`) and advanced control (custom transports, interceptors, transport-specific features).
 
+## Implementation Priority
+
+1. **Phase 1**: Core Extraction & Independent Architecture
+   - Extract transport trait and basic Client/Server structs
+   - Protocol types (JsonRpcRequest, JsonRpcResponse, etc.)
+   - No Shadowcat dependencies
+   - Basic pass/fail reporting
+
+2. **Phase 2**: Transport Implementation & Three-way Separation
+   - stdio::Transport from shadowcat
+   - http::Transport with SSE support using hyper
+   - Client/Server/Proxy test suites
+   - Transport convenience builders
+
+3. **Phase 3**: Interceptor System & Streaming Results
+   - Interceptor trait and Chain
+   - Event system for real-time feedback
+   - Progress reporting in CLI
+   - Basic interceptors (logging, metrics)
+
+4. **Phase 4**: Full Compliance Suite & Integration
+   - All 250 tests implemented
+   - Update shadowcat to use MCP crate
+   - Build compliance framework using MCP crate
+   - Complete spec coverage
+   - Production ready
+
 ---
 
 *Created: 2025-08-24*
@@ -649,3 +676,4 @@ The architecture enables both simple usage (`stdio::connect()`) and advanced con
 - *Per-request streaming via `HandlerResult` enum*
 - *Type-conscious naming: `module::Type` not `ModuleType`*
 - *HTTP Library: Hyper (not reqwest) for SSE support*
+- *Implementation phases defined for incremental development*
