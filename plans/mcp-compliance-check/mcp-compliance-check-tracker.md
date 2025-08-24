@@ -187,7 +187,7 @@ Implement async_trait Connection pattern to replace Sink/Stream
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | **PREP** | **Hyper 1.7 Upgrade** | 6h | None | ✅ Completed | | Direct conn management, no pooling, rustls TLS |
-| C.7.0 | **Create Connection trait** | 2h | PREP | 🚧 In Progress | | async_trait, protocol selection, adapter for migration |
+| C.7.0 | **Create Connection trait** | 2h | PREP | ✅ Completed | | async_trait, protocol selection, adapter for migration |
 | C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | 🔴 Critical | | Multiplexing with hyper 1.7, shadowcat pooling |
 | C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | 🟡 High | | Bidirectional, message routing, session in messages |
 | C.7.3 | **Implement Stdio Connection** | 2h | C.7.0 | 🟢 Normal | | Simple wrapper, singleton pattern |

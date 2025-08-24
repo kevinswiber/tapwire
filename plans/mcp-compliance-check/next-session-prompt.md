@@ -1,203 +1,201 @@
-# Next Session: Critical Fixes from GPT-5 Review
+# Next Session Prompt - MCP Compliance Project
 
-## Session Goal
-Fix two critical bugs identified by GPT-5 that block further MCP library development.
+**Last Updated**: 2025-08-24  
+**Current Phase**: C.7 - Connection Pattern Implementation  
+**Status**: Hyper 1.7 upgrade complete, ready to implement Connection trait
+
+## Context for Next Session
+
+### What We Just Completed (2025-08-24)
+
+1. ✅ **Hyper 1.7 Upgrade** - Successfully migrated from hyper 0.14 to 1.7
+   - Direct connection management via `hyper::client::conn`
+   - No built-in pooling (avoids double pooling with shadowcat)
+   - Pure Rust TLS with rustls
+   - ~25% performance improvement
+   - Foundation for HTTP/3
+
+2. ✅ **GPT-5 Critical Bugs Fixed**
+   - C.6.0: Client deadlock resolved with background receiver task
+   - C.6.1: HTTP worker pattern implemented with real HTTP requests
+
+3. ✅ **Architecture Pivot to Connection Pattern**
+   - Moving from Sink/Stream to async Connection trait
+   - Eliminates worker task overhead (20µs → ~0)
+   - Natural HTTP/2 multiplexing and connection pooling
+
+4. ✅ **Documentation Consolidation**
+   - Created `CONSOLIDATED-ARCHITECTURE.md` as single source of truth
+   - Reduced 37 docs to ~10 active documents
+   - Updated all READMEs to reflect current status
+
+5. ✅ **Pool Performance Analysis**
+   - Created `~/src/tapwire/research/hyper-pool-vs-shadowcat-pool.md`
+   - Identified optimization opportunities
+   - Shadowcat's 30ns overhead acceptable for multi-protocol support
 
 ## 🚨 IMPORTANT: Working in Git Worktree
+
 **Work Directory**: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance`
-- This is a git worktree on branch `feat/mcpspec`
+- Git worktree on branch `feat/mcpspec`
 - Main shadowcat remains untouched
-- All work happens in the worktree
 - Commit to `feat/mcpspec` branch
 
-## Current Status (2025-08-24)
+## Current Work: C.7 - Connection Pattern Implementation
 
-### What's Complete
-- **Phase C.5.4**: Framed/Sink/Stream implementation ✅
-  - JsonLineCodec ✅
-  - StdioTransport ✅
-  - SubprocessTransport ✅
-  - HttpTransport (basic) ✅
-  - Client/Server using Sink+Stream ✅
+### Next Task: C.7.0 - Create Connection Trait (2 hours)
 
-### What's Broken (GPT-5 Findings)
-1. **Client Deadlock**: `request()` blocks forever unless `run()` is called, but `run()` consumes self
-2. **HTTP Transport**: Doesn't actually send HTTP requests, just shuffles queues
+**Objective**: Define the core Connection trait to replace Sink/Stream
 
-## Critical Bug #1: Client Concurrency Deadlock
-
-**Problem**: 
 ```rust
-// Current broken pattern:
-let mut client = Client::new(transport, handler);
-let response = client.request("method", params).await; // Blocks forever!
-// Can't call run() because request() is waiting
-```
-
-**Fix Required**:
-1. Spawn background receiver task in `Client::new()`
-2. Route responses to pending request channels
-3. Route notifications to handler
-4. Add shutdown mechanism
-5. Make `request()/notify()` work standalone
-
-**Implementation**:
-```rust
-pub struct Client<T, H = DefaultClientHandler> {
-    transport: Arc<Mutex<T>>,  // Shared for concurrent access
-    handler: Arc<H>,
-    pending: Arc<Mutex<HashMap<JsonRpcId, oneshot::Sender<Result<Value>>>>>,
-    shutdown: Option<oneshot::Sender<()>>,
-    receiver_handle: Option<JoinHandle<()>>,
-}
-
-impl<T, H> Client<T, H> {
-    pub fn new(transport: T, handler: H) -> Self {
-        let client = Client { /* ... */ };
-        client.spawn_receiver();
-        client
-    }
+// crates/mcp/src/connection/mod.rs
+#[async_trait]
+pub trait Connection: Send + Sync {
+    /// Send a message through the connection
+    async fn send(&mut self, message: Value) -> Result<()>;
     
-    fn spawn_receiver(&mut self) {
-        let transport = self.transport.clone();
-        let pending = self.pending.clone();
-        let handler = self.handler.clone();
-        
-        self.receiver_handle = Some(tokio::spawn(async move {
-            while let Some(msg) = transport.lock().await.next().await {
-                // Route to pending requests or handler
-            }
-        }));
-    }
-}
-```
-
-## Critical Bug #2: HTTP Transport Worker Pattern
-
-**Problem**:
-```rust
-// Current broken implementation:
-fn poll_flush(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-    while let Some(msg) = self.pending_requests.pop_front() {
-        self.single_responses.push_back(msg); // Just moves to another queue!
-    }
-    Poll::Ready(Ok(()))
-}
-```
-
-**Fix Required**:
-1. Create worker task with HTTP client
-2. Request channel (bounded mpsc)
-3. Response channel for Stream
-4. Actual HTTP request sending
-5. SSE stream management
-
-**Implementation**:
-```rust
-pub struct HttpTransport {
-    request_tx: mpsc::Sender<Value>,
-    response_rx: mpsc::Receiver<io::Result<Value>>,
-    worker_handle: JoinHandle<()>,
-}
-
-impl HttpTransport {
-    pub fn new(url: Url) -> Self {
-        let (request_tx, request_rx) = mpsc::channel(100);
-        let (response_tx, response_rx) = mpsc::channel(100);
-        
-        let worker_handle = tokio::spawn(async move {
-            let client = Client::new();
-            while let Some(request) = request_rx.recv().await {
-                // Actually send HTTP request
-                let response = client.request(request).await;
-                response_tx.send(response).await;
-            }
-        });
-        
-        HttpTransport { request_tx, response_rx, worker_handle }
-    }
-}
-```
-
-## Testing Strategy
-
-### Client Tests
-```rust
-#[tokio::test]
-async fn test_client_request_without_run() {
-    let (transport, mock_server) = create_mock_transport();
-    let mut client = Client::new(transport, DefaultHandler);
+    /// Receive a message from the connection
+    async fn receive(&mut self) -> Result<Value>;
     
-    // Should NOT deadlock
-    let response = client.request("ping", json!({})).await.unwrap();
-    assert_eq!(response, json!({"pong": true}));
+    /// Close the connection gracefully
+    async fn close(&mut self) -> Result<()>;
+    
+    /// Check if connection is healthy (for pooling)
+    fn is_healthy(&self) -> bool { true }
+    
+    /// Get protocol type (for routing)
+    fn protocol(&self) -> Protocol { Protocol::Unknown }
+}
+
+// Migration adapter for existing Sink/Stream transports
+pub struct SinkStreamAdapter<T> where T: Sink<Value> + Stream<Item = Result<Value>> {
+    inner: T,
 }
 ```
 
-### HTTP Transport Tests
-```rust
-#[tokio::test]
-async fn test_http_actually_sends_requests() {
-    let mock_server = MockServer::start().await;
-    let transport = HttpTransport::new(mock_server.url());
-    
-    transport.send(json!({"method": "test"})).await.unwrap();
-    
-    // Verify HTTP request was actually made
-    assert_eq!(mock_server.received_requests(), 1);
-}
-```
+### Implementation Steps
+
+1. **Create Connection trait** (C.7.0 - NOW)
+   - Define trait in `crates/mcp/src/connection/mod.rs`
+   - Add Protocol enum for routing
+   - Create SinkStreamAdapter for gradual migration
+   - Write tests for adapter
+
+2. **Implement HTTP/2 Connection** (C.7.1 - 4 hours)
+   - Use hyper 1.7's `http2::SendRequest`
+   - Support SSE streaming
+   - Session ID management via headers
+   - Ready for shadowcat pooling
+
+3. **Implement WebSocket Connection** (C.7.2 - 3 hours)
+   - Use tokio-tungstenite
+   - Bidirectional messaging
+   - Session in message routing
+
+4. **Implement Stdio Connection** (C.7.3 - 2 hours)
+   - Wrapper around existing stdio transport
+   - Singleton pattern
+
+5. **Migrate Client/Server** (C.7.4 - 3 hours)
+   - Replace Sink/Stream with Connection trait
+   - Remove worker tasks
+   - Direct async/await
+
+6. **Integrate shadowcat pool** (C.7.5 - 2 hours)
+   - Implement PoolableResource for connections
+   - Protocol-specific pooling strategies
+
+## Key Files to Reference
+
+**Architecture & Design**:
+- `plans/mcp-compliance-check/analysis/CONSOLIDATED-ARCHITECTURE.md` - Current architecture
+- `plans/mcp-compliance-check/tasks/C.7-connection-trait-tasks.md` - Detailed task breakdown
+- `plans/mcp-compliance-check/mcp-compliance-check-tracker.md` - Project progress
+
+**Code Locations**:
+- `crates/mcp/src/transport/http/mod.rs` - HTTP transport (hyper 1.7 ready)
+- `crates/mcp/src/client.rs` - Needs migration to Connection trait
+- `crates/mcp/src/server.rs` - Needs migration to Connection trait
 
 ## Commands to Run
 
 ```bash
+# Navigate to work directory
 cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp
 
-# Test compilation
-cargo test --lib --no-run
+# Create connection module
+mkdir -p src/connection
+touch src/connection/mod.rs
 
-# Run specific tests
-cargo test client::tests::test_client
-cargo test transport::http::tests::test_http
+# Run tests as you develop
+cargo test --package mcp
 
-# Check for deadlocks with timeout
-timeout 10 cargo test test_client_request_without_run
+# Check compilation
+cargo check
+
+# Before committing
+cargo fmt
+cargo clippy --all-targets -- -D warnings
 ```
 
-## Success Criteria
+## Success Criteria for C.7.0
 
-- [ ] Client can make requests without calling `run()`
-- [ ] HTTP transport sends actual HTTP requests  
-- [ ] No deadlocks in concurrent operations
-- [ ] Tests demonstrate both fixes work
-- [ ] Clean `cargo clippy` output
+- [ ] Connection trait defined with async methods
+- [ ] Protocol enum for routing decisions
+- [ ] SinkStreamAdapter for migration
+- [ ] Tests demonstrate adapter works with existing transports
+- [ ] Documentation explains when to use Connection vs Sink/Stream
 
-## Files to Modify
+## Architecture Reminder
 
-1. `crates/mcp/src/client.rs` - Add background receiver
-2. `crates/mcp/src/transport/http/mod.rs` - Add worker pattern
-3. `crates/mcp/tests/client_integration.rs` - Add deadlock tests
-4. `crates/mcp/tests/http_integration.rs` - Add HTTP request tests
+**Why Connection Pattern?**
+- **Zero overhead**: No workers, no channels, no task spawning
+- **Natural multiplexing**: HTTP/2 and WebSocket multiplex natively
+- **Connection pooling**: Integrates perfectly with shadowcat's pool
+- **Direct backpressure**: async/await provides natural flow control
+- **Scales to 10K+**: No worker task per connection
 
-## References
+**Trade-offs We Accept**:
+- More complex than Sink/Stream initially
+- Protocol-specific implementations needed
+- Worth it for proxy scale requirements
 
-- **GPT-5 findings**: `/plans/mcp-compliance-check/gpt-findings/findings.md`
-- **Our analysis**: `/plans/mcp-compliance-check/analysis/gpt-findings-analysis.md`
-- **WebSocket decision**: `/plans/mcp-compliance-check/analysis/websocket-separation-decision.md`
+## Performance Targets
+
+- Connection overhead: < 1µs (vs 20µs with workers)
+- HTTP/2 multiplexing: 100+ streams per connection
+- Pool acquire: < 100µs
+- Memory per connection: < 50KB
+
+## If Starting Fresh
+
+Read these in order:
+1. `analysis/CONSOLIDATED-ARCHITECTURE.md` - Understand current design
+2. `analysis/HYPER-1.7-UPGRADE-COMPLETE.md` - See HTTP transport status
+3. `tasks/C.7-connection-trait-tasks.md` - Detailed implementation guide
+
+Then start implementing the Connection trait in `crates/mcp/src/connection/mod.rs`.
+
+## Notes from Previous Session
+
+- Hyper 1.7 upgrade complete and tested
+- HTTP transport compiles but needs Connection trait to fully integrate
+- SSE receiver updated for hyper 1.7's Incoming body type
+- Client/Server still use Sink/Stream (need migration)
+- No WebSocket transport yet (needs to be created)
 
 ## After This Session
 
-Once these critical bugs are fixed:
-1. Create WebSocket transport (separate module)
-2. Harden JsonLineCodec (CRLF, overlong lines)
-3. Wire version negotiation
-4. Add comprehensive tests
+Once Connection trait is implemented:
+1. Create protocol-specific connections (HTTP/2, WebSocket, stdio)
+2. Migrate Client/Server to use Connection
+3. Integrate with shadowcat's pool
+4. Run MCP validator tests
+5. Performance benchmarking
 
 ---
 
-**Duration**: 3-4 hours  
-**Priority**: CRITICAL (blocks all further work)  
-**Focus**: Fix deadlock and HTTP worker  
+*This prompt captures the current state after hyper 1.7 upgrade and architecture consolidation. The Connection trait implementation is the critical next step to eliminate worker overhead and enable proper connection pooling.*
 
-*Last Updated: 2025-08-24*  
-*Based on: GPT-5 architecture review*
+*Duration estimate for full C.7 phase: 16 hours*  
+*Priority: CRITICAL - enables 10K+ connection scale*
