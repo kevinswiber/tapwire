@@ -4,11 +4,16 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-24  
+**Last Updated**: 2025-08-24 (Paused for Transport Architecture Review)  
 **Total Estimated Duration**: 99 hours (16 + 15 + 11 + 9 + 14 + 12 + 10 + 12)  
-**Status**: Phase A Complete - Ready for Implementation  
+**Status**: Phase B & C.0-C.1 Complete - PAUSED for architecture review  
 **Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
 **Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
+
+**CURRENT STATUS**: Pausing implementation to investigate Transport architecture design. Need to determine:
+1. Should Transport be split into Incoming/Outgoing traits?
+2. Should MCP Client manage subprocesses or accept AsyncRead/AsyncWrite?
+3. What patterns does the official Rust SDK use?
 
 ## Goals
 
@@ -89,11 +94,11 @@ Extract and refactor MCP protocol implementation from shadowcat
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| B.0 | **Extract core types and messages** | 2h | None | ⬜ Not Started | | types.rs, messages.rs, constants.rs |
-| B.1 | **Extract builders and parsers** | 3h | B.0 | ⬜ Not Started | | builder.rs, parser.rs, validation.rs |
-| B.2 | **Create Transport trait and stdio** | 4h | B.0 | ⬜ Not Started | | Transport trait + stdio::Transport |
-| B.3 | **Build Client struct** | 3h | B.2 | ⬜ Not Started | | Client<T: Transport> with handshake |
-| B.4 | **Build Server struct** | 3h | B.2 | ⬜ Not Started | | Server<H: Handler> with handshake |
+| B.0 | **Extract core types and messages** | 2h | None | ✅ Completed | | types.rs, messages.rs, constants.rs, version.rs |
+| B.1 | **Extract builders and parsers** | 3h | B.0 | ✅ Completed | | builder.rs, parser.rs, validation.rs |
+| B.2 | **Create Transport trait and stdio** | 4h | B.0 | ✅ Completed | | Transport trait + stdio::Transport (also added subprocess) |
+| B.3 | **Build Client struct** | 3h | B.2 | ✅ Completed | | Client<T: Transport, H: Handler> with symmetric design |
+| B.4 | **Build Server struct** | 3h | B.2 | ✅ Completed | | Server<T: Transport, H: Handler> with symmetric design |
 
 **Phase B Total**: 15 hours
 
@@ -102,12 +107,25 @@ Complete MCP library with advanced features
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.0 | **Add HTTP transport with SSE** | 4h | B.2 | ⬜ Not Started | | http::Transport + streaming::sse |
-| C.1 | **Extract interceptor system** | 3h | B.3, B.4 | ⬜ Not Started | | Interceptor trait + Chain |
+| C.0 | **Add HTTP transport with SSE** | 4h | B.2 | ✅ Completed | | http::Transport + streaming::sse with reconnection |
+| C.1 | **Extract interceptor system** | 3h | B.3, B.4 | ✅ Completed | | Interceptor trait + Chain from shadowcat |
 | C.2 | **Add batch support** | 2h | B.1 | ⬜ Not Started | | Batch handling from batch.rs |
 | C.3 | **Test MCP crate independently** | 2h | C.0-C.2 | ⬜ Not Started | | Integration tests, examples |
 
 **Phase C Total**: 11 hours
+
+### Phase C.5: Transport Architecture Investigation (INSERTED)
+Re-evaluate transport design based on implementation discoveries
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| C.5.0 | **Investigate official Rust SDK patterns** | 2h | None | ⬜ Not Started | | Review ~/src/modelcontextprotocol/rust-sdk |
+| C.5.1 | **Analyze Incoming vs Outgoing split** | 1h | C.5.0 | ⬜ Not Started | | Determine if Transport should be split |
+| C.5.2 | **Subprocess management decision** | 1h | C.5.0 | ⬜ Not Started | | Client spawning vs AsyncRead/AsyncWrite |
+| C.5.3 | **Document architectural decision** | 1h | C.5.1, C.5.2 | ⬜ Not Started | | Update architectural-decisions.md |
+| C.5.4 | **Refactor transports if needed** | 3h | C.5.3 | ⬜ Not Started | | Implement new design |
+
+**Phase C.5 Total**: 8 hours
 
 ### Phase D: Compliance Framework (Week 2)
 Build the compliance testing framework using extracted MCP library
@@ -185,9 +203,13 @@ Integrate MCP crate back into shadowcat (can be done after MVP)
 - [x] A.2: Design Rust compliance architecture
 - [x] A.3: Create proxy-specific test scenarios
 - [x] A.4: Inventory existing code for extraction
-- [ ] B.0: Extract core types and messages
-- [ ] B.1: Extract builders and parsers
-- [ ] B.2: Create Transport trait and stdio
+- [x] B.0: Extract core types and messages
+- [x] B.1: Extract builders and parsers
+- [x] B.2: Create Transport trait and stdio
+- [x] B.3: Build Client struct
+- [x] B.4: Build Server struct
+- [x] C.0: Add HTTP transport with SSE
+- [x] C.1: Extract interceptor system
 
 ### Completed Tasks
 - **Phase A**: All analysis and architecture complete (16 hours)
@@ -196,6 +218,17 @@ Integrate MCP crate back into shadowcat (can be done after MVP)
   - Architecture designed with key decisions documented
   - 50 proxy-specific tests defined
   - ~70% existing code inventoried for reuse
+
+- **Phase B**: Core MCP library extraction complete (15 hours)
+  - Extracted types, messages, constants, version modules
+  - Built MessageBuilder and Parser with validation
+  - Created Transport trait with stdio and subprocess implementations
+  - Implemented symmetric Client<T, H> and Server<T, H> architecture
+
+- **Phase C (Partial)**: Advanced components (7 hours of 11)
+  - HTTP transport with SSE and reconnection support
+  - Full interceptor system with chain and metrics
+  - **PAUSED**: Need to investigate transport architecture before continuing
 
 ## Success Criteria
 
