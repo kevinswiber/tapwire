@@ -3,6 +3,13 @@
 ## Session Goal
 Start Phase B by extracting core MCP protocol types from shadowcat into a reusable library.
 
+## 🚨 IMPORTANT: Working in Git Worktree
+**Work Directory**: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance`
+- This is a git worktree on branch `feat/mcpspec`
+- Main shadowcat remains untouched in `/Users/kevin/src/tapwire/shadowcat`
+- All extraction work happens in the worktree
+- Commit to `feat/mcpspec` branch
+
 ## Context
 - **Tracker**: `plans/mcp-compliance-check/mcp-compliance-check-tracker.md`
 - **Current Phase**: B - MCP Library Extraction (Ready to start)
@@ -32,13 +39,19 @@ From `shadowcat/src/mcp/`:
 - `version.rs` → Version negotiation logic
 
 ### Steps
-1. **Create crate structure**:
+1. **Navigate to worktree**:
    ```bash
-   mkdir -p shadowcat/crates/mcp/src
-   cd shadowcat/crates/mcp
+   cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance
+   git status  # Should show: On branch feat/mcpspec
    ```
 
-2. **Set up Cargo.toml**:
+2. **Create crate structure**:
+   ```bash
+   mkdir -p crates/mcp/src
+   cd crates/mcp
+   ```
+
+3. **Set up Cargo.toml**:
    ```toml
    [package]
    name = "mcp"
@@ -51,24 +64,31 @@ From `shadowcat/src/mcp/`:
    thiserror = "1.0"
    ```
 
-3. **Copy and refactor files**:
-   - Copy files from shadowcat/src/mcp/
+4. **Copy and refactor files**:
+   - Copy files from `src/mcp/` (in the worktree)
    - Remove shadowcat-specific code
    - Simplify APIs where possible
    - Add clear documentation
    - Keep protocol-pure functionality
 
-4. **Add to workspace** in shadowcat/Cargo.toml:
+5. **Add to workspace** in Cargo.toml (worktree root):
    ```toml
    [workspace]
    members = [".", "crates/mcp"]  # Note: Don't need crates/compliance yet
    ```
 
-5. **Test standalone**:
+6. **Test standalone**:
    ```bash
-   cd crates/mcp
+   cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp
    cargo check
    cargo test
+   ```
+
+7. **Commit to feature branch**:
+   ```bash
+   git add -A
+   git commit -m "feat(mcp): extract core types from shadowcat"
+   git push origin feat/mcpspec
    ```
 
 ### If Time Permits: Start B.1 - Extract Builders and Parsers (3 hours)
@@ -92,13 +112,14 @@ These depend on B.0 types but are otherwise independent.
 - **MCP Inventory**: `analysis/shadowcat-mcp-extraction-inventory.md` - WHAT to extract
 - **Transport Inventory**: `analysis/shadowcat-transport-session-inventory.md` - Infrastructure code
 
-## Target Structure (Single MCP Crate)
+## Target Structure (in Worktree)
 
 ```
-shadowcat/
-├── src/                    # Shadowcat (will use MCP crate)
+shadowcat-mcp-compliance/           # Git worktree root
+├── src/                           # Shadowcat source (unchanged)
+│   └── mcp/                      # Existing MCP code to copy from
 ├── crates/
-│   ├── mcp/               # Extracted MCP library
+│   ├── mcp/                      # NEW: Extracted MCP library
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
@@ -117,9 +138,11 @@ shadowcat/
 │   │           └── http/
 │   │               └── streaming/
 │   │                   └── sse.rs
-│   └── compliance/        # Future: Phase D
+│   └── compliance/               # Future: Phase D
 │       └── Cargo.toml
 ```
+
+**Remember**: All work happens in the worktree, not the main shadowcat directory!
 
 ## Important Notes
 - **Copy, don't refactor shadowcat** - Leave shadowcat unchanged

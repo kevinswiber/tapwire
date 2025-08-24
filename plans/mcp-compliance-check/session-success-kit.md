@@ -16,24 +16,37 @@ When starting a session, load these in order:
 - **Per-request streaming** (HandlerResult enum)
 
 ## Common Commands Cheatsheet
-```bash
-# Navigate to workspace
-cd /Users/kevin/src/tapwire/shadowcat
 
-# Create MCP crate
+### 🚨 Git Worktree Commands
+```bash
+# Navigate to MCP compliance worktree
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance
+git status  # Should show: On branch feat/mcpspec
+
+# See all worktrees
+git worktree list
+
+# Work happens in worktree, not main shadowcat!
+pwd  # Should be: /Users/kevin/src/tapwire/shadowcat-mcp-compliance
+```
+
+### Extraction Commands
+```bash
+# Create MCP crate IN WORKTREE
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance
 cargo new --lib crates/mcp
 cd crates/mcp
 
-# Add to workspace (edit shadowcat/Cargo.toml)
+# Add to workspace (edit Cargo.toml in worktree root)
 members = [".", "crates/mcp"]
 
 # Test extraction
 cargo check --package mcp
 cargo test --package mcp
 
-# See what shadowcat uses
-rg "use crate::mcp::" ../src/
-rg "pub struct" ../src/mcp/types.rs
+# See what shadowcat uses (from worktree)
+rg "use crate::mcp::" src/
+rg "pub struct" src/mcp/types.rs
 
 # Quick compile test
 echo "fn main() {}" > examples/test.rs
@@ -128,13 +141,17 @@ cargo run --example demo
 
 ## Commit Message Templates
 ```bash
-# For extraction
+# For extraction (in worktree)
+git add -A
 git commit -m "feat(mcp): extract core types from shadowcat
 
 - Copy types.rs with JsonRpcId, SessionId, etc.
 - Remove shadowcat-specific dependencies
 - Add basic tests for type creation
 - Module compiles standalone"
+
+# Push to feature branch
+git push origin feat/mcpspec
 
 # For refactoring
 git commit -m "refactor(mcp): simplify message builder API

@@ -7,7 +7,8 @@ This tracker coordinates the development of a Rust-native MCP compliance testing
 **Last Updated**: 2025-08-24  
 **Total Estimated Duration**: 99 hours (16 + 15 + 11 + 9 + 14 + 12 + 10 + 12)  
 **Status**: Phase A Complete - Ready for Implementation  
-**Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later
+**Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
+**Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
 ## Goals
 
@@ -390,10 +391,12 @@ See `next-session-prompt.md` for the current session setup.
 
 ## Critical Implementation Guidelines
 
-### Extraction Strategy (Copy-First Approach)
+### Extraction Strategy (Copy-First in Worktree)
+- **Work in git worktree**: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance`
+- **Branch**: `feat/mcpspec` (separate from main)
 - **Phase B-C**: Copy code from shadowcat to create standalone MCP crate
 - **Focus on clean API**: Design without backward compatibility constraints
-- **Keep shadowcat unchanged**: Don't break existing functionality
+- **Keep main shadowcat unchanged**: Work only in worktree
 - **Phase H (later)**: Integrate MCP crate back into shadowcat
 - **Benefits**: Freedom to design, reduced risk, cleaner architecture
 
@@ -426,17 +429,20 @@ See `next-session-prompt.md` for the current session setup.
 
 ## Next Actions
 
-1. **Start Phase B**: Begin MCP library extraction
+1. **Start Phase B**: Begin MCP library extraction (in worktree)
+   - Navigate to: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance`
    - B.0: Extract core types and messages (2h)
    - B.1: Extract builders and parsers (3h)
    - B.2: Create Transport trait and stdio implementation (4h)
 
 2. **Key Focus Areas**:
+   - Work in git worktree on `feat/mcpspec` branch
    - Use extraction inventories as guides
-   - Keep shadowcat working during extraction
+   - Keep main shadowcat unchanged
    - Test extraction early with simple examples
 
 3. **Session Planning**:
+   - Start by: `cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance`
    - Each task is sized for one Claude session
    - Clear inputs/outputs defined
    - Dependencies mapped for proper sequencing
