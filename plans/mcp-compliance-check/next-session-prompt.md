@@ -106,6 +106,13 @@ These depend on B.0 types but are otherwise independent.
 - [ ] Basic unit tests pass
 - [ ] Can import types from MCP crate in shadowcat
 
+## 🚀 Quick Start Resources (Use These!)
+- **First Extraction Kit**: `first-extraction-kit.md` - Step-by-step for B.0
+- **Quick Reference Card**: `extraction-quick-reference.md` - Keep open during work
+- **Ready-to-use Cargo.toml**: `templates/Cargo.toml` - Just copy it
+- **Initial Tests**: `templates/initial-tests.rs` - Tests ready to paste
+- **Validation Script**: `validate-extraction.sh` - Check progress
+
 ## Key References
 - **Architecture Decisions**: `analysis/architectural-decisions.md` - WHY we made choices
 - **Extraction Guide**: `analysis/mcp-core-extraction-architecture.md` - HOW to build
