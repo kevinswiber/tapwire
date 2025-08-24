@@ -17,7 +17,14 @@ Start Phase B by extracting core MCP protocol types from shadowcat into a reusab
 
 ## Primary Task: B.0 - Extract Core Types and Messages (2 hours)
 
-### What to Extract
+### Extraction Strategy: Copy-First Approach ✨
+**Important**: We're copying code to create a clean MCP crate. Shadowcat stays unchanged for now.
+- **Copy** files from shadowcat/src/mcp/ to crates/mcp/src/
+- **Clean** the API without worrying about backward compatibility  
+- **Design** for ideal usage, not current shadowcat patterns
+- **Later** (Phase H) we'll integrate shadowcat with the new crate
+
+### What to Copy
 From `shadowcat/src/mcp/`:
 - `types.rs` → Core types (JsonRpcId, SessionId, MessageContext)
 - `messages.rs` → Protocol messages (MessageEnvelope, ProtocolMessage)
@@ -44,19 +51,22 @@ From `shadowcat/src/mcp/`:
    thiserror = "1.0"
    ```
 
-3. **Extract files** (copy and clean):
-   - Remove shadowcat-specific imports
+3. **Copy and refactor files**:
+   - Copy files from shadowcat/src/mcp/
+   - Remove shadowcat-specific code
+   - Simplify APIs where possible
+   - Add clear documentation
    - Keep protocol-pure functionality
-   - Ensure standalone compilation
 
 4. **Add to workspace** in shadowcat/Cargo.toml:
    ```toml
    [workspace]
-   members = [".", "crates/mcp", "crates/compliance"]
+   members = [".", "crates/mcp"]  # Note: Don't need crates/compliance yet
    ```
 
-5. **Test compilation**:
+5. **Test standalone**:
    ```bash
+   cd crates/mcp
    cargo check
    cargo test
    ```
@@ -112,11 +122,19 @@ shadowcat/
 ```
 
 ## Important Notes
+- **Copy, don't refactor shadowcat** - Leave shadowcat unchanged
+- **Design freedom** - Create the API you wish shadowcat had
 - **Start minimal** - Just get types compiling first
 - **No over-engineering** - Simple extraction, refactor later
-- **Test early** - Ensure MCP crate works standalone
-- **Keep shadowcat working** - Don't break existing functionality
+- **Test standalone** - MCP crate should work independently
 - **Clear commits** - One commit per extraction step
+
+## Benefits of Copy-First Approach
+- ✅ **No risk** to shadowcat - it keeps working
+- ✅ **Clean API** - design without legacy constraints
+- ✅ **Faster progress** - no simultaneous refactoring
+- ✅ **Better testing** - validate MCP crate independently
+- ✅ **Flexibility** - can evolve API based on compliance needs
 
 ## Definition of Done
 - [ ] Core types extracted and compile in MCP crate

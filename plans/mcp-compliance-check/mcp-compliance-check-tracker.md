@@ -5,8 +5,9 @@
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
 **Last Updated**: 2025-08-24  
-**Total Estimated Duration**: 88 hours (16 + 15 + 12 + 9 + 14 + 12 + 10)  
-**Status**: Phase A Complete - Ready for Implementation
+**Total Estimated Duration**: 99 hours (16 + 15 + 11 + 9 + 14 + 12 + 10 + 12)  
+**Status**: Phase A Complete - Ready for Implementation  
+**Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later
 
 ## Goals
 
@@ -103,9 +104,9 @@ Complete MCP library with advanced features
 | C.0 | **Add HTTP transport with SSE** | 4h | B.2 | ⬜ Not Started | | http::Transport + streaming::sse |
 | C.1 | **Extract interceptor system** | 3h | B.3, B.4 | ⬜ Not Started | | Interceptor trait + Chain |
 | C.2 | **Add batch support** | 2h | B.1 | ⬜ Not Started | | Batch handling from batch.rs |
-| C.3 | **Update shadowcat to use MCP crate** | 3h | C.0-C.2 | ⬜ Not Started | | Replace internal with crate dep |
+| C.3 | **Test MCP crate independently** | 2h | C.0-C.2 | ⬜ Not Started | | Integration tests, examples |
 
-**Phase C Total**: 12 hours
+**Phase C Total**: 11 hours
 
 ### Phase D: Compliance Framework (Week 2)
 Build the compliance testing framework using extracted MCP library
@@ -155,6 +156,18 @@ Production readiness and automation
 | G.3 | **Documentation and examples** | 3h | All | ⬜ Not Started | | README, examples, API docs |
 
 **Phase G Total**: 10 hours
+
+### Phase H: Shadowcat Integration (Week 4-5)
+Integrate MCP crate back into shadowcat (can be done after MVP)
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| H.0 | **Replace shadowcat MCP module** | 4h | C.3 | ⬜ Not Started | | Update imports, fix breaking changes |
+| H.1 | **Update proxy logic** | 3h | H.0 | ⬜ Not Started | | Adapt to new API |
+| H.2 | **Fix integration tests** | 3h | H.1 | ⬜ Not Started | | Update test expectations |
+| H.3 | **Performance validation** | 2h | H.2 | ⬜ Not Started | | Ensure no regression |
+
+**Phase H Total**: 12 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -377,7 +390,14 @@ See `next-session-prompt.md` for the current session setup.
 
 ## Critical Implementation Guidelines
 
-### Integration Requirements
+### Extraction Strategy (Copy-First Approach)
+- **Phase B-C**: Copy code from shadowcat to create standalone MCP crate
+- **Focus on clean API**: Design without backward compatibility constraints
+- **Keep shadowcat unchanged**: Don't break existing functionality
+- **Phase H (later)**: Integrate MCP crate back into shadowcat
+- **Benefits**: Freedom to design, reduced risk, cleaner architecture
+
+### Integration Requirements (for Phase H)
 - Must work with existing Shadowcat transport layer
 - Must support all transport types (stdio, HTTP, SSE)
 - Must integrate with session manager
