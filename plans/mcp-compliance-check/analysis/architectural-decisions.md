@@ -2,11 +2,15 @@
 
 ## Executive Summary
 
+**NOTE: Transport architecture has been updated twice after implementation investigation.**
+- **CURRENT**: See [transport-architecture-final-v2.md](transport-architecture-final-v2.md) for Framed/Sink/Stream design
+- **Previous**: ~~[transport-architecture-final.md](transport-architecture-final.md)~~ (AsyncRead/AsyncWrite - superseded)
+
 After analyzing shadowcat's current implementation and evaluating trade-offs, we've made the following key architectural decisions for the MCP library extraction:
 
 1. **Hybrid Client/Server Architecture** - Protocol logic centralized, transport flexibility maintained
-2. **Transport Organization** - `mcp::transports::http::streaming::{sse, websockets}`
-3. **Type-Conscious Naming** - `stdio::Transport` not `StdioTransport`
+2. **Transport Organization** - **CURRENT**: See [transport-architecture-final-v2.md](transport-architecture-final-v2.md)
+3. **Type-Conscious Naming** - `stdio::Transport` not `StdioTransport` **CURRENT**: Using Framed/Sink/Stream
 4. **Per-Request Streaming** - Handlers decide streaming per request via `HandlerResult`
 5. **Interceptor Integration** - At protocol layer with `interceptor::Chain`
 6. **HTTP Library** - Hyper (not reqwest) for SSE support
@@ -60,19 +64,17 @@ use mcp::transports::http::Transport as HttpTransport;
 
 ## 2. Transport Organization
 
-### Decision: Hierarchical Module Structure
+**⚠️ SUPERSEDED: See [transport-architecture-final-v2.md](transport-architecture-final-v2.md) for CURRENT architecture.**
 
-```
-mcp::transports::{
-    stdio,                    // stdio::Transport
-    http::{                   // http::Transport
-        streaming::{
-            sse,              // SSE-specific streaming logic
-            websockets,       // WebSocket streaming (future)
-        }
-    }
-}
-```
+### Current Decision: Framed/Sink/Stream Architecture
+
+All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`:
+- **StdioTransport**: `Framed<StdioStream, JsonLineCodec>` 
+- **SubprocessTransport**: `Framed<ChildStdio, JsonLineCodec>` with process management
+- **HttpTransport**: Custom Sink/Stream implementation for request/response
+- **SseTransport**: Custom Stream implementation with HTTP POST for sending
+
+**Key insight**: Unify at message level (JsonRpcMessage), not byte level (AsyncRead/AsyncWrite)
 
 ### Rationale
 

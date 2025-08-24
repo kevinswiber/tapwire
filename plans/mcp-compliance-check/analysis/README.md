@@ -6,10 +6,12 @@ This directory contains research, analysis, and design documents for the MCP com
 
 ### For New Developers
 - Start with **architectural-decisions.md** - Explains WHY we made key choices
+- **IMPORTANT**: Read **transport-architecture-final-v2.md** - CURRENT transport design (Framed/Sink/Stream)
 - Then read **mcp-core-extraction-architecture.md** - Shows HOW to build it
 - Review **compliance-independence-design.md** - Understand testing independence
 
-### For Implementers
+### For Implementers  
+- **transport-architecture-final-v2.md** - CURRENT transport architecture (Framed/Sink/Stream)
 - **mcp-core-extraction-architecture.md** - Implementation guide with code examples
 - **library-architecture-design.md** - Compliance library specifics
 - **proxy-specific-test-scenarios.md** - Detailed proxy test cases
@@ -29,6 +31,16 @@ This directory contains research, analysis, and design documents for the MCP com
 - **implementation-considerations.md** - Risks and mitigation strategies
 - **compliance-independence-design.md** - Testing independence + streaming
 - **library-architecture-design.md** - Compliance library specifics
+
+### 🚀 Transport Architecture (CURRENT v2)
+- **transport-architecture-final-v2.md** - CURRENT Framed/Sink/Stream architecture
+- **http-sse-unified-transport.md** - Clarification: HTTP+SSE is ONE transport
+- **framed-sink-stream-architecture.md** - Why message-level unification is better
+- **rmcp-vs-framed-comparison.md** - Comparison with RMCP's approach
+- **transport-architecture-final.md** - (SUPERSEDED) AsyncRead/AsyncWrite design
+- **websocket-transport-design.md** - Future WebSocket support design
+- **transport-patterns-analysis.md** - RMCP patterns investigation
+- **transport-investigation-summary.md** - Executive summary of findings
 
 ### 📊 Analysis & Research
 - **mcp-validator-findings.md** - Critical bugs in Python validator

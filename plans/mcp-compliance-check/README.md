@@ -9,8 +9,8 @@ We're building a comprehensive MCP (Model Context Protocol) compliance testing f
 3. **Create a compatibility matrix** testing our implementation against reference implementations
 4. **Support three MCP versions**: 2025-03-26, 2025-06-18, and draft (living spec)
 
-**Estimated effort**: 80-100 hours  
-**Current status**: Planning complete, ready for implementation
+**Estimated effort**: 108 hours total  
+**Current status**: Phase B complete, Phase C.0-C.1 complete, Transport architecture finalized (v2). Ready for C.5.4 implementation.
 
 ## Quick Start for New Developers
 
@@ -19,15 +19,17 @@ We're building a comprehensive MCP (Model Context Protocol) compliance testing f
 1. **Start here**: Read [mcp-compliance-check-tracker.md](mcp-compliance-check-tracker.md) for the full project overview
 2. **Understand the problem**: Review [analysis/mcp-validator-findings.md](analysis/mcp-validator-findings.md) to see why we're building this
 3. **Architecture**: Study [analysis/architectural-decisions.md](analysis/architectural-decisions.md) for key design decisions
-4. **Next steps**: Check [next-session-prompt.md](next-session-prompt.md) for immediate tasks
+4. **Transport Design**: See [analysis/transport-architecture-final-v2.md](analysis/transport-architecture-final-v2.md) for CURRENT Framed/Sink/Stream architecture
+5. **Next steps**: Check Phase C.5.4 in tracker - implement Framed/Sink/Stream transports
 
 ### Key Decisions Made
 
 1. **Build our own MCP implementation** - Not depend on external libraries for core functionality
-2. **Test separation** - Client tests (60) + Server tests (60) + Proxy tests (50) + Protocol tests (80)
-3. **Support draft spec** - Stay ahead by testing against in-progress specifications
-4. **Performance over ergonomics** - Fast, compliant, low-level implementation first
-5. **Streaming results** - Real-time test progress for better UX
+2. **Framed/Sink/Stream architecture** - Message-level unification using standard async traits
+3. **Test separation** - Client tests (60) + Server tests (60) + Proxy tests (50) + Protocol tests (80)
+4. **Support draft spec** - Stay ahead by testing against in-progress specifications
+5. **Performance over ergonomics** - Fast, compliant, low-level implementation first
+6. **Streaming results** - Real-time test progress for better UX
 
 ## Project Structure
 
@@ -124,14 +126,19 @@ Details: [analysis/mcp-core-extraction-architecture.md](analysis/mcp-core-extrac
 - Found only 12% coverage in existing validator
 - Designed comprehensive architecture
 
-### Phase B: Core Framework (Next)
-1. Extract MCP libraries from Shadowcat
-2. Create compliance framework structure
-3. Implement test runner with streaming
+### Phase B: Core MCP Extraction ✅ COMPLETE
+- Extracted types, messages, constants, version modules
+- Built MessageBuilder and Parser with validation
+- Created Transport trait with stdio and subprocess
+- Implemented symmetric Client<T,H> and Server<T,H>
 
-### Phase C: Test Implementation
-- 250 total tests needed
-- Priority: Security (0% coverage) → Transport (4%) → Proxy (0%)
+### Phase C: Advanced Components (IN PROGRESS)
+- ✅ C.0: HTTP transport with SSE and reconnection
+- ✅ C.1: Full interceptor system with chain
+- ✅ C.5.0-C.5.3: Transport architecture investigation
+- 🔄 C.5.4: Refactor to StreamTransport<R,W> (NEXT)
+- ⬜ C.2: Add batch support for v2025-03-26
+- ⬜ C.3: Test MCP crate independently
 
 ### Phase D: Integration
 - Compliance matrix testing

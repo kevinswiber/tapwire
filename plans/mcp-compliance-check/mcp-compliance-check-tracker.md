@@ -4,16 +4,30 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-24 (Paused for Transport Architecture Review)  
-**Total Estimated Duration**: 99 hours (16 + 15 + 11 + 9 + 14 + 12 + 10 + 12)  
-**Status**: Phase B & C.0-C.1 Complete - PAUSED for architecture review  
+**Last Updated**: 2025-08-24 (Transport Architecture Finalized v2 - Framed/Sink/Stream)  
+**Total Estimated Duration**: 108 hours (16 + 15 + 11 + 9 + 9 + 14 + 12 + 10 + 12)  
+**Status**: Phase B, C.0-C.1, & C.5.0-C.5.3 Complete - Ready for C.5.4 (implementation)  
 **Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
 **Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
-**CURRENT STATUS**: Pausing implementation to investigate Transport architecture design. Need to determine:
-1. Should Transport be split into Incoming/Outgoing traits?
-2. Should MCP Client manage subprocesses or accept AsyncRead/AsyncWrite?
-3. What patterns does the official Rust SDK use?
+**TRANSPORT ARCHITECTURE FINALIZED (v2)**: 
+After investigating RMCP and reconsidering abstraction level:
+1. ✅ **Message-level unification** - Sink/Stream traits, not AsyncRead/AsyncWrite
+2. ✅ **Framed for line protocols** - tokio_util::codec::Framed for stdio/subprocess
+3. ✅ **Keep subprocess management** - RMCP validates this approach
+4. ✅ **Arc<Mutex> for concurrent sends** - Validated by RMCP pattern
+5. ✅ **Custom Sink/Stream for HTTP/SSE** - Different protocol semantics
+6. 📝 **WebSocket future-ready** - Already implements Sink/Stream!
+
+**Architecture**: All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`
+- **Framed**: Only for line-delimited JSON (stdio, subprocess)  
+- **HTTP**: ONE transport with THREE response modes:
+  - JSON (200 OK + application/json)
+  - SSE (200 OK + text/event-stream)  
+  - WebSocket (101 Switching Protocols)
+**Documentation**: See [transport-architecture-final-v2.md](analysis/transport-architecture-final-v2.md) and [http-transport-unified-architecture.md](analysis/http-transport-unified-architecture.md)
+
+**NEXT STEP**: Phase C.5.4 - Implement Framed/Sink/Stream architecture (3 hours)
 
 ## Goals
 
@@ -119,13 +133,13 @@ Re-evaluate transport design based on implementation discoveries
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| C.5.0 | **Investigate official Rust SDK patterns** | 2h | None | ⬜ Not Started | | Review ~/src/modelcontextprotocol/rust-sdk |
-| C.5.1 | **Analyze Incoming vs Outgoing split** | 1h | C.5.0 | ⬜ Not Started | | Determine if Transport should be split |
-| C.5.2 | **Subprocess management decision** | 1h | C.5.0 | ⬜ Not Started | | Client spawning vs AsyncRead/AsyncWrite |
-| C.5.3 | **Document architectural decision** | 1h | C.5.1, C.5.2 | ⬜ Not Started | | Update architectural-decisions.md |
-| C.5.4 | **Refactor transports if needed** | 3h | C.5.3 | ⬜ Not Started | | Implement new design |
+| C.5.0 | **Investigate official Rust SDK patterns** | 2h | None | ✅ Completed | | Reviewed rmcp - they support BOTH AsyncRW and Sink/Stream! |
+| C.5.1 | **Analyze Incoming vs Outgoing split** | 1h | C.5.0 | ✅ Completed | | Not needed - unified Transport is correct approach |
+| C.5.2 | **Subprocess management decision** | 1h | C.5.0 | ✅ Completed | | Keep subprocess - RMCP includes TokioChildProcess |
+| C.5.3 | **Document architectural decisions** | 2h | C.5.1, C.5.2 | ✅ Completed | | Created 8+ docs including framed-sink-stream-architecture.md, rmcp-vs-framed-comparison.md, transport-architecture-final-v2.md |
+| C.5.4 | **Implement Framed/Sink/Stream architecture** | 3h | C.5.3 | 🔄 Ready | | Use tokio_util::codec::Framed with futures::{Sink, Stream} for message-level unification |
 
-**Phase C.5 Total**: 8 hours
+**Phase C.5 Total**: 9 hours (6 completed, 3 remaining)
 
 ### Phase D: Compliance Framework (Week 2)
 Build the compliance testing framework using extracted MCP library
@@ -372,20 +386,30 @@ Based on analysis and requirements, we've made the following architecture decisi
 - **Benefits**: Code reuse, simpler maintenance, clean architecture
 - **Testing approach**: Test our implementation vs reference implementations
 
-### 3. Comprehensive Test Coverage
+### 3. Transport Architecture (FINALIZED v2)
+After investigating RMCP and reconsidering abstraction level:
+- **Message-level unification**: All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`
+- **Framed for line protocols**: Use `tokio_util::codec::Framed` for stdio/subprocess
+- **Custom Sink/Stream**: HTTP and SSE get custom implementations
+- **WebSocketTransport**: Future-ready (WebSocketStream already implements Sink+Stream!)
+- **Subprocess management**: Included in library (RMCP standard practice)
+- **Concurrent sends**: Arc<Mutex> pattern for Sink (validated by RMCP)
+- **Key insight**: Unify at message level, not byte level
+
+### 4. Comprehensive Test Coverage
 - **Spec-based tests**: ~200 tests covering 233 MCP requirements
 - **Proxy-specific tests**: ~50 tests for proxy behaviors
 - **Total tests**: ~250 comprehensive compliance tests
 - **Coverage target**: 100% of MUST requirements, 80%+ of SHOULD
 
-### 4. Version Management Strategy
+### 5. Version Management Strategy
 - **Supported versions**: 2025-03-26, 2025-06-18, and draft (living spec)
 - **Architecture**: Pluggable version modules with feature detection
 - **Future-proof**: New versions added via configuration, minimal code
 - **Test selection**: Tests auto-detect applicable versions
 - **Draft support**: Early testing against in-progress specifications
 
-### 5. Test Categories Revised
+### 6. Test Categories Revised
 Based on spec analysis, not just mcp-validator:
 - **Lifecycle**: 20-25 tests (vs 4 in validator)
 - **Transport**: 35-40 tests (vs 1 in validator)
@@ -393,7 +417,7 @@ Based on spec analysis, not just mcp-validator:
 - **Proxy**: 50 tests (new category)
 - **Total**: ~250 tests (vs 54 in validator)
 
-### 6. Compliance Matrix Testing
+### 7. Compliance Matrix Testing
 With our shared MCP library, we test against:
 - **Our Client vs rmcp Server**: Validate compatibility with official SDK
 - **rmcp Client vs Our Server**: Ensure we accept official SDK clients
@@ -403,7 +427,7 @@ With our shared MCP library, we test against:
 - **Shadowcat vs All**: Proxy compliance in all combinations
 - **Result**: Comprehensive 3x3 compatibility matrix
 
-### 7. Implementation Philosophy
+### 8. Implementation Philosophy
 - **Fast & Compliant**: Performance and spec adherence over ergonomics
 - **No macro magic**: Direct, explicit implementation (no #[tool_router])
 - **Independent**: No dependency on rmcp or external MCP libraries
@@ -462,23 +486,24 @@ See `next-session-prompt.md` for the current session setup.
 
 ## Next Actions
 
-1. **Start Phase B**: Begin MCP library extraction (in worktree)
+1. **Continue Phase C.5.4**: Implement Framed/Sink/Stream architecture (3h)
    - Navigate to: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance`
-   - B.0: Extract core types and messages (2h)
-   - B.1: Extract builders and parsers (3h)
-   - B.2: Create Transport trait and stdio implementation (4h)
+   - Create JsonLineCodec for line-delimited JSON (stdio/subprocess only)
+   - Implement StdioTransport using `Framed<_, JsonLineCodec>`
+   - Implement SubprocessTransport using `Framed<_, JsonLineCodec>` with process management
+   - Implement HttpTransport as custom Sink/Stream (handles both JSON and SSE)
+   - Update Client/Server to use Sink + Stream traits directly
 
-2. **Key Focus Areas**:
-   - Work in git worktree on `feat/mcpspec` branch
-   - Use extraction inventories as guides
-   - Keep main shadowcat unchanged
-   - Test extraction early with simple examples
+2. **Then Phase C.2-C.3**: Complete MCP crate
+   - C.2: Add batch support for v2025-03-26 (2h)
+   - C.3: Test MCP crate independently (2h)
 
-3. **Session Planning**:
-   - Start by: `cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance`
-   - Each task is sized for one Claude session
-   - Clear inputs/outputs defined
-   - Dependencies mapped for proper sequencing
+3. **Key Implementation Points**:
+   - All transports implement `Sink<JsonRpcMessage> + Stream<Item = Result<JsonRpcMessage>>`
+   - Framed ONLY for line-delimited JSON (stdio, subprocess)
+   - HTTP is ONE transport with THREE modes (JSON, SSE, WebSocket)
+   - Server chooses response mode based on operation
+   - Arc<Mutex> for Sink to enable concurrent sends
 
 ## Notes
 
@@ -500,3 +525,5 @@ See `next-session-prompt.md` for the current session setup.
 |------|---------|---------|--------|
 | 2025-08-23 | 1.0 | Initial plan creation based on mcp-validator analysis | Team |
 | 2025-08-24 | 2.0 | Restructured phases for extraction strategy, completed Phase A | Team |
+| 2025-08-24 | 2.1 | Added Phase C.5, completed transport architecture investigation | Team |
+| 2025-08-24 | 2.2 | Finalized Framed/Sink/Stream architecture after RMCP analysis | Team |
