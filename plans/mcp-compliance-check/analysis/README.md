@@ -26,6 +26,7 @@ This directory contains research, analysis, and design documents for the MCP com
 - **mcp-core-extraction-architecture.md** - Implementation guide (HOW)
 - **shadowcat-mcp-extraction-inventory.md** - MCP protocol code to reuse
 - **shadowcat-transport-session-inventory.md** - Transport/session/interceptor code
+- **implementation-considerations.md** - Risks and mitigation strategies
 - **compliance-independence-design.md** - Testing independence + streaming
 - **library-architecture-design.md** - Compliance library specifics
 
