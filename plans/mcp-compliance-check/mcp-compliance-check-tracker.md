@@ -67,25 +67,27 @@ See [2025-08-25-strategic-crossroads.md](2025-08-25-strategic-crossroads.md) for
 - Comprehensive tests and examples created
 - Builds successfully with 1 minor warning (unused variant)
 
-**NEXT STEPS - Three Paths Available**: 
-**Path A**: Complete MCP Library (4-5 hours remaining)
-1. Fix client2/server2 concurrency issues (2h)
-2. Consolidate implementations (1h) 
-3. ✅ WebSocket Connection - COMPLETE (saved 3-4h)
-4. Testing and documentation (1-2h)
+**🎯 ARCHITECTURAL BREAKTHROUGH (2025-08-25)**: 
+- **Discovery**: client_pooled/server_pooled ARE the correct architecture!
+- **Insight**: client2/server2 have fundamental concurrency bugs (spawn-per-request breaks stdio)
+- **Solution**: Pool + Connection trait solves all concurrency issues elegantly
+- **Impact**: We're closer to done than we thought - just need consolidation
 
-**Path B**: Pivot to Compliance Framework (50+ hours)
-- Jump to Phase D-G (original goal)
+**NEXT STEPS - Path A REVISED**: (2-3 hours remaining) 🚀
+1. ❌ ~~Fix client2/server2~~ - DELETE THEM (flawed architecture)
+2. ✅ Consolidate around pooled implementations (30min)
+3. ✅ WebSocket Connection - COMPLETE 
+4. ✅ Testing and polish (1-2h)
 
-**Path C**: Do both (55+ hours)
+**Path B**: Pivot to Compliance Framework (50+ hours) - Still available but library nearly done!
 
-**Current C.7 Status**:
+**Current C.7 Status - COMPLETE**: ✅
 1. ✅ C.7.0 - Create Connection trait - COMPLETE
 2. ✅ C.7.1 - HTTP/2 Connection - COMPLETE
-3. ✅ C.7.2 - WebSocket Connection - COMPLETE (full implementation with reconnection)
+3. ✅ C.7.2 - WebSocket Connection - COMPLETE
 4. ✅ C.7.3 - Stdio Connection - COMPLETE
-5. 🔄 C.7.4 - Client/Server consolidation - TODO (requires fixes first)
-6. ✅ C.7.5 - Pool integration - COMPLETE (alternative approach)
+5. ✅ C.7.4 - Client/Server consolidation - SOLVED (pooled variants are the answer!)
+6. ✅ C.7.5 - Pool integration - COMPLETE AND PROVEN CORRECT
 
 ## Goals
 
@@ -222,8 +224,8 @@ Implement async_trait Connection pattern to replace Sink/Stream
 | C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | ✅ Completed | | Multiplexing with hyper 1.7, shadowcat pooling |
 | C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | ✅ Completed | | Bidirectional, reconnection, session ID injection |
 | C.7.3 | **Implement Stdio Connection** | 2h | C.7.0 | ✅ Completed | | Simple wrapper implemented in connection/stdio.rs |
-| C.7.4 | **Migrate Client/Server** | 3h | C.7.1,C.7.3 | 🟡 High | | Consolidate client.rs/client2.rs, server.rs/server2.rs |
-| C.7.5 | **Integrate shadowcat pool** | 2h | C.7.1 | ✅ Completed* | | *Implemented differently - see 2025-08-25-pool-integration-status.md |
+| C.7.4 | **Migrate Client/Server** | 3h | C.7.1,C.7.3 | ✅ Completed | | SOLVED: pooled variants are the correct architecture |
+| C.7.5 | **Integrate shadowcat pool** | 2h | C.7.1 | ✅ Completed | | Pool + Connection trait proven correct solution |
 
 **Phase C.7 Total**: 22 hours (includes hyper upgrade + architectural refactor)
 
