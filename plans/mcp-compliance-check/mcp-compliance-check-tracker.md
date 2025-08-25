@@ -4,10 +4,11 @@
 
 This tracker coordinates the development of a Rust-native MCP compliance testing framework for Shadowcat. After extensive analysis of the Python-based mcp-validator, we've determined that building our own compliance suite will provide better integration, quality control, and proxy-specific testing capabilities.
 
-**Last Updated**: 2025-08-24 (HYPER 1.7 UPGRADE COMPLETE - Connection pattern ready)  
-**Total Estimated Duration**: 120 hours (16 + 15 + 11 + 9 + 13 + 15 + 9 + 14 + 12 + 10 + 12)  
-**Status**: Phase B, C.0-C.1, C.5 Complete, C.6.0-C.6.1 Complete, **Hyper 1.7 ✅**, C.7 In Progress  
-**Strategy**: Copy-first extraction - Build clean MCP API, integrate shadowcat later  
+**Last Updated**: 2025-08-25 (Strategic Decision Point - Library vs Framework)  
+**Total Estimated Duration**: 120 hours planned, ~60 hours spent (on different deliverable)  
+**Status**: Built MCP Library instead of Compliance Framework - DECISION NEEDED  
+**Current Progress**: Phase A-B ✅, C partial ✅, D-G ⬜ (not started), Pool integration ✅  
+**Strategy Pivot**: Built production MCP library; compliance framework deferred  
 **Work Location**: Git worktree at `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
 **TRANSPORT ARCHITECTURE v3 (Connection Pattern)**: 
@@ -48,13 +49,43 @@ Successfully upgraded from hyper 0.14 to 1.7 for:
 - ~25% performance improvement
 - Uses rustls for pure-Rust TLS stack
 
-**NEXT STEPS (C.7 - Connection Pattern Implementation)**: 
-1. C.7.0 - Create Connection trait and adapters (2 hours) - IN PROGRESS
-2. C.7.1 - Implement HTTP/2 Connection with multiplexing (4 hours)
-3. C.7.2 - Implement WebSocket Connection (3 hours)
-4. C.7.3 - Implement stdio Connection (2 hours)
-5. C.7.4 - Migrate Client/Server to Connection pattern (3 hours)
-6. C.7.5 - Integrate shadowcat pool (2 hours)
+**POOL INTEGRATION UPDATE (2025-08-25)**: 
+- ✅ Successfully integrated shadowcat pool module (copied to MCP crate)
+- ✅ Created PooledClient and PooledServer implementations
+- ✅ Fixed all critical dylint errors (36 → 5 acceptable warnings)
+- ⚠️ Implementation differs from plan - see [2025-08-25-pool-integration-status.md](2025-08-25-pool-integration-status.md)
+
+**⚠️ STRATEGIC CROSSROADS (2025-08-25)**:
+We've built a production-quality MCP library instead of the compliance framework.
+See [2025-08-25-strategic-crossroads.md](2025-08-25-strategic-crossroads.md) for decision analysis.
+
+**WEBSOCKET IMPLEMENTATION COMPLETE (2025-08-25)**: ✅
+- Implemented full WebSocketConnection with tokio-tungstenite
+- Features: bidirectional communication, auto-reconnection with exponential backoff
+- Session ID injection into every message payload
+- Health monitoring with ping/pong frames
+- Comprehensive tests and examples created
+- Builds successfully with 1 minor warning (unused variant)
+
+**NEXT STEPS - Three Paths Available**: 
+**Path A**: Complete MCP Library (4-5 hours remaining)
+1. Fix client2/server2 concurrency issues (2h)
+2. Consolidate implementations (1h) 
+3. ✅ WebSocket Connection - COMPLETE (saved 3-4h)
+4. Testing and documentation (1-2h)
+
+**Path B**: Pivot to Compliance Framework (50+ hours)
+- Jump to Phase D-G (original goal)
+
+**Path C**: Do both (55+ hours)
+
+**Current C.7 Status**:
+1. ✅ C.7.0 - Create Connection trait - COMPLETE
+2. ✅ C.7.1 - HTTP/2 Connection - COMPLETE
+3. ✅ C.7.2 - WebSocket Connection - COMPLETE (full implementation with reconnection)
+4. ✅ C.7.3 - Stdio Connection - COMPLETE
+5. 🔄 C.7.4 - Client/Server consolidation - TODO (requires fixes first)
+6. ✅ C.7.5 - Pool integration - COMPLETE (alternative approach)
 
 ## Goals
 
@@ -181,18 +212,18 @@ Fix blocking issues before proceeding with framework
 
 **Phase C.6 Total**: 13 hours (2 completed, 3 deprioritized due to architecture change)
 
-### Phase C.7: Connection Pattern Architecture (IN PROGRESS)
+### Phase C.7: Connection Pattern Architecture (PARTIALLY COMPLETE)
 Implement async_trait Connection pattern to replace Sink/Stream
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | **PREP** | **Hyper 1.7 Upgrade** | 6h | None | ✅ Completed | | Direct conn management, no pooling, rustls TLS |
 | C.7.0 | **Create Connection trait** | 2h | PREP | ✅ Completed | | async_trait, protocol selection, adapter for migration |
-| C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | 🔴 Critical | | Multiplexing with hyper 1.7, shadowcat pooling |
-| C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | 🟡 High | | Bidirectional, message routing, session in messages |
-| C.7.3 | **Implement Stdio Connection** | 2h | C.7.0 | 🟢 Normal | | Simple wrapper, singleton pattern |
-| C.7.4 | **Migrate Client/Server** | 3h | C.7.1-C.7.3 | 🟡 High | | Use Connection instead of Sink/Stream |
-| C.7.5 | **Integrate shadowcat pool** | 2h | C.7.1 | 🟡 High | | PoolableResource wrapper, protocol strategies |
+| C.7.1 | **Implement HTTP/2 Connection** | 4h | C.7.0 | ✅ Completed | | Multiplexing with hyper 1.7, shadowcat pooling |
+| C.7.2 | **Implement WebSocket Connection** | 3h | C.7.0 | ✅ Completed | | Bidirectional, reconnection, session ID injection |
+| C.7.3 | **Implement Stdio Connection** | 2h | C.7.0 | ✅ Completed | | Simple wrapper implemented in connection/stdio.rs |
+| C.7.4 | **Migrate Client/Server** | 3h | C.7.1,C.7.3 | 🟡 High | | Consolidate client.rs/client2.rs, server.rs/server2.rs |
+| C.7.5 | **Integrate shadowcat pool** | 2h | C.7.1 | ✅ Completed* | | *Implemented differently - see 2025-08-25-pool-integration-status.md |
 
 **Phase C.7 Total**: 22 hours (includes hyper upgrade + architectural refactor)
 
@@ -573,9 +604,9 @@ See `next-session-prompt.md` for the current session setup.
 
 ---
 
-**Document Version**: 2.0  
+**Document Version**: 2.3  
 **Created**: 2025-08-23  
-**Last Modified**: 2025-08-24  
+**Last Modified**: 2025-08-25  
 **Author**: Development Team
 
 ## Revision History
@@ -586,3 +617,4 @@ See `next-session-prompt.md` for the current session setup.
 | 2025-08-24 | 2.0 | Restructured phases for extraction strategy, completed Phase A | Team |
 | 2025-08-24 | 2.1 | Added Phase C.5, completed transport architecture investigation | Team |
 | 2025-08-24 | 2.2 | Finalized Framed/Sink/Stream architecture after RMCP analysis | Team |
+| 2025-08-25 | 2.3 | Pool integration complete with alternative implementation, dylint fixes | Team |
