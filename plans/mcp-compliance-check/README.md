@@ -2,29 +2,39 @@
 
 ## Executive Summary
 
-We're building a comprehensive MCP (Model Context Protocol) compliance testing framework for Shadowcat, our MCP proxy. After analyzing the existing Python-based mcp-validator and finding it covers only ~12% of spec requirements, we're creating a Rust-native solution.
+We're building **mcpspec**, a comprehensive MCP (Model Context Protocol) compliance testing framework. After analyzing the existing Python-based mcp-validator and finding it covers only ~12% of spec requirements, we're creating a Rust-native solution. The project consists of:
 
-**Current Architecture**: Connection trait pattern with hyper 1.7 for zero-overhead async communication  
-**Status**: Hyper 1.7 upgrade ✅ COMPLETE, Connection trait implementation IN PROGRESS  
-**Estimated effort**: 120+ hours total  
+1. **MCP Library** (90% complete) - Foundation for the compliance framework
+2. **mcpspec Tool** (next phase) - The compliance testing framework itself
+3. **Shadowcat Integration** (final phase) - Proxy using the shared library
+
+**Current Architecture**: Connection trait pattern with pooled Client/Server implementations  
+**Status**: MCP library foundation nearly complete (2-3h remaining), ready for compliance framework  
+**Estimated effort**: 120+ hours total (~60h spent on foundation)  
 **Work location**: `/Users/kevin/src/tapwire/shadowcat-mcp-compliance` (branch: `feat/mcpspec`)
 
-## 🔥 Current Status (2025-08-24)
+## 🔥 Current Status (2025-08-25)
 
 ### Just Completed
-- ✅ **Hyper 1.7 Upgrade** - Direct connection management, no pooling conflicts
-- ✅ **Architecture Consolidation** - Single source of truth in `analysis/CONSOLIDATED-ARCHITECTURE.md`
-- ✅ **GPT-5 Bug Fixes** - Client deadlock and HTTP worker issues resolved
+- ✅ **Connection Trait Architecture** - Replaced Sink/Stream with zero-overhead async
+- ✅ **Pooled Client/Server** - Consolidated from 6 implementations to 2 clean ones
+- ✅ **HTTP/1.1 + HTTP/2 Support** - HttpConnection with automatic protocol negotiation
+- ✅ **WebSocket Implementation** - Full bidirectional with reconnection
+- ✅ **Pool Integration** - Shadowcat's advanced pool with performance optimizations
+- ✅ **Architecture Breakthrough** - Discovered pooled variants solve all concurrency issues
 
-### In Progress
-- 🚧 **C.7.0** - Creating Connection trait to replace Sink/Stream
-- 🚧 **Protocol Adapters** - HTTP/2, WebSocket, stdio implementations
+### Library Foundation Status (90% Complete)
+- ✅ Connection trait with all transports
+- ✅ Pooled Client and Server 
+- ✅ HTTP/1.1, HTTP/2, WebSocket, stdio
+- ✅ Session management and pooling
+- ⏳ Final testing and documentation (2-3h)
 
-### Next Steps
-1. Complete Connection trait implementation (C.7.0)
-2. Implement HTTP/2 connection with shadowcat pooling (C.7.1)
-3. WebSocket and stdio connections (C.7.2-C.7.3)
-4. Migrate Client/Server to use Connection (C.7.4)
+### Next Phase: mcpspec Compliance Framework
+1. Create compliance crate structure (Phase D: 9h)
+2. Implement comprehensive test suites (Phase E: 14h)
+3. Add proxy-specific tests (Phase F: 12h)
+4. CI/CD integration (Phase G: 10h)
 
 ## Quick Start for New Developers
 
@@ -79,28 +89,32 @@ shadowcat-mcp-compliance/        # Git worktree
 
 ## Implementation Phases
 
-### ✅ Completed Phases
-- **Phase A**: Analysis & Knowledge Capture (16 hours)
-- **Phase B**: MCP Library Extraction (15 hours)
-- **Phase C.0-C.1**: HTTP transport + Interceptors (7 hours)
-- **Phase C.5**: Transport Architecture Investigation (4 hours)
-- **Phase C.6**: Critical bug fixes (4 hours)
-- **Hyper 1.7 Upgrade**: Migration to modern hyper (6 hours)
+### ✅ Completed Phases (~60 hours)
+- **Phase A**: Analysis & Knowledge Capture (16 hours) ✅
+- **Phase B**: MCP Library Extraction (15 hours) ✅
+- **Phase C.0-C.1**: HTTP transport + Interceptors (7 hours) ✅
+- **Phase C.5**: Transport Architecture Investigation (9 hours) ✅
+- **Phase C.7**: Connection Pattern Implementation (22 hours) ✅
+  - ✅ Connection trait created
+  - ✅ HTTP/1.1 and HTTP/2 connections
+  - ✅ WebSocket connection
+  - ✅ Stdio connection
+  - ✅ Client/Server consolidated to pooled variants
+  - ✅ Shadowcat pool integrated
 
-### 🚧 Current Phase: C.7 - Connection Pattern (22 hours)
-- C.7.0: Create Connection trait (2h) - IN PROGRESS
-- C.7.1: HTTP/2 Connection (4h)
-- C.7.2: WebSocket Connection (3h)
-- C.7.3: Stdio Connection (2h)
-- C.7.4: Migrate Client/Server (3h)
-- C.7.5: Integrate shadowcat pool (2h)
+### 🎯 Current: Final Library Polish (2-3 hours)
+- Testing with real MCP servers
+- Documentation updates
+- Code cleanup
 
-### 📋 Upcoming Phases
-- **Phase D**: Compliance Framework (9 hours)
+### 📋 Next: mcpspec Compliance Framework (~45-50 hours)
+- **Phase D**: Compliance Framework Structure (9 hours)
 - **Phase E**: Protocol Compliance Tests (14 hours)
-- **Phase F**: Proxy & Advanced Tests (12 hours)
-- **Phase G**: Reference Implementation Tests (10 hours)
-- **Phase H**: Integration & Polish (12 hours)
+- **Phase F**: Proxy-Specific Tests (12 hours)
+- **Phase G**: CI/CD Integration (10 hours)
+
+### 🔮 Future: Shadowcat Integration (~12 hours)
+- **Phase H**: Replace shadowcat's MCP module with shared library
 
 ## Technical Highlights
 
@@ -133,11 +147,18 @@ pub trait Connection: Send + Sync {
 - **Not designed for proxies** like Shadowcat
 - **Missing security, transport, proxy scenarios**
 
-### Why Build Our Own?
-1. **Shadowcat is both client AND server** - needs comprehensive testing
-2. **Proxy-specific behaviors** - 50+ scenarios not in spec
-3. **Performance critical** - Need fast, low-level implementation
-4. **Future-proof** - HTTP/3 and draft spec support
+### Why Build mcpspec?
+1. **Comprehensive validation** - Test any MCP implementation for compliance
+2. **Shadowcat validation** - Ensure our proxy correctly handles MCP
+3. **Proxy-specific behaviors** - 50+ scenarios not in standard spec
+4. **Ecosystem contribution** - Help other MCP implementers
+5. **CI/CD integration** - Automated compliance testing
+
+### Why Extract MCP Library First?
+1. **Foundation for mcpspec** - Can't test without a reference implementation
+2. **Shadowcat benefit** - Cleaner architecture, better maintenance
+3. **Code reuse** - Single implementation for proxy and compliance tool
+4. **Quality assurance** - Library tested by compliance framework
 
 ## Success Metrics
 
@@ -166,5 +187,5 @@ cargo clippy --all-targets -- -D warnings
 
 ---
 
-*Last Updated: 2025-08-24*  
-*Status: Hyper 1.7 complete, Connection trait in progress*
+*Last Updated: 2025-08-25*  
+*Status: MCP library foundation 90% complete, ready for mcpspec compliance framework*
