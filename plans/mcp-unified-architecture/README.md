@@ -1,5 +1,14 @@
 # MCP Unified Architecture Plan
 
+## 🎯 IMPORTANT: We Use Two Trackers!
+
+We maintain **two trackers** for maximum flexibility (Option C from migration decision):
+
+1. **[v1 Comprehensive Tracker](mcp-unified-architecture-tracker.md)** - Full 250-hour plan with all Gemini feedback
+2. **[v2 Critical Path Tracker](mcp-tracker-v2-critical-path.md)** - Optimized 200-hour execution guide ⭐ **USE THIS**
+
+**Strategy**: Execute from v2 (Sprint-based), reference v1 for detailed requirements.
+
 ## Overview
 
 This plan coordinates the integration of three major architectural improvements into the MCP crate:
@@ -10,15 +19,25 @@ This plan coordinates the integration of three major architectural improvements 
 
 ## Current Status
 
-**Phase**: A - Foundation Analysis  
-**Status**: Planning Complete, Ready for Implementation  
-**Next Step**: Execute Phase A tasks (A.0, A.1, A.2)
+**Sprint**: 1 - Core Foundation  
+**Status**: Ready to Start  
+**Next Task**: 1.0 - Fix Async Antipatterns (8h)  
+**Session Guide**: [next-session-prompt.md](next-session-prompt.md) ⭐ **START HERE**
 
-## Quick Start
+## Quick Start for New Session
 
-1. Review the tracker: [mcp-unified-architecture-tracker.md](mcp-unified-architecture-tracker.md)
-2. Check current phase: [next-session-prompt.md](next-session-prompt.md)
-3. Start with task A.0: [tasks/A.0-inventory-existing-code.md](tasks/A.0-inventory-existing-code.md)
+```bash
+# 1. Read the session prompt (THIS IS YOUR GUIDE)
+cat plans/mcp-unified-architecture/next-session-prompt.md
+
+# 2. Check which sprint/task we're on
+grep "Sprint" plans/mcp-unified-architecture/mcp-tracker-v2-critical-path.md | head -5
+
+# 3. Go to the MCP crate
+cd crates/mcp
+
+# 4. Start implementing!
+```
 
 ## Architecture Goals
 
@@ -40,36 +59,43 @@ This plan coordinates the integration of three major architectural improvements 
 - Performance benchmarks
 - Full documentation
 
-## Implementation Phases
+## Implementation Approach: Critical Path Sprints
 
-| Phase | Focus | Duration | Status |
-|-------|-------|----------|--------|
-| A | Foundation Analysis | 18h | ⬜ Ready |
-| B | Server Refactoring | 44h | ⬜ Planned |
-| C | Client Optimization | 28h | ⬜ Planned |
-| D | Session Integration | 38h | ⬜ Planned |
-| E | Interceptor Chain | 40h | ⬜ Planned |
-| F | Testing & Hardening | 42h | ⬜ Planned |
+We follow the **v2 Critical Path** approach for execution:
 
-**Total**: 210 hours (6-8 weeks)
+| Sprint | Focus | Duration | Delivers |
+|--------|-------|----------|----------|
+| 1 | Core Foundation | 38h | Working proxy with metrics |
+| 2 | Persistence & SSE | 32h | Persistent sessions, SSE support |
+| 3 | Production Essentials | 32h | Interceptors, error handling |
+| 4 | Advanced Features | 38h | Pooling, Redis, WebSocket |
+| 5 | Testing & Hardening | 42h | Battle-tested system |
+
+**Total**: ~200 hours (vs 250 in comprehensive plan)
+
+### Why Two Trackers?
+
+- **v1**: Shows everything we might want (comprehensive)
+- **v2**: Shows critical path to get there (execution)
+- **Result**: No analysis paralysis, clear next steps
 
 ## Key Documents
+
+### 📍 Navigation (Start Here)
+- **[next-session-prompt.md](next-session-prompt.md)** ⭐ - What to do right now
+- **[mcp-tracker-v2-critical-path.md](mcp-tracker-v2-critical-path.md)** - Execution tracker (use this)
+- **[mcp-unified-architecture-tracker.md](mcp-unified-architecture-tracker.md)** - Reference tracker (consult for details)
+- **[TRACKER-MIGRATION-DECISION.md](TRACKER-MIGRATION-DECISION.md)** - Why we have two trackers
 
 ### Analysis (Completed)
 - [Spawn Audit](analysis/spawn-audit.md) - Current inefficiencies
 - [Server Architecture](analysis/server-architecture.md) - Target design
-- [SSE Implementation](analysis/sse-implementation.md) - Streaming guide
-- [Usage Patterns](analysis/usage-patterns.md) - How sessions/interceptors are used in practice
-- [Integration Requirements](analysis/integration-requirements.md) - Concrete requirements from usage analysis
-
-### Design (To Create)
-- Session Architecture - How sessions integrate
-- Interceptor Design - Message processing pipeline
-- Migration Strategy - Incremental rollout plan
+- [Plan Optimization Review](analysis/plan-optimization-review.md) - How we optimized the plan
+- [Gemini Feedback Incorporation](analysis/gemini-feedback-incorporation.md) - External review addressed
 
 ### Implementation
-- [Task Files](tasks/) - Detailed work breakdown
-- [Tracker](mcp-unified-architecture-tracker.md) - Progress tracking
+- [Task Files](tasks/) - Detailed work breakdown (referenced by both trackers)
+- [Sprint Tasks](mcp-tracker-v2-critical-path.md#critical-path-sprints) - Organized by value delivery
 
 ## Critical Decisions Made
 
@@ -128,12 +154,30 @@ crates/mcp/src/
 
 ## Development Workflow
 
-1. **Start Session**: Read `next-session-prompt.md`
-2. **Check Tracker**: Review phase status
-3. **Execute Tasks**: Follow task files
-4. **Test Changes**: Run targeted tests
-5. **Update Progress**: Mark completed in tracker
-6. **Prepare Handoff**: Update next-session-prompt
+### 🚀 Session Start Checklist
+```bash
+# 1. Where are we?
+cat plans/mcp-unified-architecture/next-session-prompt.md
+
+# 2. What's the current sprint?
+grep -A 10 "Current Status" plans/mcp-unified-architecture/README.md
+
+# 3. What task are we on?
+grep "✅\|🔄" plans/mcp-unified-architecture/mcp-tracker-v2-critical-path.md || echo "Starting fresh!"
+```
+
+### During Development
+1. **Follow v2 Sprint** from critical path tracker
+2. **Reference v1 Task** for detailed requirements
+3. **Test Incrementally** - don't wait until end
+4. **Update Both Trackers** when completing tasks
+
+### Session End Checklist
+- [ ] Update task status in v2 tracker
+- [ ] Mark corresponding items in v1 tracker
+- [ ] Update Current Status in this README
+- [ ] Update next-session-prompt.md with next steps
+- [ ] Commit with clear message about what was done
 
 ## Testing Strategy
 
@@ -167,11 +211,30 @@ cargo bench                        # Performance check
 - **Implementation**: `~/src/tapwire/shadowcat-mcp-compliance/crates/mcp/`
 - **Source Material**: `~/src/tapwire/shadowcat-mcp-compliance/src/`
 
-## Next Actions
+## Sprint 1 Immediate Actions
 
-1. Execute Phase A analysis tasks
-2. Create integration design documents
-3. Begin Phase B server refactoring
+### Task 1.0: Fix Async Antipatterns (8h) ⭐ CRITICAL
+**What**: Remove block_on, fix locks across await, reduce spawns by 50%+  
+**Where**: `/crates/mcp/src/server/` and `/crates/mcp/src/client/`  
+**Reference**: v1 Task B.0 in `tasks/B.0-fix-async-antipatterns.md`  
+
+### Task 1.1: Basic Observability (6h) ⭐ CRITICAL
+**What**: OpenTelemetry + Prometheus, metrics endpoint  
+**Reference**: v1 Task E.3 in `tasks/E.3-observability.md`  
+
+### Task 1.2: Basic Hyper Server (6h) ⭐ CRITICAL
+**What**: Single spawn per connection pattern  
+**Reference**: v1 Task B.1 (partial)  
+
+---
+
+## ⚡ Quick Reference
+
+**Lost?** → Read [next-session-prompt.md](next-session-prompt.md)  
+**Confused about trackers?** → Read [TRACKER-MIGRATION-DECISION.md](TRACKER-MIGRATION-DECISION.md)  
+**Need the plan?** → Use [v2 Critical Path](mcp-tracker-v2-critical-path.md)  
+**Need details?** → Check [v1 Comprehensive](mcp-unified-architecture-tracker.md)  
+**Ready to code?** → Start with Sprint 1, Task 1.0!
 
 ---
 
