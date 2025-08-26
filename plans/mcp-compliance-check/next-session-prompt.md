@@ -1,38 +1,27 @@
-# Next Session Prompt - MCP Compliance Project
+# Next Session Prompt - mcpspec Compliance Framework
 
-**Last Updated**: 2025-08-24  
-**Current Phase**: C.7 - Connection Pattern Implementation  
-**Status**: Hyper 1.7 upgrade complete, ready to implement Connection trait
+**Last Updated**: 2025-08-26  
+**Current Phase**: Phase D - Compliance Framework Structure  
+**Status**: MCP Library COMPLETE! Ready to build mcpspec tool
 
-## Context for Next Session
+## 🎉 Major Achievement: MCP Library Foundation Complete!
 
-### What We Just Completed (2025-08-24)
+### What We Just Completed (2025-08-26)
 
-1. ✅ **Hyper 1.7 Upgrade** - Successfully migrated from hyper 0.14 to 1.7
-   - Direct connection management via `hyper::client::conn`
-   - No built-in pooling (avoids double pooling with shadowcat)
-   - Pure Rust TLS with rustls
-   - ~25% performance improvement
-   - Foundation for HTTP/3
+✅ **Production Pool Integration** - Shadowcat's battle-tested pool
+- Tagged pool architecture with protocol-aware partitioning
+- McpConnectionKey for HTTP, WebSocket, stdio
+- EventListener pattern (fixed 5-second shutdown delays)
+- Fast path optimization (~200ns hot path)
+- 16 pool tests passing, 2 benchmarks operational
 
-2. ✅ **GPT-5 Critical Bugs Fixed**
-   - C.6.0: Client deadlock resolved with background receiver task
-   - C.6.1: HTTP worker pattern implemented with real HTTP requests
-
-3. ✅ **Architecture Pivot to Connection Pattern**
-   - Moving from Sink/Stream to async Connection trait
-   - Eliminates worker task overhead (20µs → ~0)
-   - Natural HTTP/2 multiplexing and connection pooling
-
-4. ✅ **Documentation Consolidation**
-   - Created `CONSOLIDATED-ARCHITECTURE.md` as single source of truth
-   - Reduced 37 docs to ~10 active documents
-   - Updated all READMEs to reflect current status
-
-5. ✅ **Pool Performance Analysis**
-   - Created `~/src/tapwire/research/hyper-pool-vs-shadowcat-pool.md`
-   - Identified optimization opportunities
-   - Shadowcat's 30ns overhead acceptable for multi-protocol support
+✅ **MCP Library Foundation** - 100% Complete
+- Connection trait with protocol awareness
+- HTTP/1.1 and HTTP/2 support
+- WebSocket bidirectional communication
+- Stdio singleton management
+- Production-ready pooling with per-protocol limits
+- Comprehensive test suite
 
 ## 🚨 IMPORTANT: Working in Git Worktree
 
@@ -41,165 +30,240 @@
 - Main shadowcat remains untouched
 - Commit to `feat/mcpspec` branch
 
-## Current Work: C.7 - Connection Pattern Implementation
+## 🎯 Primary Goal: Build mcpspec Compliance Tool
 
-### Completed Today:
-- ✅ C.7.0 - Connection trait with zero-overhead design
-- ✅ C.7.1 - HTTP/2 Connection with hyper 1.7, SSE support, session management
+Now that the MCP library foundation is complete, we can focus on our main deliverable: the mcpspec compliance testing framework.
 
-### Next Task: C.7.2 - WebSocket Connection (3 hours)
+## Phase D: Compliance Framework Structure (9 hours)
 
-**Objective**: Implement WebSocket connection for bidirectional messaging
+### D.0: Create mcpspec Crate (2 hours)
 
+**Location**: `crates/mcpspec/`
+
+**Structure**:
+```
+crates/mcpspec/
+├── Cargo.toml           # CLI and framework dependencies
+├── src/
+│   ├── main.rs          # CLI entry point
+│   ├── lib.rs           # Framework library
+│   ├── cli/             # Command-line interface
+│   │   ├── mod.rs
+│   │   ├── commands.rs  # test, validate, report
+│   │   └── args.rs      # Argument parsing
+│   ├── framework/       # Test framework core
+│   │   ├── mod.rs
+│   │   ├── runner.rs    # Test runner
+│   │   ├── suite.rs     # Test suite definition
+│   │   └── context.rs   # Test context and fixtures
+│   ├── tests/           # Test definitions
+│   │   ├── mod.rs
+│   │   ├── protocol/    # Protocol compliance tests
+│   │   ├── proxy/       # Proxy-specific tests
+│   │   └── versions/    # Version-specific tests
+│   └── reports/         # Report generation
+│       ├── mod.rs
+│       ├── json.rs      # JSON output
+│       └── markdown.rs  # Human-readable reports
+```
+
+**Commands**:
+```bash
+# Create mcpspec crate
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates
+cargo new --lib mcpspec
+
+# Add dependencies
+cd mcpspec
+# Edit Cargo.toml with required dependencies
+```
+
+### D.1: Create Test Framework (3 hours)
+
+**Test Suite Definition**:
 ```rust
-// crates/mcp/src/connection/mod.rs
-#[async_trait]
-pub trait Connection: Send + Sync {
-    /// Send a message through the connection
-    async fn send(&mut self, message: Value) -> Result<()>;
-    
-    /// Receive a message from the connection
-    async fn receive(&mut self) -> Result<Value>;
-    
-    /// Close the connection gracefully
-    async fn close(&mut self) -> Result<()>;
-    
-    /// Check if connection is healthy (for pooling)
-    fn is_healthy(&self) -> bool { true }
-    
-    /// Get protocol type (for routing)
-    fn protocol(&self) -> Protocol { Protocol::Unknown }
+// src/framework/suite.rs
+pub struct TestSuite {
+    name: String,
+    version: McpVersion,
+    tests: Vec<Test>,
 }
 
-// Migration adapter for existing Sink/Stream transports
-pub struct SinkStreamAdapter<T> where T: Sink<Value> + Stream<Item = Result<Value>> {
-    inner: T,
+pub struct Test {
+    id: String,
+    description: String,
+    category: TestCategory,
+    runner: Box<dyn TestRunner>,
+}
+
+pub enum TestCategory {
+    Protocol,      // Core protocol compliance
+    Transport,     // Transport-specific
+    Proxy,        // Proxy behavior
+    Performance,  // Performance requirements
+}
+
+#[async_trait]
+pub trait TestRunner: Send + Sync {
+    async fn run(&self, context: &TestContext) -> TestResult;
 }
 ```
 
-### Implementation Steps
+**Test Context**:
+```rust
+// src/framework/context.rs
+pub struct TestContext {
+    client: mcp::Client<Box<dyn mcp::Connection>>,
+    server_url: Url,
+    version: McpVersion,
+    fixtures: HashMap<String, Value>,
+}
+```
 
-1. **Create Connection trait** (C.7.0 - NOW)
-   - Define trait in `crates/mcp/src/connection/mod.rs`
-   - Add Protocol enum for routing
-   - Create SinkStreamAdapter for gradual migration
-   - Write tests for adapter
+### D.2: Implement Test Runner (2 hours)
 
-2. **Implement HTTP/2 Connection** (C.7.1 - 4 hours)
-   - Use hyper 1.7's `http2::SendRequest`
-   - Support SSE streaming
-   - Session ID management via headers
-   - Ready for shadowcat pooling
+**Runner Implementation**:
+```rust
+// src/framework/runner.rs
+pub struct ComplianceRunner {
+    suites: Vec<TestSuite>,
+    config: RunnerConfig,
+}
 
-3. **Implement WebSocket Connection** (C.7.2 - 3 hours)
-   - Use tokio-tungstenite
-   - Bidirectional messaging
-   - Session in message routing
+impl ComplianceRunner {
+    pub async fn run_all(&self) -> ComplianceReport {
+        // Run all test suites
+        // Collect results
+        // Generate report
+    }
+    
+    pub async fn run_suite(&self, suite_name: &str) -> SuiteResult {
+        // Run specific suite
+    }
+    
+    pub async fn run_test(&self, test_id: &str) -> TestResult {
+        // Run individual test
+    }
+}
+```
 
-4. **Implement Stdio Connection** (C.7.3 - 2 hours)
-   - Wrapper around existing stdio transport
-   - Singleton pattern
+### D.3: Create Report Generator (2 hours)
 
-5. **Migrate Client/Server** (C.7.4 - 3 hours)
-   - Replace Sink/Stream with Connection trait
-   - Remove worker tasks
-   - Direct async/await
+**Report Types**:
+```rust
+// src/reports/mod.rs
+pub struct ComplianceReport {
+    timestamp: DateTime<Utc>,
+    version: McpVersion,
+    results: Vec<SuiteResult>,
+    summary: Summary,
+}
 
-6. **Integrate shadowcat pool** (C.7.5 - 2 hours)
-   - Implement PoolableResource for connections
-   - Protocol-specific pooling strategies
+pub struct Summary {
+    total: usize,
+    passed: usize,
+    failed: usize,
+    skipped: usize,
+    duration: Duration,
+}
 
-## Key Files to Reference
+// JSON output for CI/CD
+impl ComplianceReport {
+    pub fn to_json(&self) -> Result<String> { ... }
+    pub fn to_markdown(&self) -> Result<String> { ... }
+}
+```
 
-**Architecture & Design**:
-- `plans/mcp-compliance-check/analysis/CONSOLIDATED-ARCHITECTURE.md` - Current architecture
-- `plans/mcp-compliance-check/tasks/C.7-connection-trait-tasks.md` - Detailed task breakdown
-- `plans/mcp-compliance-check/mcp-compliance-check-tracker.md` - Project progress
+## Phase D Success Criteria
 
-**Code Locations**:
-- `crates/mcp/src/transport/http/mod.rs` - HTTP transport (hyper 1.7 ready)
-- `crates/mcp/src/client.rs` - Needs migration to Connection trait
-- `crates/mcp/src/server.rs` - Needs migration to Connection trait
+- [ ] mcpspec crate created with proper structure
+- [ ] CLI accepts test/validate/report commands
+- [ ] Test framework can define and run tests
+- [ ] Test runner executes tests with proper context
+- [ ] Reports generated in JSON and Markdown
+- [ ] Basic test example working end-to-end
 
-## Commands to Run
+## Commands to Get Started
 
 ```bash
-# Navigate to work directory
-cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp
+# Navigate to crates directory
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates
 
-# Create connection module
-mkdir -p src/connection
-touch src/connection/mod.rs
+# Create mcpspec crate
+cargo new --lib mcpspec
+cd mcpspec
 
-# Run tests as you develop
-cargo test --package mcp
+# Add to workspace
+# Edit ../Cargo.toml to add mcpspec to workspace members
 
-# Check compilation
+# Set up initial structure
+mkdir -p src/{cli,framework,tests,reports}
+touch src/{cli,framework,tests,reports}/mod.rs
+
+# Start with CLI skeleton
+# Edit src/main.rs for CLI entry point
+
+# Run initial compilation
 cargo check
-
-# Before committing
-cargo fmt
-cargo clippy --all-targets -- -D warnings
 ```
 
-## Success Criteria for C.7.0
+## After Phase D: What's Next
 
-- [ ] Connection trait defined with async methods
-- [ ] Protocol enum for routing decisions
-- [ ] SinkStreamAdapter for migration
-- [ ] Tests demonstrate adapter works with existing transports
-- [ ] Documentation explains when to use Connection vs Sink/Stream
+### Phase E: Protocol Compliance Tests (14 hours)
+- Port tests from mcp-validator
+- Create comprehensive protocol test suite
+- Version-specific test implementations
 
-## Architecture Reminder
+### Phase F: Proxy-Specific Tests (12 hours)
+- Forward proxy validation
+- Reverse proxy validation
+- Session management tests
+- Connection pooling validation
 
-**Why Connection Pattern?**
-- **Zero overhead**: No workers, no channels, no task spawning
-- **Natural multiplexing**: HTTP/2 and WebSocket multiplex natively
-- **Connection pooling**: Integrates perfectly with shadowcat's pool
-- **Direct backpressure**: async/await provides natural flow control
-- **Scales to 10K+**: No worker task per connection
+### Phase G: CI/CD Integration (10 hours)
+- GitHub Actions workflow
+- Test matrix for versions
+- Badge generation
+- Release automation
 
-**Trade-offs We Accept**:
-- More complex than Sink/Stream initially
-- Protocol-specific implementations needed
-- Worth it for proxy scale requirements
+## Key Resources
+
+**MCP Specifications**:
+- `/Users/kevin/src/modelcontextprotocol/modelcontextprotocol/specs/`
+- Version 2025-03-26 and 2025-06-18 schemas
+
+**Reference Implementation**:
+- `~/src/modelcontextprotocol/typescript-sdk/` - Official TypeScript SDK
+- `~/src/modelcontextprotocol/servers/everything/` - Test server with all features
+
+**Our MCP Library**:
+- `crates/mcp/` - Complete MCP protocol implementation
+- Use this as the foundation for compliance testing
+
+## Architecture Decisions
+
+**Why Separate mcpspec Crate?**
+- Clean separation of concerns
+- Can be published independently
+- Reusable by other projects
+- Clear CLI interface
+
+**Test Organization**:
+- Group by category (protocol, transport, proxy)
+- Version-aware test selection
+- Parallel test execution where possible
+- Fixture sharing for efficiency
 
 ## Performance Targets
 
-- Connection overhead: < 1µs (vs 20µs with workers)
-- HTTP/2 multiplexing: 100+ streams per connection
-- Pool acquire: < 100µs
-- Memory per connection: < 50KB
-
-## If Starting Fresh
-
-Read these in order:
-1. `analysis/CONSOLIDATED-ARCHITECTURE.md` - Understand current design
-2. `analysis/HYPER-1.7-UPGRADE-COMPLETE.md` - See HTTP transport status
-3. `tasks/C.7-connection-trait-tasks.md` - Detailed implementation guide
-
-Then start implementing the Connection trait in `crates/mcp/src/connection/mod.rs`.
-
-## Notes from Previous Session
-
-- Hyper 1.7 upgrade complete and tested
-- HTTP transport compiles but needs Connection trait to fully integrate
-- SSE receiver updated for hyper 1.7's Incoming body type
-- Client/Server still use Sink/Stream (need migration)
-- No WebSocket transport yet (needs to be created)
-
-## After This Session
-
-Once Connection trait is implemented:
-1. Create protocol-specific connections (HTTP/2, WebSocket, stdio)
-2. Migrate Client/Server to use Connection
-3. Integrate with shadowcat's pool
-4. Run MCP validator tests
-5. Performance benchmarking
+- Test suite completion: < 30 seconds
+- Individual test timeout: 5 seconds
+- Memory usage: < 100MB
+- Support for 1000+ tests
 
 ---
 
-*This prompt captures the current state after hyper 1.7 upgrade and architecture consolidation. The Connection trait implementation is the critical next step to eliminate worker overhead and enable proper connection pooling.*
+*This session begins the mcpspec compliance framework - our primary deliverable. The MCP library foundation is complete, providing everything needed to build comprehensive compliance testing.*
 
-*Duration estimate for full C.7 phase: 16 hours*  
-*Priority: CRITICAL - enables 10K+ connection scale*
+*Duration estimate for Phase D: 9 hours*  
+*Priority: CRITICAL - Main project deliverable*
