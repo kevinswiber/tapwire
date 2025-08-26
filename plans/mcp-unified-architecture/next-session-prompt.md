@@ -1,56 +1,79 @@
-# Next Session Prompt - Sprint 1 Foundation
+# Next Session Prompt - Sprint 1 Task 1.1 Observability
 
 ## Session Goal
-Implement Sprint 1 from the Critical Path tracker - establish the core foundation with async fixes, observability, and basic hyper patterns.
+Continue Sprint 1 - Add basic observability to MCP client and server using OpenTelemetry with Prometheus.
 
 ## Context
-- We have two trackers: v1 (comprehensive) and v2 (critical path execution)
-- Following v2 for implementation, referencing v1 for details
-- Goal: MVP working proxy with metrics in ~38 hours total
-- This session: Focus on first 2-3 tasks (aiming for 8 hours work)
+- ✅ Task 1.0 Complete: Async patterns are already optimal (no changes needed)
+- Now implementing Task 1.1: Basic Observability Setup
+- Following v2 tracker, referencing v1 Task E.3 for details
+- Time saved from 1.0 can be used for comprehensive metrics
 
-## Sprint 1 Tasks
+## Current Status
 
-### 1.0: Fix Async Antipatterns (8h) ⭐ CRITICAL
-**Reference**: v1 Task B.0 (`tasks/B.0-fix-async-antipatterns.md`)
+### ✅ Completed (Task 1.0)
+- Analyzed all async patterns in MCP crate
+- Found spawns are already optimized (bounded executor pattern)
+- Fixed minor clippy warning (_connection_sender)
+- All tests passing (93/93)
 
-**Key Issues to Fix**:
-- Remove `block_on` calls causing deadlocks
-- Fix locks held across await points
-- Reduce excessive task spawning
-- Fix select! loops that never yield
-- Remove unnecessary Arc<Mutex<>> where single-threaded
+## Sprint 1 Task 1.1: Basic Observability Setup (6h) ⭐ CRITICAL
 
-**Success Criteria**:
-- No `block_on` in async contexts
-- No locks held across await
-- Spawns reduced by 50%+
-- All clippy warnings resolved
-
-### 1.1: Basic Observability Setup (6h) ⭐ CRITICAL
 **Reference**: v1 Task E.3 (`tasks/E.3-observability.md`)
 
-**Implementation**:
-- OpenTelemetry with Prometheus (default)
-- Basic metrics: connections, requests, latency
-- Metrics endpoint at `/metrics`
-- No OTLP initially (avoid tonic dependency)
+### Implementation Plan
 
-**Key Metrics**:
-- Connection count/duration
-- Request rate/latency
-- Session active/total
-- Error rates
+1. **Add Dependencies** (30 min)
+```toml
+[dependencies]
+opentelemetry = { version = "0.24", features = ["metrics"] }
+opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
+opentelemetry-prometheus = "0.17"
+prometheus = "0.13"
+```
 
-### 1.2: Basic Hyper Server (6h) ⭐ CRITICAL
-**Reference**: v1 Task B.1 (partial)
+2. **Create Metrics Module** (1 hour)
+- `src/metrics/mod.rs` - Metrics registry
+- `src/metrics/server.rs` - Server-specific metrics
+- `src/metrics/client.rs` - Client-specific metrics
+- `src/metrics/pool.rs` - Pool metrics integration
 
-**Implementation**:
-- Use hyper v1 serve_connection pattern
-- Single spawn per connection
-- Basic HTTP/1.1 support
-- Integration with session manager stub
-- Graceful connection handling
+3. **Core Metrics to Implement** (2 hours)
+
+**Server Metrics:**
+- `mcp_server_connections_total` - Total connections accepted
+- `mcp_server_connections_active` - Currently active connections
+- `mcp_server_requests_total` - Total requests by method
+- `mcp_server_request_duration_seconds` - Request processing time
+- `mcp_server_errors_total` - Errors by type
+
+**Client Metrics:**
+- `mcp_client_requests_total` - Total requests sent
+- `mcp_client_request_duration_seconds` - Request round-trip time
+- `mcp_client_pool_connections_active` - Active pooled connections
+- `mcp_client_pool_connections_created_total` - New connections created
+- `mcp_client_errors_total` - Client errors by type
+
+**Pool Metrics (existing):**
+- Already has metrics in `pool::metrics` module
+- Need to expose via OpenTelemetry
+
+4. **Metrics Endpoint** (1.5 hours)
+- Add `/metrics` HTTP endpoint
+- Use existing HTTP server infrastructure
+- Serve Prometheus text format
+
+5. **Integration & Testing** (1 hour)
+- Add metrics to key code paths
+- Create example with metrics
+- Test metrics collection
+
+### Success Criteria
+- [ ] Metrics endpoint serves at `/metrics`
+- [ ] Basic metrics visible in Prometheus format
+- [ ] No performance regression (< 2% overhead)
+- [ ] Example program demonstrates metrics
+- [ ] Tests verify metric updates
 
 ## Execution Plan
 
