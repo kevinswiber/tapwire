@@ -7,9 +7,17 @@ We're integrating hyper patterns, session management, and interceptors into the 
 - Completed comprehensive spawn audit showing 80% reduction opportunity
 - Designed server architecture with SSE/WebSocket support
 - Created SSE implementation guide with hyper v1 patterns
+- **NEW**: Analyzed actual usage patterns in shadowcat proxy code
+- **NEW**: Documented integration requirements based on real usage
 
 ## Current Focus: Phase A - Foundation Analysis
 Complete analysis and design tasks to prepare for implementation.
+
+## Critical Insights from Usage Analysis
+- SessionManager and InterceptorChain always work together via shared AppState
+- Sessions track protocol versions, upstream IDs, and event IDs for SSE
+- Interceptors integrate deeply with pause controller and tape recorder
+- Both forward and reverse proxies use same patterns
 
 ## Tasks for This Session
 

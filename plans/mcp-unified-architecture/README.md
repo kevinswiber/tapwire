@@ -55,10 +55,12 @@ This plan coordinates the integration of three major architectural improvements 
 
 ## Key Documents
 
-### Analysis (Existing)
+### Analysis (Completed)
 - [Spawn Audit](analysis/spawn-audit.md) - Current inefficiencies
 - [Server Architecture](analysis/server-architecture.md) - Target design
 - [SSE Implementation](analysis/sse-implementation.md) - Streaming guide
+- [Usage Patterns](analysis/usage-patterns.md) - How sessions/interceptors are used in practice
+- [Integration Requirements](analysis/integration-requirements.md) - Concrete requirements from usage analysis
 
 ### Design (To Create)
 - Session Architecture - How sessions integrate
