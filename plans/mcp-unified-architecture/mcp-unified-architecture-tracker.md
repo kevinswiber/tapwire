@@ -2,10 +2,10 @@
 
 ## Overview
 
-This tracker coordinates the integration of hyper patterns, session management, and interceptors into both MCP client and server implementations, achieving production-grade performance and correctness.
+This tracker coordinates the integration of hyper patterns, session management, and interceptors into both MCP client and server implementations, achieving production-grade performance and correctness. Incorporates comprehensive feedback from Gemini's architectural review.
 
 **Last Updated**: 2025-08-26  
-**Total Estimated Duration**: 160-200 hours  
+**Total Estimated Duration**: 250-280 hours  
 **Status**: Planning
 
 ## Goals
@@ -74,57 +74,72 @@ Apply hyper patterns and async best practices to server
 
 **Phase B Total**: 44 hours
 
-### Phase C: Client Optimization (Week 3)
-Apply same patterns to client implementation
+### Phase C: Client Optimization & Session Heartbeat (Week 3)
+Apply same patterns to client implementation with proactive liveness detection
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
 | C.0 | **Analyze Client Architecture** | 4h | B.1 | ⬜ Not Started | | [Details](tasks/C.0-analyze-client.md) |
-| C.1 | **Reduce Client Spawns** | 8h | C.0 | ⬜ Not Started | | [Details](tasks/C.1-reduce-client-spawns.md) |
-| C.2 | **Client Connection Pool Integration** | 10h | C.1 | ⬜ Not Started | | [Details](tasks/C.2-client-pool-integration.md) |
-| C.3 | **Client SSE Handling** | 6h | C.1 | ⬜ Not Started | | [Details](tasks/C.3-client-sse-handling.md) |
+| C.1 | **Session Heartbeat Mechanism** | 8h | C.0 | ⬜ Not Started | | [Details](tasks/C.1-session-heartbeat.md) |
+| C.2 | **Reduce Client Spawns** | 8h | C.0 | ⬜ Not Started | | [Details](tasks/C.2-reduce-client-spawns.md) |
+| C.3 | **Client Connection Pool Integration** | 10h | C.2 | ⬜ Not Started | | [Details](tasks/C.3-client-pool-integration.md) |
+| C.4 | **Client SSE Handling** | 6h | C.2 | ⬜ Not Started | | [Details](tasks/C.4-client-sse-handling.md) |
 
-**Phase C Total**: 28 hours
+**Phase C Total**: 36 hours
 
-### Phase D: Session Management Integration (Week 4)
-Integrate comprehensive session management
+### Phase D: Session Management & Error Handling (Week 4)
+Integrate comprehensive session management with robust error handling
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| D.0 | **Port Session Manager** | 8h | C.1 | ⬜ Not Started | | [Details](tasks/D.0-port-session-manager.md) |
+| D.0 | **Port Session Manager** | 8h | C.2 | ⬜ Not Started | | [Details](tasks/D.0-port-session-manager.md) |
 | D.1 | **Session Store Trait** | 6h | D.0 | ⬜ Not Started | | [Details](tasks/D.1-session-store-trait.md) |
 | D.2 | **SQLite Implementation** | 8h | D.1 | ⬜ Not Started | | [Details](tasks/D.2-sqlite-store.md) |
-| D.3 | **Redis Implementation** | 10h | D.1 | ⬜ Not Started | | [Details](tasks/D.3-redis-store.md) |
-| D.4 | **SSE Session Tracking** | 6h | D.0, B.2 | ⬜ Not Started | | [Details](tasks/D.4-sse-session-tracking.md) |
+| D.3 | **Interceptor Error Handling** | 7h | D.0 | ⬜ Not Started | | [Details](tasks/D.3-interceptor-error-handling.md) |
+| D.4 | **Redis Implementation** | 10h | D.1 | ⬜ Not Started | | [Details](tasks/D.4-redis-store.md) |
+| D.5 | **SSE Session Tracking** | 6h | D.0, B.2 | ⬜ Not Started | | [Details](tasks/D.5-sse-session-tracking.md) |
 
-**Phase D Total**: 38 hours
+**Phase D Total**: 45 hours
 
-### Phase E: Interceptor Chain (Week 5)
-Add message processing pipeline
+### Phase E: API Design & Observability (Week 5)
+Add builder pattern API and comprehensive observability
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| E.0 | **Port Interceptor Engine** | 8h | D.0 | ⬜ Not Started | | [Details](tasks/E.0-port-interceptor-engine.md) |
-| E.1 | **MCP Protocol Interceptor** | 6h | E.0 | ⬜ Not Started | | [Details](tasks/E.1-mcp-interceptor.md) |
-| E.2 | **Rules Engine Integration** | 8h | E.0 | ⬜ Not Started | | [Details](tasks/E.2-rules-engine.md) |
-| E.3 | **HTTP Policy Interceptor** | 6h | E.0 | ⬜ Not Started | | [Details](tasks/E.3-http-policy.md) |
-| E.4 | **Client Interceptor Chain** | 6h | E.0, C.1 | ⬜ Not Started | | [Details](tasks/E.4-client-interceptors.md) |
-| E.5 | **Server Interceptor Chain** | 6h | E.0, B.1 | ⬜ Not Started | | [Details](tasks/E.5-server-interceptors.md) |
+| E.0 | **Builder Pattern API Design** | 6h | D.0 | ⬜ Not Started | | [Details](tasks/E.0-api-design.md) |
+| E.1 | **Port Interceptor Engine** | 8h | E.0 | ⬜ Not Started | | [Details](tasks/E.1-port-interceptor-engine.md) |
+| E.2 | **MCP Protocol Interceptor** | 6h | E.1 | ⬜ Not Started | | [Details](tasks/E.2-mcp-interceptor.md) |
+| E.3 | **Observability & Metrics** | 6.5h | E.0 | ⬜ Not Started | | [Details](tasks/E.3-observability.md) |
+| E.4 | **Rules Engine Integration** | 8h | E.1 | ⬜ Not Started | | [Details](tasks/E.4-rules-engine.md) |
+| E.5 | **HTTP Policy Interceptor** | 6h | E.1 | ⬜ Not Started | | [Details](tasks/E.5-http-policy.md) |
+| E.6 | **Client Interceptor Chain** | 6h | E.1, C.2 | ⬜ Not Started | | [Details](tasks/E.6-client-interceptors.md) |
+| E.7 | **Server Interceptor Chain** | 6h | E.1, B.1 | ⬜ Not Started | | [Details](tasks/E.7-server-interceptors.md) |
 
-**Phase E Total**: 40 hours
+**Phase E Total**: 52.5 hours
 
 ### Phase F: Testing & Hardening (Week 6)
 Comprehensive testing and production readiness
 
 | ID | Task | Duration | Dependencies | Status | Owner | Notes |
 |----|------|----------|--------------|--------|-------|-------|
-| F.0 | **Integration Test Suite** | 12h | E.5 | ⬜ Not Started | | [Details](tasks/F.0-integration-tests.md) |
+| F.0 | **Integration Test Suite** | 12h | E.7 | ⬜ Not Started | | [Details](tasks/F.0-integration-tests.md) |
 | F.1 | **Performance Benchmarks** | 8h | F.0 | ⬜ Not Started | | [Details](tasks/F.1-performance-benchmarks.md) |
 | F.2 | **Load Testing** | 6h | F.0 | ⬜ Not Started | | [Details](tasks/F.2-load-testing.md) |
-| F.3 | **Monitoring & Metrics** | 8h | F.0 | ⬜ Not Started | | [Details](tasks/F.3-monitoring-metrics.md) |
+| F.3 | **Monitoring & Metrics** | 8h | F.0, E.3 | ⬜ Not Started | | [Details](tasks/F.3-monitoring-metrics.md) |
 | F.4 | **Documentation** | 8h | F.0 | ⬜ Not Started | | [Details](tasks/F.4-documentation.md) |
 
 **Phase F Total**: 42 hours
+
+### Phase G: Chaos & Security Testing (Week 7)
+Chaos engineering, security hardening, and long-running validation
+
+| ID | Task | Duration | Dependencies | Status | Owner | Notes |
+|----|------|----------|--------------|--------|-------|-------|
+| G.0 | **Fault Injection & Chaos Testing** | 8.5h | F.0 | ⬜ Not Started | | [Details](tasks/G.0-fault-injection.md) |
+| G.1 | **Security Testing & Hardening** | 7h | F.0 | ⬜ Not Started | | [Details](tasks/G.1-security-testing.md) |
+| G.2 | **Soak Testing (24-48 hrs)** | 6.5h | F.0 | ⬜ Not Started | | [Details](tasks/G.2-soak-testing.md) |
+
+**Phase G Total**: 22 hours
 
 ### Status Legend
 - ⬜ Not Started - Task not yet begun
@@ -147,6 +162,43 @@ Comprehensive testing and production readiness
 - [ ] B.2: Add SSE Support
 - [ ] B.3: WebSocket Integration
 - [ ] B.4: Graceful Shutdown
+
+### Week 3 (Client & Session)
+- [ ] C.0: Analyze Client Architecture
+- [ ] C.1: Session Heartbeat Mechanism
+- [ ] C.2: Reduce Client Spawns
+- [ ] C.3: Client Connection Pool Integration
+- [ ] C.4: Client SSE Handling
+
+### Week 4 (Session & Error Handling)
+- [ ] D.0: Port Session Manager
+- [ ] D.1: Session Store Trait
+- [ ] D.2: SQLite Implementation
+- [ ] D.3: Interceptor Error Handling
+- [ ] D.4: Redis Implementation
+- [ ] D.5: SSE Session Tracking
+
+### Week 5 (API & Observability)
+- [ ] E.0: Builder Pattern API Design
+- [ ] E.1: Port Interceptor Engine
+- [ ] E.2: MCP Protocol Interceptor
+- [ ] E.3: Observability & Metrics
+- [ ] E.4: Rules Engine Integration
+- [ ] E.5: HTTP Policy Interceptor
+- [ ] E.6: Client Interceptor Chain
+- [ ] E.7: Server Interceptor Chain
+
+### Week 6 (Testing)
+- [ ] F.0: Integration Test Suite
+- [ ] F.1: Performance Benchmarks
+- [ ] F.2: Load Testing
+- [ ] F.3: Monitoring & Metrics
+- [ ] F.4: Documentation
+
+### Week 7 (Chaos & Security)
+- [ ] G.0: Fault Injection & Chaos Testing
+- [ ] G.1: Security Testing & Hardening
+- [ ] G.2: Soak Testing (24-48 hrs)
 
 ### Completed Tasks
 <!-- Tasks will be moved here as completed -->
@@ -290,3 +342,4 @@ data.process().await;
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
 | 2025-08-26 | 1.0 | Initial tracker creation | Claude |
+| 2025-08-26 | 1.1 | Added Gemini feedback tasks (C.1, D.3, E.0, E.3, G.0-G.2) | Claude |
