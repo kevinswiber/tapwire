@@ -1,95 +1,183 @@
-# Next Session: MCP Unified Architecture - Phase A
+# Next Session Prompt - Sprint 1 Foundation
+
+## Session Goal
+Implement Sprint 1 from the Critical Path tracker - establish the core foundation with async fixes, observability, and basic hyper patterns.
 
 ## Context
-We're integrating hyper patterns, session management, and interceptors into the MCP crate for both client and server. This creates a production-ready, high-performance MCP implementation.
+- We have two trackers: v1 (comprehensive) and v2 (critical path execution)
+- Following v2 for implementation, referencing v1 for details
+- Goal: MVP working proxy with metrics in ~38 hours total
+- This session: Focus on first 2-3 tasks (aiming for 8 hours work)
 
-## Previous Work
-- Completed comprehensive spawn audit showing 80% reduction opportunity
-- Designed server architecture with SSE/WebSocket support
-- Created SSE implementation guide with hyper v1 patterns
-- **NEW**: Analyzed actual usage patterns in shadowcat proxy code
-- **NEW**: Documented integration requirements based on real usage
+## Sprint 1 Tasks
 
-## Current Focus: Phase A - Foundation Analysis
-Complete analysis and design tasks to prepare for implementation.
+### 1.0: Fix Async Antipatterns (8h) ⭐ CRITICAL
+**Reference**: v1 Task B.0 (`tasks/B.0-fix-async-antipatterns.md`)
 
-## Critical Insights from Usage Analysis
-- SessionManager and InterceptorChain always work together via shared AppState
-- Sessions track protocol versions, upstream IDs, and event IDs for SSE
-- Interceptors integrate deeply with pause controller and tape recorder
-- Both forward and reverse proxies use same patterns
+**Key Issues to Fix**:
+- Remove `block_on` calls causing deadlocks
+- Fix locks held across await points
+- Reduce excessive task spawning
+- Fix select! loops that never yield
+- Remove unnecessary Arc<Mutex<>> where single-threaded
 
-## Tasks for This Session
+**Success Criteria**:
+- No `block_on` in async contexts
+- No locks held across await
+- Spawns reduced by 50%+
+- All clippy warnings resolved
 
-### 1. A.0: Inventory Session & Interceptor Code (4h)
-**Goal**: Understand what exists in shadowcat vs MCP crate
+### 1.1: Basic Observability Setup (6h) ⭐ CRITICAL
+**Reference**: v1 Task E.3 (`tasks/E.3-observability.md`)
 
-**Actions**:
-- Analyze `~/src/tapwire/shadowcat-mcp-compliance/src/session/`
-- Analyze `~/src/tapwire/shadowcat-mcp-compliance/src/interceptor/`
-- Compare with `crates/mcp/src/` current implementations
-- Create inventory documents
+**Implementation**:
+- OpenTelemetry with Prometheus (default)
+- Basic metrics: connections, requests, latency
+- Metrics endpoint at `/metrics`
+- No OTLP initially (avoid tonic dependency)
 
-**Deliverables**:
-- `analysis/session-inventory.md`
-- `analysis/interceptor-inventory.md`
-- `analysis/dependency-map.md`
+**Key Metrics**:
+- Connection count/duration
+- Request rate/latency
+- Session active/total
+- Error rates
 
-### 2. A.1: Design Unified Session Architecture (6h)
-**Goal**: Design how sessions work in both client and server
+### 1.2: Basic Hyper Server (6h) ⭐ CRITICAL
+**Reference**: v1 Task B.1 (partial)
 
-**Key Decisions**:
-- Session store trait design
-- Persistence strategy
-- SSE session tracking approach
-- Client vs server session differences
+**Implementation**:
+- Use hyper v1 serve_connection pattern
+- Single spawn per connection
+- Basic HTTP/1.1 support
+- Integration with session manager stub
+- Graceful connection handling
 
-**Deliverable**:
-- `analysis/session-architecture.md`
+## Execution Plan
 
-### 3. A.2: Design Interceptor Integration (4h)
-**Goal**: Design interceptor chain for client and server
+### If 8-Hour Session:
+1. Complete Task 1.0 (Fix Async Antipatterns)
+2. Run comprehensive tests
+3. Document changes in tracker
 
-**Key Decisions**:
-- Interceptor trait for MCP
-- Chain composition
-- Async interceptor handling
-- Error propagation
+### If 12-Hour Session:
+1. Complete Task 1.0 (8h)
+2. Complete Task 1.1 (4h) - Just core metrics setup
 
-**Deliverable**:
-- `analysis/interceptor-design.md`
+### If 16-Hour Session:
+1. Complete Task 1.0 (8h)
+2. Complete Task 1.1 (6h)
+3. Start Task 1.2 (2h) - Basic setup
 
-## Key References
-- **Tracker**: `plans/mcp-unified-architecture/mcp-unified-architecture-tracker.md`
-- **Server Analysis**: `plans/mcp-unified-architecture/analysis/server-architecture.md`
-- **SSE Guide**: `plans/mcp-unified-architecture/analysis/sse-implementation.md`
+## Files to Review First
 
-## Success Criteria
-- [ ] Complete understanding of existing code
-- [ ] Clear integration design documented
-- [ ] No architectural conflicts identified
-- [ ] Migration plan ready for Phase B
+1. Read existing async patterns:
+   - `/crates/mcp/src/server/mod.rs`
+   - `/crates/mcp/src/client/mod.rs`
+   - `/crates/mcp/src/transport/`
 
-## Commands to Start
-```bash
-cd ~/src/tapwire/shadowcat-mcp-compliance
+2. Check task details:
+   - `/plans/mcp-unified-architecture/tasks/B.0-fix-async-antipatterns.md`
+   - `/plans/mcp-unified-architecture/analysis/spawn-audit.md`
 
-# Review the tracker
-cat plans/mcp-unified-architecture/mcp-unified-architecture-tracker.md
+3. Review shadowcat patterns:
+   - `/src/proxy/forward.rs` (good hyper patterns)
+   - `/src/server/` (reference implementation)
 
-# Start with inventory task
-cat plans/mcp-unified-architecture/tasks/A.0-inventory-existing-code.md
+## Key Patterns to Apply
 
-# Examine session code
-ls -la src/session/
-ls -la src/interceptor/
+### Remove block_on:
+```rust
+// ❌ BAD
+runtime.block_on(async_function())
+
+// ✅ GOOD
+async_function().await
 ```
 
-## Important Notes
-- We're in the MCP crate, not main shadowcat
-- Session/interceptor code needs to be ported, not referenced
-- Maintain compatibility with existing Connection trait
-- Focus on understanding before implementing
+### Fix lock scope:
+```rust
+// ❌ BAD
+let guard = mutex.lock().await;
+something_async().await; // Lock held!
 
-## Time Estimate
-14-18 hours total for Phase A. Focus on A.0 and A.1 first (10h), then A.2 if time permits.
+// ✅ GOOD
+let data = {
+    let guard = mutex.lock().await;
+    guard.clone()
+}; // Lock released
+something_async().await;
+```
+
+### Reduce spawns:
+```rust
+// ❌ BAD
+tokio::spawn(handle_connection());
+tokio::spawn(process_request());
+tokio::spawn(send_response());
+
+// ✅ GOOD
+tokio::spawn(async move {
+    handle_connection().await;
+    process_request().await;
+    send_response().await;
+});
+```
+
+## Success Metrics
+
+### After Task 1.0:
+- [ ] All `block_on` removed from async code
+- [ ] No locks held across await points  
+- [ ] Task spawns reduced by 50%+
+- [ ] All async clippy warnings fixed
+- [ ] Tests passing
+
+### After Task 1.1:
+- [ ] Prometheus endpoint serving at `/metrics`
+- [ ] Basic metrics visible
+- [ ] No external dependencies added
+- [ ] Metrics have minimal overhead (<2% CPU)
+
+### After Task 1.2:
+- [ ] Hyper server accepting connections
+- [ ] One spawn per connection
+- [ ] Basic request handling working
+- [ ] Integration test passing
+
+## Commands to Run
+
+```bash
+# Start in MCP crate
+cd /crates/mcp
+
+# Check current issues
+cargo clippy --all-targets -- -D warnings 2>&1 | grep -E "(block_on|held across)"
+
+# Find block_on usage
+rg "block_on" --type rust
+
+# Find lock issues  
+rg "\.lock\(\)|\.write\(\)|\.read\(\)" --type rust -A 3 | grep -B 2 "\.await"
+
+# Test after fixes
+cargo test --lib
+cargo test --test integration
+
+# Verify spawn reduction
+rg "tokio::spawn|task::spawn" --type rust --count
+```
+
+## Notes
+- Start with Task 1.0 as it's foundational
+- Don't worry about perfection - we want working code
+- Reference shadowcat's patterns but adapt for MCP
+- Keep changes incremental and testable
+- Update tracker after each task completion
+
+## If You Get Stuck
+1. Check shadowcat's forward proxy for hyper patterns
+2. Review the spawn audit document
+3. Look at v1 task files for detailed requirements
+4. Focus on critical path - skip nice-to-haves
+
+Ready to start with Sprint 1!
