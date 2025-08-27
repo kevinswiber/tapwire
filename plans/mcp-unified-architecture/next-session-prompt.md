@@ -1,206 +1,150 @@
-# Next Session Prompt - Sprint 1 Task 1.1 Observability
+# Next Session Prompt - Sprint 1 Task 1.2 Basic Hyper Server
 
 ## Session Goal
-Continue Sprint 1 - Add basic observability to MCP client and server using OpenTelemetry with Prometheus.
+Continue Sprint 1 - Implement a basic Hyper server for the MCP library with proper connection handling patterns.
 
 ## Context
-- ✅ Task 1.0 Complete: Async patterns are already optimal (no changes needed)
-- Now implementing Task 1.1: Basic Observability Setup
-- Following v2 tracker, referencing v1 Task E.3 for details
-- Time saved from 1.0 can be used for comprehensive metrics
+- ✅ Task 1.0 Complete: Async patterns already optimal (2h instead of 8h)
+- ✅ Task 1.1 Complete: OpenTelemetry observability with Prometheus implemented
+- 🎯 Task 1.2: Basic Hyper Server (6h)
+- Following v2 tracker in `mcp-tracker-v2-critical-path.md`
+- Time saved from 1.0 & 1.1 can be used for more robust implementation
 
 ## Current Status
 
-### ✅ Completed (Task 1.0)
-- Analyzed all async patterns in MCP crate
-- Found spawns are already optimized (bounded executor pattern)
-- Fixed minor clippy warning (_connection_sender)
-- All tests passing (93/93)
+### ✅ Completed (Sprint 1)
+1. **Task 1.0 - Async Patterns**
+   - Analyzed all async patterns
+   - Found bounded executor pattern preventing spawn explosion
+   - One-spawn-per-client is correct for stateful MCP
+   - No refactoring needed
 
-## Sprint 1 Task 1.1: Basic Observability Setup (6h) ⭐ CRITICAL
+2. **Task 1.1 - Observability**
+   - Added OpenTelemetry + Prometheus metrics
+   - Server metrics: connections, requests, duration, errors
+   - Client metrics: requests, round-trip time, pool connections
+   - Export via `export_metrics()` method
+   - Safe error handling (no panics)
 
-**Reference**: v1 Task E.3 (`tasks/E.3-observability.md`)
+## Sprint 1 Task 1.2: Basic Hyper Server (6h) ⭐ CRITICAL
+
+### Goal
+Replace or augment the existing server implementation with proper Hyper 1.x patterns for HTTP-based MCP transport.
+
+### Key Requirements
+1. **Use Hyper 1.x** (already in dependencies)
+2. **One spawn per connection** (pattern already validated)
+3. **Integrate with existing metrics** from Task 1.1
+4. **Support HTTP/1.1 and HTTP/2**
+5. **Proper graceful shutdown**
 
 ### Implementation Plan
 
-1. **Add Dependencies** (30 min)
-```toml
-[dependencies]
-opentelemetry = { version = "0.24", features = ["metrics"] }
-opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
-opentelemetry-prometheus = "0.17"
-prometheus = "0.13"
-```
+1. **Review Existing Server** (30 min)
+   - Check `src/server.rs` current implementation
+   - Understand connection handling patterns
+   - Review `src/connection/http.rs` for HTTP support
 
-2. **Create Metrics Module** (1 hour)
-- `src/metrics/mod.rs` - Metrics registry
-- `src/metrics/server.rs` - Server-specific metrics
-- `src/metrics/client.rs` - Client-specific metrics
-- `src/metrics/pool.rs` - Pool metrics integration
+2. **Create Hyper Service** (2 hours)
+   ```rust
+   // Create a service that handles MCP over HTTP
+   struct McpHttpService<H: ServerHandler> {
+       handler: Arc<H>,
+       metrics: Arc<ServerMetrics>,
+   }
+   
+   impl<H> Service<Request<Body>> for McpHttpService<H> {
+       // Handle HTTP requests containing MCP messages
+   }
+   ```
 
-3. **Core Metrics to Implement** (2 hours)
+3. **Implement HTTP Transport** (2 hours)
+   - Handle POST requests with JSON-RPC bodies
+   - Support SSE for server-sent events
+   - Maintain session state across requests
+   - Add proper CORS headers for browser clients
 
-**Server Metrics:**
-- `mcp_server_connections_total` - Total connections accepted
-- `mcp_server_connections_active` - Currently active connections
-- `mcp_server_requests_total` - Total requests by method
-- `mcp_server_request_duration_seconds` - Request processing time
-- `mcp_server_errors_total` - Errors by type
+4. **Connection Management** (1 hour)
+   - Use hyper's `serve_connection` pattern
+   - Graceful shutdown with drain
+   - Connection limit enforcement
+   - Integrate with existing session tracking
 
-**Client Metrics:**
-- `mcp_client_requests_total` - Total requests sent
-- `mcp_client_request_duration_seconds` - Request round-trip time
-- `mcp_client_pool_connections_active` - Active pooled connections
-- `mcp_client_pool_connections_created_total` - New connections created
-- `mcp_client_errors_total` - Client errors by type
-
-**Pool Metrics (existing):**
-- Already has metrics in `pool::metrics` module
-- Need to expose via OpenTelemetry
-
-4. **Metrics Endpoint** (1.5 hours)
-- Add `/metrics` HTTP endpoint
-- Use existing HTTP server infrastructure
-- Serve Prometheus text format
-
-5. **Integration & Testing** (1 hour)
-- Add metrics to key code paths
-- Create example with metrics
-- Test metrics collection
+5. **Testing & Integration** (30 min)
+   - Create HTTP integration test
+   - Verify metrics are recorded
+   - Test graceful shutdown
+   - Benchmark performance
 
 ### Success Criteria
-- [ ] Metrics endpoint serves at `/metrics`
-- [ ] Basic metrics visible in Prometheus format
-- [ ] No performance regression (< 2% overhead)
-- [ ] Example program demonstrates metrics
-- [ ] Tests verify metric updates
-
-## Execution Plan
-
-### If 8-Hour Session:
-1. Complete Task 1.0 (Fix Async Antipatterns)
-2. Run comprehensive tests
-3. Document changes in tracker
-
-### If 12-Hour Session:
-1. Complete Task 1.0 (8h)
-2. Complete Task 1.1 (4h) - Just core metrics setup
-
-### If 16-Hour Session:
-1. Complete Task 1.0 (8h)
-2. Complete Task 1.1 (6h)
-3. Start Task 1.2 (2h) - Basic setup
+- [ ] HTTP server accepts MCP requests
+- [ ] Supports both HTTP/1.1 and HTTP/2
+- [ ] Metrics track HTTP connections/requests
+- [ ] Graceful shutdown works properly
+- [ ] One spawn per connection pattern maintained
+- [ ] Integration test passes
 
 ## Files to Review First
 
-1. Read existing async patterns:
-   - `/crates/mcp/src/server/mod.rs`
-   - `/crates/mcp/src/client/mod.rs`
-   - `/crates/mcp/src/transport/`
+1. Current implementation:
+   - `/crates/mcp/src/server.rs` - Existing server
+   - `/crates/mcp/src/connection/http.rs` - HTTP connection support
+   - `/crates/mcp/src/transport/` - Transport implementations
 
-2. Check task details:
-   - `/plans/mcp-unified-architecture/tasks/B.0-fix-async-antipatterns.md`
-   - `/plans/mcp-unified-architecture/analysis/spawn-audit.md`
+2. Reference shadowcat patterns:
+   - `/src/proxy/forward.rs` - Good hyper patterns
+   - `/src/server/` - Reference server implementation
 
-3. Review shadowcat patterns:
-   - `/src/proxy/forward.rs` (good hyper patterns)
-   - `/src/server/` (reference implementation)
+## Key Patterns from Shadowcat
 
-## Key Patterns to Apply
-
-### Remove block_on:
+### Connection Handling:
 ```rust
-// ❌ BAD
-runtime.block_on(async_function())
+let (service, connection) = hyper::server::conn::http1()
+    .serve_connection(stream, service)
+    .with_upgrades();
 
-// ✅ GOOD
-async_function().await
-```
-
-### Fix lock scope:
-```rust
-// ❌ BAD
-let guard = mutex.lock().await;
-something_async().await; // Lock held!
-
-// ✅ GOOD
-let data = {
-    let guard = mutex.lock().await;
-    guard.clone()
-}; // Lock released
-something_async().await;
-```
-
-### Reduce spawns:
-```rust
-// ❌ BAD
-tokio::spawn(handle_connection());
-tokio::spawn(process_request());
-tokio::spawn(send_response());
-
-// ✅ GOOD
 tokio::spawn(async move {
-    handle_connection().await;
-    process_request().await;
-    send_response().await;
+    if let Err(e) = connection.await {
+        error!("Connection error: {}", e);
+    }
 });
 ```
 
-## Success Metrics
-
-### After Task 1.0:
-- [ ] All `block_on` removed from async code
-- [ ] No locks held across await points  
-- [ ] Task spawns reduced by 50%+
-- [ ] All async clippy warnings fixed
-- [ ] Tests passing
-
-### After Task 1.1:
-- [ ] Prometheus endpoint serving at `/metrics`
-- [ ] Basic metrics visible
-- [ ] No external dependencies added
-- [ ] Metrics have minimal overhead (<2% CPU)
-
-### After Task 1.2:
-- [ ] Hyper server accepting connections
-- [ ] One spawn per connection
-- [ ] Basic request handling working
-- [ ] Integration test passing
+### Graceful Shutdown:
+```rust
+let graceful = connection.graceful_shutdown();
+shutdown_rx.await;
+graceful.await;
+```
 
 ## Commands to Run
 
 ```bash
-# Start in MCP crate
+# Navigate to MCP crate
 cd /crates/mcp
 
-# Check current issues
-cargo clippy --all-targets -- -D warnings 2>&1 | grep -E "(block_on|held across)"
+# Check existing HTTP implementation
+rg "hyper::" --type rust src/
 
-# Find block_on usage
-rg "block_on" --type rust
+# Run tests after implementation
+cargo test --lib server::
+cargo test --test integration_server
 
-# Find lock issues  
-rg "\.lock\(\)|\.write\(\)|\.read\(\)" --type rust -A 3 | grep -B 2 "\.await"
-
-# Test after fixes
-cargo test --lib
-cargo test --test integration
-
-# Verify spawn reduction
-rg "tokio::spawn|task::spawn" --type rust --count
+# Check metrics work
+cargo run --example http_server_demo
 ```
 
+## Next Steps After 1.2
+
+- Task 1.3: Basic Hyper Client (6h)
+- Task 1.4: Session Manager Core (8h)
+- Task 1.5: Memory Session Store (4h)
+
+Sprint 1 should deliver a working proxy foundation with proper async patterns, observability, and Hyper-based HTTP transport.
+
 ## Notes
-- Start with Task 1.0 as it's foundational
-- Don't worry about perfection - we want working code
-- Reference shadowcat's patterns but adapt for MCP
-- Keep changes incremental and testable
-- Update tracker after each task completion
-
-## If You Get Stuck
-1. Check shadowcat's forward proxy for hyper patterns
-2. Review the spawn audit document
-3. Look at v1 task files for detailed requirements
-4. Focus on critical path - skip nice-to-haves
-
-Ready to start with Sprint 1!
+- We're ahead of schedule (saved 6h from Task 1.0)
+- Focus on clean Hyper integration
+- Reuse existing connection abstractions where possible
+- Keep metrics integration from Task 1.1
+- Document any deviations from the plan

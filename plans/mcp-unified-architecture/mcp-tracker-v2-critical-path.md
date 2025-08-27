@@ -15,8 +15,8 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 
 | ID | Task | Duration | Dependencies | Critical | Notes |
 |----|------|----------|--------------|----------|-------|
-| 1.0 | Fix Async Antipatterns | 8h | None | ⭐ | ✅ Analysis complete - patterns are good! |
-| 1.1 | Basic Observability Setup | 6h | None | ⭐ | Need metrics from start |
+| 1.0 | Fix Async Antipatterns | 8h | None | ⭐ | ✅ Complete (2h) - patterns already optimal! |
+| 1.1 | Basic Observability Setup | 6h | None | ⭐ | ✅ Complete - OpenTelemetry + Prometheus |
 | 1.2 | Basic Hyper Server | 6h | 1.0 | ⭐ | Core value proposition |
 | 1.3 | Basic Hyper Client | 6h | 1.0 | ⭐ | Matching client |
 | 1.4 | Session Manager Core | 8h | 1.2 | ⭐ | Essential for proxy |
