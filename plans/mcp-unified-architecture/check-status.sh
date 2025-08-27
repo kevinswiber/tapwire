@@ -17,7 +17,7 @@ PLAN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo -e "${BLUE}📍 Current Location:${NC}"
 echo "   Plan: $PLAN_DIR"
-echo "   Code: ${PLAN_DIR/plans*/crates}/mcp"
+echo "   Code: ${PLAN_DIR/plans*/shadowcat-mcp-compliance/crates}/mcp"
 echo ""
 
 echo -e "${BLUE}📊 Overall Progress:${NC}"
@@ -32,35 +32,60 @@ echo "   Total: ${TOTAL_TASKS} tasks"
 echo ""
 
 echo -e "${BLUE}🎯 Current Sprint:${NC}"
-# Find current sprint (first one with incomplete tasks)
-CURRENT_SPRINT=$(grep -A 50 "### Sprint" "$PLAN_DIR/mcp-tracker-v2-critical-path.md" 2>/dev/null | grep -B 1 "⬜\|🔄" | grep "Sprint" | head -1)
+# Find current sprint (first one with tasks that aren't complete)
+# Look for lines that DON'T have ✅ in the Notes column
+CURRENT_SPRINT=""
+while IFS= read -r line; do
+    if [[ "$line" == *"### Sprint"* ]]; then
+        SPRINT_NAME="$line"
+    elif [[ "$line" == *"|"* ]] && [[ "$line" =~ \|[[:space:]]*[0-9] ]]; then
+        # Check if this task line doesn't have ✅ in it
+        if [[ "$line" != *"✅"* ]]; then
+            CURRENT_SPRINT="$SPRINT_NAME"
+            break
+        fi
+    fi
+done < "$PLAN_DIR/mcp-tracker-v2-critical-path.md"
+
 if [ -z "$CURRENT_SPRINT" ]; then
     if [ "$COMPLETED" = "$TOTAL_TASKS" ] && [ "$TOTAL_TASKS" -gt "0" ]; then
         echo -e "   ${GREEN}✅ ALL SPRINTS COMPLETE!${NC}"
     else
-        echo "   Sprint 1: Core Foundation (Starting)"
+        echo "   Sprint 1: Core Foundation"
     fi
 else
-    echo "   $CURRENT_SPRINT"
+    # Clean up the sprint name
+    SPRINT_NAME=$(echo "$CURRENT_SPRINT" | sed 's/### //')
+    echo "   $SPRINT_NAME"
 fi
 echo ""
 
 echo -e "${BLUE}📝 Current/Next Task:${NC}"
-# Find first in-progress or not started task from v2 tracker
-CURRENT_TASK=$(grep "| [0-9]" "$PLAN_DIR/mcp-tracker-v2-critical-path.md" | grep "🔄" | head -1)
-if [ -z "$CURRENT_TASK" ]; then
-    # No in-progress, look for next not started
-    NEXT_TASK=$(grep "| [0-9]" "$PLAN_DIR/mcp-tracker-v2-critical-path.md" | head -1)
-    if [ -z "$NEXT_TASK" ]; then
-        echo -e "   ${GREEN}✅ All tasks complete!${NC}"
-    else
-        # Extract task name from the line
-        TASK_NAME=$(echo "$NEXT_TASK" | cut -d'|' -f3 | sed 's/^ *//;s/ *$//')
-        echo "   Next: $TASK_NAME"
+# Find first task that doesn't have ✅ in the Notes column
+NEXT_TASK=""
+while IFS= read -r line; do
+    # Check if it's a task line (has | and starts with a number in ID column)
+    if [[ "$line" == *"|"* ]] && [[ "$line" =~ \|[[:space:]]*[0-9] ]]; then
+        # Check if this task line doesn't have ✅ in it
+        if [[ "$line" != *"✅"* ]]; then
+            NEXT_TASK="$line"
+            break
+        fi
     fi
+done < "$PLAN_DIR/mcp-tracker-v2-critical-path.md"
+
+if [ -z "$NEXT_TASK" ]; then
+    echo -e "   ${GREEN}✅ All tasks complete!${NC}"
 else
-    TASK_NAME=$(echo "$CURRENT_TASK" | cut -d'|' -f3 | sed 's/^ *//;s/ *$//')
-    echo -e "   ${YELLOW}In Progress: $TASK_NAME${NC}"
+    # Extract task ID and name from the line
+    TASK_ID=$(echo "$NEXT_TASK" | cut -d'|' -f2 | sed 's/^ *//;s/ *$//')
+    TASK_NAME=$(echo "$NEXT_TASK" | cut -d'|' -f3 | sed 's/^ *//;s/ *$//')
+    # Check if it has 🔄 to indicate in-progress
+    if [[ "$NEXT_TASK" == *"🔄"* ]]; then
+        echo -e "   ${YELLOW}In Progress: $TASK_ID - $TASK_NAME${NC}"
+    else
+        echo "   Next: $TASK_ID - $TASK_NAME"
+    fi
 fi
 echo ""
 
@@ -73,7 +98,7 @@ echo ""
 
 echo -e "${BLUE}🚀 Quick Start:${NC}"
 echo "   1. cat $PLAN_DIR/next-session-prompt.md"
-echo "   2. cd ${PLAN_DIR/plans*/crates}/mcp"
+echo "   2. cd ${PLAN_DIR/plans*/shadowcat-mcp-compliance/crates}/mcp"
 echo "   3. Start implementing!"
 echo ""
 
