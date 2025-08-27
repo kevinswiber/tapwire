@@ -17,7 +17,7 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 |----|------|----------|--------------|----------|-------|
 | 1.0 | Fix Async Antipatterns | 8h | None | ⭐ | ✅ Complete (2h) - patterns already optimal! |
 | 1.1 | Basic Observability Setup | 6h | None | ⭐ | ✅ Complete - OpenTelemetry + Prometheus |
-| 1.2 | Basic Hyper Server | 6h | 1.0 | ⭐ | 🚧 IN PROGRESS - Hyper 1.x patterns |
+| 1.2 | Basic Hyper Server | 6h | 1.0 | ⭐ | ✅ Complete (4h) - HTTP/1.1 & HTTP/2 with metrics |
 | 1.3 | Basic Hyper Client | 6h | 1.0 | ⭐ | Matching client |
 | 1.4 | Session Manager Core | 8h | 1.2 | ⭐ | Essential for proxy |
 | 1.5 | Memory Session Store | 4h | 1.4 | ⭐ | Simplest working store |
