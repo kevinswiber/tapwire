@@ -1,13 +1,14 @@
-# Next Session Prompt - Sprint 1 Task 1.3 Basic Hyper Client
+# Next Session Prompt - Sprint 1 Task 1.4 Session Manager Core
 
 ## Session Goal
-Continue Sprint 1 - Implement a basic Hyper client for the MCP library to complement the server we just built.
+Continue Sprint 1 - Implement Session Manager Core for managing MCP sessions with proper lifecycle and tracking.
 
 ## Context
 - ✅ Task 1.0 Complete: Async patterns already optimal (2h instead of 8h)
 - ✅ Task 1.1 Complete: OpenTelemetry observability with Prometheus implemented
 - ✅ Task 1.2 Complete: Basic Hyper HTTP server with HTTP/1.1 and HTTP/2 support
-- 🎯 Task 1.3: Basic Hyper Client (6h)
+- ✅ Task 1.3 Complete: Basic Hyper HTTP client with connection pooling
+- 🎯 Task 1.4: Session Manager Core (8h)
 - Following v2 tracker in `mcp-tracker-v2-critical-path.md`
 
 ## Current Status
@@ -29,66 +30,75 @@ Continue Sprint 1 - Implement a basic Hyper client for the MCP library to comple
    - Health, metrics, and MCP endpoints
    - Demo example and integration tests
 
-## Sprint 1 Task 1.3: Basic Hyper Client (6h) ⭐ CRITICAL
+4. **Task 1.3 - Basic Hyper Client**
+   - HTTP client using Hyper 1.x patterns
+   - Connection pooling integration
+   - Support for both HTTP/1.1 and HTTP/2
+   - Client metrics integration
+   - Created transport/http/client.rs module
+   - Integration tests and examples
+
+## Sprint 1 Task 1.4: Session Manager Core (8h) ⭐ CRITICAL
 
 ### Goal
-Create a Hyper 1.x based HTTP client for MCP that matches the server implementation.
+Implement core session management functionality for tracking MCP sessions across connections.
 
 ### Key Requirements
-1. **Use existing HttpConnection** in `src/connection/http.rs`
-2. **Integrate with connection pool** from `src/pool/`
-3. **Support both HTTP/1.1 and HTTP/2**
-4. **Integrate metrics** from Task 1.1
-5. **Match server patterns** from Task 1.2
+1. **Session lifecycle management** - Create, track, expire sessions
+2. **Thread-safe session storage** - Concurrent access support
+3. **Session metadata tracking** - Creation time, last activity, protocol version
+4. **Integration with existing pool** - Work with connection pooling
+5. **Metrics integration** - Track session metrics
 
 ### Implementation Plan
 
-1. **Review Existing HTTP Connection** (30 min)
-   - Check `src/connection/http.rs` implementation
-   - Understand current HTTP client patterns
-   - Review connection pooling integration
+1. **Review Existing Session Code** (1 hour)
+   - Check existing session implementations in codebase
+   - Understand current session patterns
+   - Review how sessions integrate with connections
 
-2. **Enhance HTTP Client** (2 hours)
-   - Update for consistency with server patterns
-   - Ensure proper HTTP/2 negotiation
-   - Add connection health checks
-   - Integrate client metrics
+2. **Design Session Manager** (2 hours)
+   - Define session lifecycle states
+   - Design thread-safe storage
+   - Plan session expiry mechanism
+   - Define session metadata structure
 
-3. **Pool Integration** (2 hours)
-   - Ensure HttpConnection works with pool
-   - Test connection reuse
-   - Handle connection lifecycle properly
-   - Track metrics for pooled connections
+3. **Implement Core Session Manager** (3 hours)
+   - Create SessionManager struct
+   - Implement session creation/deletion
+   - Add session lookup and validation
+   - Integrate with existing metrics
 
-4. **Client Factory Pattern** (1 hour)
-   - Create factory for HTTP connections
-   - Support configuration options
-   - Handle TLS properly
+4. **Add Session Lifecycle** (1.5 hours)
+   - Session expiry and cleanup
+   - Activity tracking
+   - Graceful shutdown handling
 
-5. **Testing & Examples** (30 min)
-   - Create client demo example
-   - Integration tests with server
-   - Test connection pooling
-   - Verify metrics integration
+5. **Testing & Integration** (30 min)
+   - Unit tests for session manager
+   - Integration with HTTP client/server
+   - Verify thread safety
+   - Test session expiry
 
 ### Success Criteria
-- [ ] HTTP client can connect to HTTP server from Task 1.2
-- [ ] Connection pooling works properly
-- [ ] Metrics track client requests and connections
-- [ ] Both HTTP/1.1 and HTTP/2 work
-- [ ] Demo example shows client-server interaction
-- [ ] Integration tests pass
+- [ ] Sessions can be created and tracked
+- [ ] Thread-safe concurrent access
+- [ ] Sessions expire after idle timeout
+- [ ] Metrics track session lifecycle
+- [ ] Integration with HTTP client/server works
+- [ ] All tests pass
 
 ## Files to Review
 
-1. Existing implementation:
-   - `/crates/mcp/src/connection/http.rs` - Current HTTP connection
-   - `/crates/mcp/src/client.rs` - Client implementation
-   - `/crates/mcp/src/pool/` - Connection pooling
+1. Session-related code:
+   - Check for existing session implementations
+   - Review connection lifecycle management
+   - Look at current metadata tracking
 
-2. Reference from Task 1.2:
-   - `/crates/mcp/src/http_server.rs` - Server patterns to match
-   - `/crates/mcp/examples/http_server_demo.rs` - Server example
+2. Integration points:
+   - `/crates/mcp/src/pool/` - Connection pooling
+   - `/crates/mcp/src/metrics/` - Metrics system
+   - `/crates/mcp/src/transport/http/` - HTTP client/server
 
 ## Commands to Run
 
@@ -97,26 +107,26 @@ Create a Hyper 1.x based HTTP client for MCP that matches the server implementat
 cd ~/src/tapwire/shadowcat-mcp-compliance
 cd crates/mcp
 
-# Check existing HTTP client
-rg "HttpConnection" --type rust
+# Search for existing session code
+rg "session" --type rust -i
+rg "SessionManager" --type rust
 
 # Run tests
-cargo test --lib connection::http
-cargo test --lib client::
+cargo test --lib
 
-# Test client-server interaction
-cargo run --example http_client_demo
+# Check metrics
+cargo test --lib metrics::
 ```
 
-## Next Steps After 1.3
+## Next Steps After 1.4
 
-- Task 1.4: Session Manager Core (8h)
 - Task 1.5: Memory Session Store (4h)
+- Then Sprint 2: Persistence & SSE
 
-Sprint 1 will deliver a working HTTP client-server foundation with proper async patterns, observability, and Hyper 1.x integration.
+Sprint 1 will deliver a working HTTP client-server foundation with proper async patterns, observability, session management, and Hyper 1.x integration.
 
 ## Notes
-- We're ahead of schedule (saved 10h so far from Tasks 1.0-1.2)
-- Focus on reusing existing code where possible
-- Ensure client and server work together seamlessly
-- Keep metrics integration consistent
+- We're ahead of schedule (saved ~8h so far from Tasks 1.0-1.3)
+- Session manager is critical for proxy functionality
+- Should integrate cleanly with existing pool and metrics
+- Memory store (Task 1.5) will be simple implementation for testing
