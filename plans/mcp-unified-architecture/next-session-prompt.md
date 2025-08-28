@@ -1,132 +1,135 @@
-# Next Session Prompt - Sprint 1 Task 1.4 Session Manager Core
+# Next Session Prompt - Streamable HTTP Implementation
 
-## Session Goal
-Continue Sprint 1 - Implement Session Manager Core for managing MCP sessions with proper lifecycle and tracking.
+## 🎯 Current Focus: Streamable HTTP Transport
 
-## Context
-- ✅ Task 1.0 Complete: Async patterns already optimal (2h instead of 8h)
-- ✅ Task 1.1 Complete: OpenTelemetry observability with Prometheus implemented
-- ✅ Task 1.2 Complete: Basic Hyper HTTP server with HTTP/1.1 and HTTP/2 support
-- ✅ Task 1.3 Complete: Basic Hyper HTTP client with connection pooling
-- 🎯 Task 1.4: Session Manager Core (8h)
-- Following v2 tracker in `mcp-tracker-v2-critical-path.md`
-
-## Current Status
-
-### ✅ Completed (Sprint 1)
-1. **Task 1.0 - Async Patterns**
-   - Bounded executor preventing spawn explosion
-   - One-spawn-per-client pattern validated
-
-2. **Task 1.1 - Observability** 
-   - OpenTelemetry + Prometheus metrics
-   - Server, client, and pool metrics
-   - Export via `export_metrics()` method
-
-3. **Task 1.2 - Basic Hyper Server**
-   - Hyper 1.x server implementation
-   - Support for HTTP/1.1 and HTTP/2
-   - One spawn per connection pattern
-   - Health, metrics, and MCP endpoints
-   - Demo example and integration tests
-
-4. **Task 1.3 - Basic Hyper Client**
-   - HTTP client using Hyper 1.x patterns
-   - Connection pooling integration
-   - Support for both HTTP/1.1 and HTTP/2
-   - Client metrics integration
-   - Created transport/http/client.rs module
-   - Integration tests and examples
-
-## Sprint 1 Task 1.4: Session Manager Core (8h) ⭐ CRITICAL
-
-### Goal
-Implement core session management functionality for tracking MCP sessions across connections.
-
-### Key Requirements
-1. **Session lifecycle management** - Create, track, expire sessions
-2. **Thread-safe session storage** - Concurrent access support
-3. **Session metadata tracking** - Creation time, last activity, protocol version
-4. **Integration with existing pool** - Work with connection pooling
-5. **Metrics integration** - Track session metrics
-
-### Implementation Plan
-
-1. **Review Existing Session Code** (1 hour)
-   - Check existing session implementations in codebase
-   - Understand current session patterns
-   - Review how sessions integrate with connections
-
-2. **Design Session Manager** (2 hours)
-   - Define session lifecycle states
-   - Design thread-safe storage
-   - Plan session expiry mechanism
-   - Define session metadata structure
-
-3. **Implement Core Session Manager** (3 hours)
-   - Create SessionManager struct
-   - Implement session creation/deletion
-   - Add session lookup and validation
-   - Integrate with existing metrics
-
-4. **Add Session Lifecycle** (1.5 hours)
-   - Session expiry and cleanup
-   - Activity tracking
-   - Graceful shutdown handling
-
-5. **Testing & Integration** (30 min)
-   - Unit tests for session manager
-   - Integration with HTTP client/server
-   - Verify thread safety
-   - Test session expiry
-
-### Success Criteria
-- [ ] Sessions can be created and tracked
-- [ ] Thread-safe concurrent access
-- [ ] Sessions expire after idle timeout
-- [ ] Metrics track session lifecycle
-- [ ] Integration with HTTP client/server works
-- [ ] All tests pass
-
-## Files to Review
-
-1. Session-related code:
-   - Check for existing session implementations
-   - Review connection lifecycle management
-   - Look at current metadata tracking
-
-2. Integration points:
-   - `/crates/mcp/src/pool/` - Connection pooling
-   - `/crates/mcp/src/metrics/` - Metrics system
-   - `/crates/mcp/src/transport/http/` - HTTP client/server
-
-## Commands to Run
-
+**IMPORTANT**: Read the comprehensive knowledge base first:
 ```bash
-# Navigate to MCP crate
-cd ~/src/tapwire/shadowcat-mcp-compliance
-cd crates/mcp
-
-# Search for existing session code
-rg "session" --type rust -i
-rg "SessionManager" --type rust
-
-# Run tests
-cargo test --lib
-
-# Check metrics
-cargo test --lib metrics::
+cat /Users/kevin/src/tapwire/plans/mcp-unified-architecture/SSE-AND-STREAMING-KNOWLEDGE.md
 ```
 
-## Next Steps After 1.4
+## Context
+We're implementing MCP's **Streamable HTTP** transport - a single transport that supports both:
+- **HTTP-only mode**: Returns `application/json` for single responses
+- **SSE mode**: Returns `text/event-stream` for streaming responses
 
-- Task 1.5: Memory Session Store (4h)
-- Then Sprint 2: Persistence & SSE
+## What We've Done
+✅ Understood the Streamable HTTP specification  
+✅ Created `StreamableHttpConfig` for both stateful/stateless modes  
+✅ Started `StreamableIncomingConnection` (server-side)  
+✅ Documented all SSE knowledge and existing code  
+✅ Identified reusable components from shadowcat  
 
-Sprint 1 will deliver a working HTTP client-server foundation with proper async patterns, observability, session management, and Hyper 1.x integration.
+## What's Next
 
-## Notes
-- We're ahead of schedule (saved ~8h so far from Tasks 1.0-1.3)
-- Session manager is critical for proxy functionality
-- Should integrate cleanly with existing pool and metrics
-- Memory store (Task 1.5) will be simple implementation for testing
+### Immediate TODO: Fix SSE Body Streaming
+Location: `crates/mcp/src/transport/http/streamable_incoming.rs`
+
+Current issue at line ~219:
+```rust
+// TODO: Implement SSE streaming body
+.body(Full::new(Bytes::from("TODO: Implement SSE streaming body")))
+```
+
+Need to:
+1. Use `http_body_util::StreamBody` or similar for streaming
+2. Reference shadowcat's SSE implementation for patterns
+3. Stream SSE events through the HTTP response body
+
+### Then: Complete Server Implementation
+- [ ] GET request handling for server-initiated streams
+- [ ] Session management integration
+- [ ] Last-Event-Id support for resumability
+
+### Next: Create Client Implementation
+- [ ] Create `streamable_outgoing.rs` 
+- [ ] Implement `Outgoing` trait
+- [ ] Handle both JSON and SSE response types
+- [ ] Reuse SSE parser from shadowcat
+
+## Key Code Locations
+
+```bash
+# What we're working on
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp/src/transport/http/
+ls streamable_*.rs
+
+# Existing SSE to reuse
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/src/transport/sse/
+ls *.rs  # Full SSE implementation we can leverage
+
+# Event tracking abstraction
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp/src/events/
+cat tracker.rs  # Generic event tracking trait
+```
+
+## Key Insights to Remember
+
+1. **Streamable HTTP = One Transport, Two Modes**
+   - Not a separate transport!
+   - Server chooses based on Accept header and config
+
+2. **We Have Sophisticated SSE Already**
+   - Full implementation in shadowcat
+   - Reconnection, parsing, buffering all done
+   - Just need to integrate with MCP patterns
+
+3. **Event Tracking is Abstracted**
+   - Generic `EventTracker` trait
+   - SSE-specific implementation exists
+   - Ready for WebSockets in future
+
+## Architecture Reminder
+
+```
+Client Request:
+  Accept: application/json, text/event-stream
+  
+Server Decision:
+  if stateless_mode OR !accepts_sse:
+    → Return application/json
+  else:
+    → Return text/event-stream
+```
+
+## Testing Approach
+
+Start with simple cases:
+1. HTTP-only mode (stateless) - single JSON responses
+2. SSE mode (stateful) - streaming responses
+3. Dynamic switching based on Accept header
+
+## Questions to Keep in Mind
+
+- **"Would this abstraction work for WebSockets too?"**
+- **"Can we reuse existing shadowcat SSE code?"**
+- **"Is this properly abstracted from transport specifics?"**
+
+## Commands to Start
+
+```bash
+# Navigate to working directory
+cd /Users/kevin/src/tapwire/shadowcat-mcp-compliance/crates/mcp
+
+# Review current implementation
+cat src/transport/http/streamable_incoming.rs | grep -A5 -B5 TODO
+
+# Check shadowcat SSE for reference
+cat ../../src/transport/sse/buffer.rs  # How they handle streaming
+
+# Run tests to ensure nothing broke
+cargo test --lib transport::http
+
+# When ready to test streaming
+cargo run --example streamable_http_demo  # (need to create this)
+```
+
+## Remember
+- This is a **big lift** - quality over speed!
+- We have existing SSE code - **reuse it**!
+- Think about WebSocket compatibility
+- Document as you go
+
+---
+
+**Start Point**: Fix the SSE body streaming TODO in `streamable_incoming.rs`  
+**Knowledge Base**: `SSE-AND-STREAMING-KNOWLEDGE.md` has everything you need

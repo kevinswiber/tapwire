@@ -19,25 +19,27 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 | 1.1 | Basic Observability Setup | 6h | None | ⭐ | ✅ Complete - OpenTelemetry + Prometheus |
 | 1.2 | Basic Hyper Server | 6h | 1.0 | ⭐ | ✅ Complete (4h) - HTTP/1.1 & HTTP/2 with metrics |
 | 1.3 | Basic Hyper Client | 6h | 1.0 | ⭐ | ✅ Complete - HTTP client with pooling |
-| 1.4 | Session Manager Core | 8h | 1.2 | ⭐ | Essential for proxy |
-| 1.5 | Memory Session Store | 4h | 1.4 | ⭐ | Simplest working store |
+| 1.4 | Session Manager Core | 8h | 1.2 | ⭐ | ✅ Complete - Fully integrated from shadowcat |
+| 1.5 | Memory Session Store | 4h | 1.4 | ⭐ | ✅ Complete - InMemorySessionStore working |
 
 **Deliverable**: Basic working proxy with session management and metrics
 
 ---
 
-### Sprint 2: Persistence & SSE (32h)
-**Goal**: Persistent sessions and SSE transport support
+### Sprint 2: Streamable HTTP Transport (20h)
+**Goal**: Complete Streamable HTTP transport (supports both JSON and SSE modes)
+
+**📚 Knowledge Base**: See `SSE-AND-STREAMING-KNOWLEDGE.md` for comprehensive documentation
 
 | ID | Task | Duration | Dependencies | Critical | Notes |
 |----|------|----------|--------------|----------|-------|
-| 2.0 | Session Store Trait | 6h | 1.4 | ⭐ | Abstraction for stores |
-| 2.1 | SQLite Implementation | 6h | 2.0 | ⭐ | Primary persistence |
-| 2.2 | SSE Server Support | 8h | 1.2 | | Modern transport |
-| 2.3 | SSE Client Support | 6h | 1.3 | | Matching client |
-| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | Reconnection support |
+| 2.0 | Session Store Trait | 6h | 1.4 | ⭐ | ✅ Already exists in store.rs |
+| 2.1 | ~~SQLite Implementation~~ | ~~6h~~ | ~~2.0~~ | | ⚠️ Skipped - Redis later |
+| 2.2 | Streamable HTTP Server | 8h | 1.2 | ⭐ | 🚧 In progress - streamable_incoming.rs |
+| 2.3 | Streamable HTTP Client | 6h | 1.3 | ⭐ | 📝 Planned - streamable_outgoing.rs |
+| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | 🎯 Event tracking abstracted |
 
-**Deliverable**: Proxy with persistent sessions and SSE support
+**Deliverable**: Proxy with complete SSE streaming support
 
 ---
 
@@ -62,9 +64,9 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 | ID | Task | Duration | Dependencies | Critical | Notes |
 |----|------|----------|--------------|----------|-------|
 | 4.0 | Builder Pattern API | 6h | 1.2, 1.3 | | Better UX |
-| 4.1 | Connection Pool Design | 4h | 1.3 | | Efficiency |
-| 4.2 | Connection Pool Implementation | 4h | 4.1 | | Complete pooling |
-| 4.3 | Redis Store | 8h | 2.0 | | Distributed sessions |
+| 4.1 | Connection Pool Design | 4h | 1.3 | | ✅ Already done with pool module |
+| 4.2 | Connection Pool Implementation | 4h | 4.1 | | ✅ Already working |
+| 4.3 | Redis Store | 8h | 2.0 | | Future: Distributed sessions |
 | 4.4 | MCP Protocol Interceptor | 6h | 3.0 | | Protocol handling |
 | 4.5 | WebSocket Support | 8h | 1.2 | | Optional transport |
 | 4.6 | Performance Benchmarks | 2h | All above | | Baseline metrics |
