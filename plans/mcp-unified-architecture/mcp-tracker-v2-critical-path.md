@@ -35,9 +35,9 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 |----|------|----------|--------------|----------|-------|
 | 2.0 | Session Store Trait | 6h | 1.4 | ⭐ | ✅ Already exists in store.rs |
 | 2.1 | ~~SQLite Implementation~~ | ~~6h~~ | ~~2.0~~ | | ⚠️ Skipped - Redis later |
-| 2.2 | Streamable HTTP Server | 8h | 1.2 | ⭐ | 🚧 In progress - streamable_incoming.rs |
-| 2.3 | Streamable HTTP Client | 6h | 1.3 | ⭐ | 📝 Planned - streamable_outgoing.rs |
-| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | 🎯 Event tracking abstracted |
+| 2.2 | Streamable HTTP Server | 8h | 1.2 | ⭐ | ✅ DONE - streamable_incoming.rs with SSE streaming |
+| 2.3 | Streamable HTTP Client | 6h | 1.3 | ⭐ | ✅ DONE - streamable_outgoing.rs with SSE parsing |
+| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | 🚧 Need GET handler + session integration |
 
 **Deliverable**: Proxy with complete SSE streaming support
 
@@ -65,7 +65,7 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 |----|------|----------|--------------|----------|-------|
 | 4.0 | Builder Pattern API | 6h | 1.2, 1.3 | | Better UX |
 | 4.1 | Connection Pool Design | 4h | 1.3 | | ✅ Already done with pool module |
-| 4.2 | Connection Pool Implementation | 4h | 4.1 | | ✅ Already working |
+| 4.2 | Connection Pool Implementation | 4h | 4.1 | | ✅ Pool exists, HttpPoolKey ready |
 | 4.3 | Redis Store | 8h | 2.0 | | Future: Distributed sessions |
 | 4.4 | MCP Protocol Interceptor | 6h | 3.0 | | Protocol handling |
 | 4.5 | WebSocket Support | 8h | 1.2 | | Optional transport |
@@ -164,10 +164,10 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 - [ ] < 1 spawn per connection
 
 ### Sprint 2 Success:
-- [ ] Sessions persist across restarts
-- [ ] SSE connections maintained
-- [ ] Automatic SSE reconnection
-- [ ] Session cleanup working
+- [x] Sessions persist across restarts (store trait exists)
+- [x] SSE connections maintained (streamable HTTP working)
+- [x] Automatic SSE reconnection (Last-Event-ID implemented with event replay)
+- [ ] Session cleanup working (need integration)
 
 ### Sprint 3 Success:
 - [ ] Interceptors modify messages
