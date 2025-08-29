@@ -37,9 +37,28 @@ Optimized tracker using Critical Path methodology - delivers incremental value w
 | 2.1 | ~~SQLite Implementation~~ | ~~6h~~ | ~~2.0~~ | | ⚠️ Skipped - Redis later |
 | 2.2 | Streamable HTTP Server | 8h | 1.2 | ⭐ | ✅ DONE - streamable_incoming.rs with SSE streaming |
 | 2.3 | Streamable HTTP Client | 6h | 1.3 | ⭐ | ✅ DONE - streamable_outgoing.rs with SSE parsing |
-| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | 🚧 Need GET handler + session integration |
+| 2.4 | SSE Session Tracking | 6h | 2.2, 1.4 | | ✅ DONE - EventStore and replay implemented |
 
 **Deliverable**: Proxy with complete SSE streaming support
+
+---
+
+### Sprint 2.5: 🔥 CRITICAL FIX - Stream Tracking (14h)
+**Goal**: Fix architectural issue with event replay - must track individual streams within sessions
+
+**📚 Design Doc**: See `STREAM-TRACKING-DESIGN.md` for full architecture
+
+| ID | Task | Duration | Dependencies | Critical | Notes |
+|----|------|----------|--------------|----------|-------|
+| 2.5.0 | Stream Tracking Analysis | 2h | 2.4 | ⭐ | ✅ DONE - Analyzed and improved design |
+| 2.5.1 | Stream Manager Implementation | 3h | 2.5.0 | ⭐ | ✅ DONE - Used typed StreamId instead |
+| 2.5.2 | EventStore Refactor | 4h | 2.5.1 | ⭐ | ✅ DONE - Full refactor with typed IDs |
+| 2.5.3 | EventIdGenerator Update | 2h | 2.5.1 | ⭐ | ✅ DONE - Simplified EventId approach |
+| 2.5.4 | Integration & Testing | 3h | 2.5.2, 2.5.3 | ⭐ | ✅ DONE - All 206 tests passing |
+
+**Resolution**: Implemented typed IDs (SessionId, StreamId, EventId) for compile-time safety and proper stream isolation per MCP spec.
+
+**Deliverable**: Correct stream-specific event replay per MCP specification
 
 ---
 
